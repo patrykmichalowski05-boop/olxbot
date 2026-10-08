@@ -1,0 +1,14 @@
+[Unit]
+Description=OLX Flip Hunter Market Lifecycle
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/market_lifecycle.py
+
+TimeoutStartSec=1800
+Nice=15

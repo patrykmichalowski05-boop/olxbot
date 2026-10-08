@@ -1,0 +1,704 @@
+import sqlite3
+
+from flask import (
+    Blueprint,
+    render_template_string,
+    redirect,
+    url_for,
+)
+
+
+watchlist_bp = Blueprint(
+    "watchlist_dashboard",
+    __name__,
+)
+
+WATCHLIST_DB = "/opt/olx-bot/watchlist.db"
+
+
+HTML = """
+<!doctype html>
+<html lang="pl">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>
+Watchlista — OLX Flip Hunter
+</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0d1014;
+    color: #edf0f3;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1450px;
+    margin: auto;
+    padding: 24px;
+}
+
+a {
+    color: #75baff;
+    text-decoration: none;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(180px, 1fr)
+        );
+    gap: 14px;
+}
+
+.card {
+    background: #171b20;
+    border: 1px solid #292f36;
+    border-radius: 14px;
+    padding: 18px;
+}
+
+.label {
+    color: #8d97a2;
+    font-size: 13px;
+}
+
+.value {
+    font-size: 28px;
+    font-weight: bold;
+    margin-top: 7px;
+}
+
+.good {
+    color: #66d98b;
+}
+
+.warn {
+    color: #ffd166;
+}
+
+.bad {
+    color: #ff7373;
+}
+
+.section {
+    margin-top: 30px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    min-width: 1000px;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 11px;
+    border-bottom: 1px solid #292f36;
+    vertical-align: middle;
+}
+
+th {
+    color: #8d97a2;
+    font-size: 12px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.triggered {
+    background: #422020;
+    color: #ff8080;
+}
+
+.watching {
+    background: #3d351b;
+    color: #ffd166;
+}
+
+.closed {
+    background: #282d33;
+    color: #aab1b9;
+}
+
+.buy {
+    background: #173b25;
+    color: #6cdf91;
+}
+
+button {
+    border: 0;
+    border-radius: 7px;
+    padding: 7px 11px;
+    background: #39424c;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: .85;
+}
+
+.empty {
+    color: #8d97a2;
+    padding: 25px 0;
+}
+
+@media(max-width: 700px) {
+
+    .container {
+        padding: 12px;
+    }
+
+    .header {
+        display: block;
+    }
+
+    .header div:last-child {
+        margin-top: 10px;
+    }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+<div class="header">
+
+<div>
+
+<h1>
+👀 Watchlista
+</h1>
+
+<div class="label">
+Oferty oczekujące na lepszą cenę
+</div>
+
+</div>
+
+<div>
+
+<a href="/">
+← Dashboard
+</a>
+
+&nbsp; · &nbsp;
+
+<a href="/analytics">
+📊 Analityka
+</a>
+
+</div>
+
+</div>
+
+
+<div class="grid">
+
+<div class="card">
+
+<div class="label">
+Obserwowane
+</div>
+
+<div class="value warn">
+{{ watching }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+KUP TERAZ
+</div>
+
+<div class="value bad">
+{{ triggered }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+Zamknięte
+</div>
+
+<div class="value">
+{{ closed }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+Najbliżej ceny zakupu
+</div>
+
+<div class="value good">
+
+{% if closest_gap is not none %}
+
+{{ money(closest_gap) }}
+
+{% else %}
+
+-
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+🔥 Aktywne oferty
+</h2>
+
+<div class="card table-wrap">
+
+{% if offers %}
+
+<table>
+
+<tr>
+<th>Status</th>
+<th>Score</th>
+<th>Oferta</th>
+<th>Cena</th>
+<th>MAX zakup</th>
+<th>Start negocjacji</th>
+<th>Brakuje</th>
+<th>Akcja</th>
+<th>OLX</th>
+<th></th>
+</tr>
+
+
+{% for row in offers %}
+
+<tr>
+
+<td>
+
+{% if row.status == "TRIGGERED" %}
+
+<span class="badge triggered">
+🚨 KUP TERAZ
+</span>
+
+{% elif row.status == "WATCHING" %}
+
+<span class="badge watching">
+👀 OBSERWUJ
+</span>
+
+{% else %}
+
+<span class="badge closed">
+ZAMKNIĘTE
+</span>
+
+{% endif %}
+
+</td>
+
+
+<td>
+
+<b>
+{{ row.score or "-" }}/100
+</b>
+
+</td>
+
+
+<td>
+{{ row.title }}
+</td>
+
+
+<td>
+{{ money(row.current_price) }}
+</td>
+
+
+<td class="good">
+{{ money(row.max_buy) }}
+</td>
+
+
+<td>
+{{ money(row.opening) }}
+</td>
+
+
+<td>
+
+{% if row.status == "TRIGGERED" %}
+
+<span class="badge buy">
+0 zł
+</span>
+
+{% elif row.gap is not none %}
+
+{% if row.gap <= 100 %}
+
+<span class="good">
+<b>
+{{ money(row.gap) }}
+</b>
+</span>
+
+{% elif row.gap <= 300 %}
+
+<span class="warn">
+{{ money(row.gap) }}
+</span>
+
+{% else %}
+
+{{ money(row.gap) }}
+
+{% endif %}
+
+{% else %}
+
+-
+
+{% endif %}
+
+</td>
+
+
+<td>
+{{ row.action or "-" }}
+</td>
+
+
+<td>
+
+{% if row.url %}
+
+<a
+    href="{{ row.url }}"
+    target="_blank"
+>
+OLX
+</a>
+
+{% endif %}
+
+</td>
+
+
+<td>
+
+{% if row.status != "CLOSED" %}
+
+<form
+    method="post"
+    action="/watchlist/close/{{ row.id }}"
+>
+
+<button type="submit">
+Usuń
+</button>
+
+</form>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="empty">
+Brak ofert na watchliście.
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>
+"""
+
+
+def connect():
+
+    conn = sqlite3.connect(
+        WATCHLIST_DB
+    )
+
+    conn.row_factory = sqlite3.Row
+
+    return conn
+
+
+def money(value):
+
+    if value is None:
+        return "-"
+
+    try:
+
+        value = int(
+            round(
+                float(value)
+            )
+        )
+
+        return (
+            f"{value:,}"
+            .replace(",", " ")
+            + " zł"
+        )
+
+    except Exception:
+
+        return "-"
+
+
+@watchlist_bp.route(
+    "/watchlist"
+)
+def watchlist_page():
+
+    conn = connect()
+
+    rows = conn.execute("""
+        SELECT *
+        FROM watchlist
+
+        WHERE status != 'CLOSED'
+    """).fetchall()
+
+
+    counts = {
+        "WATCHING": 0,
+        "TRIGGERED": 0,
+        "CLOSED": 0,
+    }
+
+
+    for status in counts:
+
+        counts[status] = conn.execute("""
+            SELECT COUNT(*)
+            FROM watchlist
+            WHERE status = ?
+        """, (
+            status,
+        )).fetchone()[0]
+
+
+    conn.close()
+
+
+    offers = []
+
+    gaps = []
+
+
+    for row in rows:
+
+        item = dict(
+            row
+        )
+
+        price = item.get(
+            "current_price"
+        )
+
+        max_buy = item.get(
+            "max_buy"
+        )
+
+        gap = None
+
+
+        if (
+            price is not None
+            and
+            max_buy is not None
+        ):
+
+            gap = max(
+                0,
+                float(price)
+                -
+                float(max_buy)
+            )
+
+            if (
+                item.get(
+                    "status"
+                )
+                ==
+                "WATCHING"
+            ):
+
+                gaps.append(
+                    gap
+                )
+
+
+        item[
+            "gap"
+        ] = gap
+
+        offers.append(
+            item
+        )
+
+
+    offers.sort(
+        key=lambda row: (
+            0
+            if row[
+                "status"
+            ]
+            ==
+            "TRIGGERED"
+            else 1,
+
+            row[
+                "gap"
+            ]
+            if row[
+                "gap"
+            ]
+            is not None
+            else 999999,
+
+            -(
+                row[
+                    "score"
+                ]
+                or 0
+            ),
+        )
+    )
+
+
+    closest_gap = (
+        min(gaps)
+        if gaps
+        else None
+    )
+
+
+    return render_template_string(
+        HTML,
+
+        offers=offers,
+
+        watching=counts[
+            "WATCHING"
+        ],
+
+        triggered=counts[
+            "TRIGGERED"
+        ],
+
+        closed=counts[
+            "CLOSED"
+        ],
+
+        closest_gap=
+            closest_gap,
+
+        money=money,
+    )
+
+
+@watchlist_bp.post(
+    "/watchlist/close/<int:item_id>"
+)
+def watchlist_close(
+    item_id,
+):
+
+    conn = connect()
+
+    conn.execute("""
+        UPDATE watchlist
+
+        SET status = 'CLOSED'
+
+        WHERE id = ?
+    """, (
+        item_id,
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+    return redirect(
+        url_for(
+            "watchlist_dashboard.watchlist_page"
+        )
+    )

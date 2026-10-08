@@ -1,0 +1,107 @@
+def _latest_amount(
+    history,
+    kind,
+):
+    for row in history:
+        if row["kind"] == kind:
+            value = row["amount"]
+
+            if value is not None:
+                return float(value)
+
+    return None
+
+
+def calculate_negotiation(
+    history,
+    max_buy,
+):
+    seller_offer = _latest_amount(
+        history,
+        "SELLER_OFFER",
+    )
+
+    my_offer = _latest_amount(
+        history,
+        "MY_OFFER",
+    )
+
+    result = {
+        "seller_offer": seller_offer,
+        "my_offer": my_offer,
+        "max_buy": max_buy,
+        "gap": None,
+        "room_from_my_offer": None,
+        "status": "NO_DATA",
+        "label": "Brak ceny sprzedającego",
+    }
+
+    if max_buy is None:
+        return result
+
+    max_buy = float(max_buy)
+
+    result["max_buy"] = max_buy
+
+    if my_offer is not None:
+        result["room_from_my_offer"] = (
+            max_buy - my_offer
+        )
+
+    if seller_offer is None:
+        result["status"] = "WAITING"
+        result["label"] = (
+            "Czekamy na ofertę sprzedającego"
+        )
+
+        return result
+
+
+    gap = (
+        seller_offer
+        - max_buy
+    )
+
+    result["gap"] = gap
+
+
+    if gap <= 0:
+
+        result["status"] = "BUY"
+
+        result["label"] = (
+            "CENA MIEŚCI SIĘ W MAX BUY"
+        )
+
+        return result
+
+
+    if gap <= 100:
+
+        result["status"] = "CLOSE"
+
+        result["label"] = (
+            "BLISKO — NEGOCJUJ DALEJ"
+        )
+
+        return result
+
+
+    if gap <= 250:
+
+        result["status"] = "NEGOTIATE"
+
+        result["label"] = (
+            "ZA DROGO — CIŚNIJ CENĘ"
+        )
+
+        return result
+
+
+    result["status"] = "TOO_EXPENSIVE"
+
+    result["label"] = (
+        "DUŻO POWYŻEJ MAX BUY"
+    )
+
+    return result

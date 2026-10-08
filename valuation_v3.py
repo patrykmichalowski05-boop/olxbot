@@ -1,0 +1,1073 @@
+from valuation import static_valuation
+
+from market_stats import (
+    get_cpu_gpu_stats
+)
+
+from similarity_engine import (
+    similar_market_stats
+)
+
+from similarity_engine_v2 import (
+    similar_market_stats_v2
+)
+
+
+MIN_PROFIT = 400
+HOT_PROFIT = 700
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def weighted_average(items):
+
+    valid = [
+        (value, weight)
+        for value, weight in items
+        if (
+            value is not None
+            and
+            weight > 0
+        )
+    ]
+
+    if not valid:
+        return None
+
+    total_weight = sum(
+        weight
+        for _, weight in valid
+    )
+
+    if total_weight <= 0:
+        return None
+
+    return round(
+        sum(
+            value * weight
+            for value, weight in valid
+        )
+        / total_weight
+    )
+
+
+def clamp(
+    value,
+    minimum,
+    maximum
+):
+
+    if value is None:
+        return None
+
+    return max(
+        minimum,
+        min(
+            maximum,
+            value
+        )
+    )
+
+
+# ============================================================
+# SANITY CAP
+# ============================================================
+
+def sanity_cap(
+    value,
+    static_value,
+    exact_samples
+):
+
+    if not static_value:
+        return (
+            value,
+            False,
+            None
+        )
+
+    # Im więcej exact danych,
+    # tym bardziej możemy odejść
+    # od starej statycznej tabeli.
+
+    if exact_samples >= 10:
+        multiplier = 1.45
+
+    elif exact_samples >= 5:
+        multiplier = 1.35
+
+    elif exact_samples >= 3:
+        multiplier = 1.25
+
+    elif exact_samples >= 1:
+        multiplier = 1.20
+
+    else:
+        multiplier = 1.15
+
+    maximum = round(
+        static_value
+        * multiplier
+    )
+
+    if (
+        value is not None
+        and
+        value > maximum
+    ):
+
+        return (
+            maximum,
+            True,
+            maximum
+        )
+
+    return (
+        value,
+        False,
+        maximum
+    )
+
+
+# ============================================================
+# NEIGHBOR GPU PROTECTION
+# ============================================================
+
+def protect_neighbor_value(
+    neighbor_quick,
+    static_quick,
+    same_gpu_quick
+):
+    """
+    Neighbor GPU jest pomocniczym sygnałem.
+
+    Nie pozwalamy, żeby sąsiednie GPU
+    kompletnie wywróciły wycenę.
+
+    Najpierw odnosimy je do same-GPU market,
+    a jeśli go brak - do static.
+    """
+
+    if neighbor_quick is None:
+        return None, False
+
+    reference = (
+        same_gpu_quick
+        if same_gpu_quick
+        else static_quick
+    )
+
+    if not reference:
+        return (
+            neighbor_quick,
+            False
+        )
+
+    lower = round(
+        reference * 0.80
+    )
+
+    upper = round(
+        reference * 1.20
+    )
+
+    protected = clamp(
+        neighbor_quick,
+        lower,
+        upper
+    )
+
+    changed = (
+        protected
+        !=
+        neighbor_quick
+    )
+
+    return (
+        protected,
+        changed
+    )
+
+
+# ============================================================
+# WYBÓR FINALNEJ CENY
+# ============================================================
+
+def choose_value(
+    static_quick,
+    exact,
+    same_gpu,
+    neighbor
+):
+
+    exact_samples = exact.get(
+        "samples",
+        0
+    )
+
+    exact_quick = exact.get(
+        "quick_sale"
+    )
+
+    same_samples = same_gpu.get(
+        "samples",
+        0
+    )
+
+    same_quick = same_gpu.get(
+        "quick_sale"
+    )
+
+    same_similarity = (
+        same_gpu.get(
+            "avg_similarity"
+        )
+        or 0
+    )
+
+    neighbor_samples = neighbor.get(
+        "samples",
+        0
+    )
+
+    neighbor_quick_raw = neighbor.get(
+        "quick_sale"
+    )
+
+    neighbor_similarity = (
+        neighbor.get(
+            "avg_similarity"
+        )
+        or 0
+    )
+
+    neighbor_quick, neighbor_protected = (
+        protect_neighbor_value(
+            neighbor_quick_raw,
+            static_quick,
+            same_quick
+        )
+    )
+
+    # ========================================================
+    # 10+ EXACT
+    # ========================================================
+
+    if (
+        exact_samples >= 10
+        and
+        exact_quick
+    ):
+
+        final = weighted_average([
+            (
+                exact_quick,
+                0.70
+            ),
+            (
+                same_quick,
+                0.20
+            ),
+            (
+                neighbor_quick,
+                0.05
+            ),
+            (
+                static_quick,
+                0.05
+            ),
+        ])
+
+        source = (
+            "EXACT_DOMINANT"
+        )
+
+        confidence = (
+            "BARDZO WYSOKI"
+        )
+
+    # ========================================================
+    # 5-9 EXACT
+    # ========================================================
+
+    elif (
+        exact_samples >= 5
+        and
+        exact_quick
+    ):
+
+        final = weighted_average([
+            (
+                exact_quick,
+                0.60
+            ),
+            (
+                same_quick,
+                0.20
+            ),
+            (
+                neighbor_quick,
+                0.10
+            ),
+            (
+                static_quick,
+                0.10
+            ),
+        ])
+
+        source = (
+            "EXACT+SAMEGPU+NEIGHBOR"
+        )
+
+        confidence = (
+            "WYSOKI"
+        )
+
+    # ========================================================
+    # 3-4 EXACT
+    # ========================================================
+
+    elif (
+        exact_samples >= 3
+        and
+        exact_quick
+    ):
+
+        final = weighted_average([
+            (
+                exact_quick,
+                0.50
+            ),
+            (
+                same_quick,
+                0.20
+            ),
+            (
+                neighbor_quick,
+                0.10
+            ),
+            (
+                static_quick,
+                0.20
+            ),
+        ])
+
+        source = (
+            "MARKET_V3"
+        )
+
+        confidence = (
+            "ŚREDNI"
+        )
+
+    # ========================================================
+    # 1-2 EXACT
+    # ========================================================
+
+    elif (
+        exact_samples >= 1
+        and
+        exact_quick
+    ):
+
+        final = weighted_average([
+            (
+                exact_quick,
+                0.25
+            ),
+            (
+                same_quick,
+                0.25
+            ),
+            (
+                neighbor_quick,
+                0.15
+            ),
+            (
+                static_quick,
+                0.35
+            ),
+        ])
+
+        source = (
+            "LOW_EXACT+MARKET_V3"
+        )
+
+        confidence = (
+            "NISKI"
+        )
+
+    # ========================================================
+    # BRAK EXACT, ALE DOBRY SAME-GPU MARKET
+    # ========================================================
+
+    elif (
+        same_samples >= 5
+        and
+        same_similarity >= 88
+        and
+        same_quick
+    ):
+
+        final = weighted_average([
+            (
+                same_quick,
+                0.40
+            ),
+            (
+                neighbor_quick,
+                0.15
+            ),
+            (
+                static_quick,
+                0.45
+            ),
+        ])
+
+        source = (
+            "SAMEGPU+STATIC"
+        )
+
+        confidence = (
+            "NISKI"
+        )
+
+    # ========================================================
+    # BRAK EXACT I SAME-GPU
+    #
+    # Neighbor nie może dominować.
+    # ========================================================
+
+    elif (
+        neighbor_samples >= 5
+        and
+        neighbor_similarity >= 82
+        and
+        neighbor_quick
+        and
+        static_quick
+    ):
+
+        final = weighted_average([
+            (
+                neighbor_quick,
+                0.25
+            ),
+            (
+                static_quick,
+                0.75
+            ),
+        ])
+
+        source = (
+            "NEIGHBOR+STATIC"
+        )
+
+        confidence = (
+            "BARDZO NISKI"
+        )
+
+    # ========================================================
+    # FALLBACK
+    # ========================================================
+
+    elif static_quick:
+
+        final = (
+            static_quick
+        )
+
+        source = (
+            "STATIC"
+        )
+
+        confidence = (
+            "FALLBACK"
+        )
+
+    else:
+
+        return {
+            "ok": False,
+
+            "reason":
+                "Brak wiarygodnych danych "
+                "do wyceny"
+        }
+
+    before_cap = (
+        final
+    )
+
+    final, capped, cap = (
+        sanity_cap(
+            final,
+            static_quick,
+            exact_samples
+        )
+    )
+
+    return {
+        "ok": True,
+
+        "quick_sale":
+            round(final),
+
+        "quick_sale_before_cap":
+            before_cap,
+
+        "sanity_cap_applied":
+            capped,
+
+        "sanity_cap":
+            cap,
+
+        "valuation_source":
+            source,
+
+        "confidence":
+            confidence,
+
+        "neighbor_protected":
+            neighbor_protected,
+
+        "neighbor_quick_raw":
+            neighbor_quick_raw,
+
+        "neighbor_quick_protected":
+            neighbor_quick,
+    }
+
+
+# ============================================================
+# ESTIMATE V3
+# ============================================================
+
+def estimate_flip_v3(
+    details,
+    mode
+):
+
+    purchase_price = details.get(
+        "price"
+    )
+
+    cpu = details.get(
+        "cpu"
+    )
+
+    gpu = details.get(
+        "gpu"
+    )
+
+    ram = details.get(
+        "ram"
+    )
+
+    if not purchase_price:
+
+        return {
+            "ok": False,
+            "reason":
+                "Brak ceny zakupu"
+        }
+
+    if not cpu:
+
+        return {
+            "ok": False,
+            "reason":
+                "Brak CPU"
+        }
+
+    if not gpu:
+
+        return {
+            "ok": False,
+            "reason":
+                "Brak GPU"
+        }
+
+    # ========================================================
+    # STATIC
+    # ========================================================
+
+    static = static_valuation(
+        details
+    )
+
+    static_quick = None
+
+    if static.get(
+        "ok"
+    ):
+
+        static_quick = static.get(
+            "quick_sale"
+        )
+
+    # ========================================================
+    # EXACT CPU + GPU
+    # ========================================================
+
+    exact = get_cpu_gpu_stats(
+        cpu,
+        gpu,
+        max_age_hours=720
+    )
+
+    # ========================================================
+    # SIMILAR CPU + IDENTYCZNA GPU
+    # ========================================================
+
+    same_gpu = (
+        similar_market_stats(
+            cpu,
+            gpu,
+            ram
+        )
+    )
+
+    # ========================================================
+    # SIMILAR CPU + NEIGHBOR GPU
+    # ========================================================
+
+    neighbor = (
+        similar_market_stats_v2(
+            cpu,
+            gpu,
+            ram
+        )
+    )
+
+    # ========================================================
+    # FAILSAFE: brak statycznej wyceny
+    #
+    # Nie wolno wyceniać komputera na podstawie 1-2 ofert
+    # rynkowych, jeżeli nie mamy żadnego niezależnego
+    # punktu odniesienia.
+    # ========================================================
+
+    exact_samples = exact.get("samples", 0)
+
+    if static_quick is None and exact_samples < 3:
+        return {
+            "ok": False,
+            "reason": (
+                "Brak bezpiecznej wyceny statycznej i za mało "
+                f"próbek rynku ({exact_samples})"
+            ),
+            "valuation_source": "REJECT_NO_STATIC_LOW_SAMPLE",
+            "confidence": "BRAK",
+        }
+
+    # ========================================================
+    # MARKET PLAUSIBILITY GUARD
+    #
+    # Chroni przed absurdalnymi cenami ofertowymi.
+    #
+    # Przykład:
+    # static ~1300 zł, jedna oferta 6000 zł
+    # nie może ustawić wartości całego rynku.
+    #
+    # Im więcej próbek, tym większą swobodę dostaje rynek.
+    # ========================================================
+
+    def guard_market_signal(data, static_value, label):
+
+        if not data or static_value is None:
+            return data
+
+        samples = data.get("samples", 0)
+        market_value = data.get("quick_sale")
+
+        if not market_value or samples <= 0:
+            return data
+
+        # Mała próbka = bardzo ograniczone zaufanie.
+        if samples <= 2:
+            low_mult = 0.65
+            high_mult = 1.60
+
+        elif samples <= 4:
+            low_mult = 0.55
+            high_mult = 1.80
+
+        elif samples <= 9:
+            low_mult = 0.45
+            high_mult = 2.10
+
+        else:
+            # Przy >=10 ofertach rynek jest znacznie
+            # ważniejszy od tabeli statycznej.
+            low_mult = 0.35
+            high_mult = 2.50
+
+        minimum = static_value * low_mult
+        maximum = static_value * high_mult
+
+        if (
+            market_value < minimum
+            or market_value > maximum
+        ):
+            result = dict(data)
+
+            result["rejected_by_guard"] = True
+            result["rejected_value"] = market_value
+            result["guard_label"] = label
+
+            result["samples"] = 0
+            result["quick_sale"] = None
+
+            return result
+
+        return data
+
+
+    exact = guard_market_signal(
+        exact,
+        static_quick,
+        "EXACT"
+    )
+
+    same_gpu = guard_market_signal(
+        same_gpu,
+        static_quick,
+        "SAME_GPU"
+    )
+
+    neighbor = guard_market_signal(
+        neighbor,
+        static_quick,
+        "NEIGHBOR"
+    )
+
+    # ========================================================
+    # FINAL ENGINE
+    # ========================================================
+
+    selected = choose_value(
+        static_quick,
+        exact,
+        same_gpu,
+        neighbor
+    )
+
+    if not selected.get(
+        "ok"
+    ):
+
+        return selected
+
+    quick_sale = selected[
+        "quick_sale"
+    ]
+
+    # ========================================================
+    # COSTS
+    # ========================================================
+
+    service_reserve = 100
+
+    shipping_cost = (
+        50
+        if mode == "POLSKA"
+        else 0
+    )
+
+    total_cost = (
+        purchase_price
+        +
+        service_reserve
+        +
+        shipping_cost
+    )
+
+    profit = (
+        quick_sale
+        -
+        total_cost
+    )
+
+    # ========================================================
+    # RETURN
+    # ========================================================
+
+    return {
+        "ok": True,
+
+        "purchase_price":
+            purchase_price,
+
+        "quick_sale":
+            quick_sale,
+
+        "total_cost":
+            total_cost,
+
+        "shipping_cost":
+            shipping_cost,
+
+        "service_reserve":
+            service_reserve,
+
+        "profit":
+            round(profit),
+
+        "profitable":
+            profit >= MIN_PROFIT,
+
+        "hot":
+            profit >= HOT_PROFIT,
+
+        # ----------------------------------------------------
+        # SOURCE
+        # ----------------------------------------------------
+
+        "valuation_source":
+            selected[
+                "valuation_source"
+            ],
+
+        "confidence":
+            selected[
+                "confidence"
+            ],
+
+        # ----------------------------------------------------
+        # STATIC
+        # ----------------------------------------------------
+
+        "static_quick_sale":
+            static_quick,
+
+        # ----------------------------------------------------
+        # EXACT
+        # ----------------------------------------------------
+
+        "market_samples":
+            exact.get(
+                "samples",
+                0
+            ),
+
+        "exact_samples":
+            exact.get(
+                "samples",
+                0
+            ),
+
+        "exact_quick_sale":
+            exact.get(
+                "quick_sale"
+            ),
+
+        "market_min":
+            exact.get(
+                "min"
+            ),
+
+        "market_p25":
+            exact.get(
+                "p25"
+            ),
+
+        "market_median":
+            exact.get(
+                "median"
+            ),
+
+        "market_p75":
+            exact.get(
+                "p75"
+            ),
+
+        # ----------------------------------------------------
+        # SAME GPU
+        # ----------------------------------------------------
+
+        "similar_samples":
+            same_gpu.get(
+                "samples",
+                0
+            ),
+
+        "similar_quick_sale":
+            same_gpu.get(
+                "quick_sale"
+            ),
+
+        "similarity":
+            same_gpu.get(
+                "avg_similarity"
+            ),
+
+        "similar_p25":
+            same_gpu.get(
+                "p25"
+            ),
+
+        "similar_median":
+            same_gpu.get(
+                "median"
+            ),
+
+        # ----------------------------------------------------
+        # NEIGHBOR GPU
+        # ----------------------------------------------------
+
+        "neighbor_samples":
+            neighbor.get(
+                "samples",
+                0
+            ),
+
+        "neighbor_exact_gpu_samples":
+            neighbor.get(
+                "exact_gpu_samples",
+                0
+            ),
+
+        "neighbor_gpu_samples":
+            neighbor.get(
+                "neighbor_gpu_samples",
+                0
+            ),
+
+        "neighbor_similarity":
+            neighbor.get(
+                "avg_similarity"
+            ),
+
+        "neighbor_p25":
+            neighbor.get(
+                "p25"
+            ),
+
+        "neighbor_median":
+            neighbor.get(
+                "median"
+            ),
+
+        "neighbor_quick_raw":
+            selected.get(
+                "neighbor_quick_raw"
+            ),
+
+        "neighbor_quick_protected":
+            selected.get(
+                "neighbor_quick_protected"
+            ),
+
+        "neighbor_protected":
+            selected.get(
+                "neighbor_protected",
+                False
+            ),
+
+        # ----------------------------------------------------
+        # CAP
+        # ----------------------------------------------------
+
+        "quick_sale_before_cap":
+            selected[
+                "quick_sale_before_cap"
+            ],
+
+        "sanity_cap_applied":
+            selected[
+                "sanity_cap_applied"
+            ],
+
+        "sanity_cap":
+            selected[
+                "sanity_cap"
+            ],
+    }
+
+
+# ============================================================
+# TEST
+# ============================================================
+
+if __name__ == "__main__":
+
+    tests = [
+        {
+            "cpu":
+                "Ryzen 5 3600",
+
+            "gpu":
+                "RTX 3060",
+
+            "ram":
+                16,
+
+            "disks":
+                ["NVME 1 TB"],
+
+            "price":
+                1400,
+        },
+
+        {
+            "cpu":
+                "Ryzen 5 5600",
+
+            "gpu":
+                "RX 6700 XT",
+
+            "ram":
+                16,
+
+            "disks":
+                ["NVME 1 TB"],
+
+            "price":
+                1500,
+        },
+
+        {
+            "cpu":
+                "i5-12400F",
+
+            "gpu":
+                "RTX 4060",
+
+            "ram":
+                16,
+
+            "disks":
+                ["NVME 1 TB"],
+
+            "price":
+                1800,
+        },
+    ]
+
+    for details in tests:
+
+        print()
+        print("=" * 90)
+
+        print(
+            details["cpu"],
+            "+",
+            details["gpu"]
+        )
+
+        result = estimate_flip_v3(
+            details,
+            "POLSKA"
+        )
+
+        for key, value in (
+            result.items()
+        ):
+
+            print(
+                f"{key:30}: "
+                f"{value}"
+            )

@@ -1,0 +1,1056 @@
+import sqlite3
+import statistics
+
+from datetime import (
+    datetime,
+    timedelta
+)
+
+from similarity_engine import (
+    normalize_cpu,
+    normalize_gpu,
+    cpu_similarity,
+    ram_similarity,
+    ram_reference,
+    market_weight,
+    weighted_percentile,
+    CPU_REFERENCE
+)
+
+
+DB_FILE = "/opt/olx-bot/market.db"
+
+
+# ============================================================
+# REFERENCYJNE WARTOŚCI GPU
+#
+# Nie jest to finalna wycena GPU.
+# Służy tylko do:
+# - określenia podobieństwa kart,
+# - korekty ceny porównywalnego PC.
+# ============================================================
+
+GPU_REFERENCE = {
+
+    # GTX
+
+    "GTX 1660": 350,
+    "GTX 1660 SUPER": 400,
+    "GTX 1660 TI": 420,
+
+    # RTX 20
+
+    "RTX 2060": 500,
+    "RTX 2060 SUPER": 580,
+
+    "RTX 2070": 570,
+    "RTX 2070 SUPER": 650,
+
+    "RTX 2080": 700,
+    "RTX 2080 SUPER": 750,
+    "RTX 2080 TI": 850,
+
+    # RTX 30
+
+    "RTX 3050": 500,
+
+    "RTX 3060": 850,
+    "RTX 3060 TI": 950,
+
+    "RTX 3070": 1050,
+    "RTX 3070 TI": 1150,
+
+    "RTX 3080": 1300,
+    "RTX 3080 TI": 1500,
+
+    "RTX 3090": 1750,
+
+    # RTX 40
+
+    "RTX 4060": 1000,
+    "RTX 4060 TI": 1250,
+
+    "RTX 4070": 1700,
+    "RTX 4070 SUPER": 2000,
+    "RTX 4070 TI": 2100,
+    "RTX 4070 TI SUPER": 2400,
+
+    "RTX 4080": 2800,
+    "RTX 4080 SUPER": 3000,
+
+    # RTX 50
+
+    "RTX 5060": 1350,
+    "RTX 5060 TI": 1750,
+    "RTX 5070": 2400,
+
+    # AMD RX 6000
+
+    "RX 6600": 600,
+    "RX 6600 XT": 700,
+    "RX 6650 XT": 750,
+
+    "RX 6700": 800,
+    "RX 6700 XT": 900,
+    "RX 6750 XT": 1000,
+
+    "RX 6800": 1150,
+    "RX 6800 XT": 1350,
+    "RX 6900 XT": 1500,
+    "RX 6950 XT": 1650,
+
+    # AMD RX 7000
+
+    "RX 7600": 850,
+    "RX 7600 XT": 1050,
+
+    "RX 7700 XT": 1350,
+
+    "RX 7800 XT": 1700,
+
+    "RX 7900 GRE": 1900,
+    "RX 7900 XT": 2300,
+    "RX 7900 XTX": 2800,
+}
+
+
+# ============================================================
+# DB
+# ============================================================
+
+def connect():
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    conn.row_factory = (
+        sqlite3.Row
+    )
+
+    return conn
+
+
+# ============================================================
+# GPU HELPERS
+# ============================================================
+
+def gpu_vendor(gpu):
+
+    gpu = normalize_gpu(
+        gpu
+    )
+
+    if not gpu:
+        return None
+
+    if gpu.startswith(
+        ("RTX ", "GTX ")
+    ):
+        return "NVIDIA"
+
+    if gpu.startswith(
+        "RX "
+    ):
+        return "AMD"
+
+    return "OTHER"
+
+
+def gpu_reference(
+    gpu
+):
+
+    return GPU_REFERENCE.get(
+        normalize_gpu(gpu)
+    )
+
+
+# ============================================================
+# GPU SIMILARITY
+# ============================================================
+
+def gpu_similarity(
+    target_gpu,
+    candidate_gpu
+):
+
+    target = normalize_gpu(
+        target_gpu
+    )
+
+    candidate = normalize_gpu(
+        candidate_gpu
+    )
+
+    if (
+        not target
+        or
+        not candidate
+    ):
+        return 0.0
+
+    if target == candidate:
+        return 1.0
+
+    target_value = (
+        GPU_REFERENCE.get(
+            target
+        )
+    )
+
+    candidate_value = (
+        GPU_REFERENCE.get(
+            candidate
+        )
+    )
+
+    if (
+        target_value is None
+        or
+        candidate_value is None
+    ):
+        return 0.0
+
+    ratio = (
+        min(
+            target_value,
+            candidate_value
+        )
+        /
+        max(
+            target_value,
+            candidate_value
+        )
+    )
+
+    # Za duża różnica wartości.
+    if ratio < 0.78:
+        return 0.0
+
+    score = ratio
+
+    # Karta tego samego producenta jest
+    # lepszym porównaniem rynku wtórnego.
+
+    if (
+        gpu_vendor(target)
+        ==
+        gpu_vendor(candidate)
+    ):
+
+        score += 0.03
+
+    else:
+
+        # Cross-brand zostawiamy,
+        # ale lekko obniżamy confidence.
+
+        score -= 0.04
+
+    # Nieidentyczna GPU nigdy nie dostaje 1.0
+
+    score = min(
+        score,
+        0.97
+    )
+
+    return max(
+        0,
+        score
+    )
+
+
+# ============================================================
+# CAŁY PC — SIMILARITY
+# ============================================================
+
+def pc_similarity(
+    target_cpu,
+    target_gpu,
+    target_ram,
+
+    candidate_cpu,
+    candidate_gpu,
+    candidate_ram
+):
+
+    gpu_score = gpu_similarity(
+        target_gpu,
+        candidate_gpu
+    )
+
+    if gpu_score <= 0:
+        return 0.0
+
+    cpu_score = cpu_similarity(
+        target_cpu,
+        candidate_cpu
+    )
+
+    if cpu_score <= 0:
+        return 0.0
+
+    ram_score = ram_similarity(
+        target_ram,
+        candidate_ram
+    )
+
+    # GPU ma największy wpływ.
+    #
+    # GPU 55 pkt
+    # CPU 30 pkt
+    # RAM 10 pkt
+    # Exact GPU bonus 5 pkt
+
+    exact_gpu_bonus = (
+        5
+        if normalize_gpu(target_gpu)
+        ==
+        normalize_gpu(candidate_gpu)
+        else 0
+    )
+
+    score = (
+        55 * gpu_score
+        +
+        30 * cpu_score
+        +
+        10 * ram_score
+        +
+        exact_gpu_bonus
+    )
+
+    return round(
+        min(score, 100),
+        2
+    )
+
+
+# ============================================================
+# NORMALIZACJA CENY
+# ============================================================
+
+def normalize_comparable_price(
+    price,
+
+    target_cpu,
+    candidate_cpu,
+
+    target_gpu,
+    candidate_gpu,
+
+    target_ram,
+    candidate_ram
+):
+
+    # --------------------------------------------------------
+    # CPU
+    # --------------------------------------------------------
+
+    target_cpu_value = (
+        CPU_REFERENCE.get(
+            normalize_cpu(
+                target_cpu
+            )
+        )
+    )
+
+    candidate_cpu_value = (
+        CPU_REFERENCE.get(
+            normalize_cpu(
+                candidate_cpu
+            )
+        )
+    )
+
+    cpu_delta = 0
+
+    if (
+        target_cpu_value is not None
+        and
+        candidate_cpu_value is not None
+    ):
+
+        cpu_delta = (
+            target_cpu_value
+            -
+            candidate_cpu_value
+        )
+
+    # --------------------------------------------------------
+    # GPU
+    # --------------------------------------------------------
+
+    target_gpu_value = (
+        gpu_reference(
+            target_gpu
+        )
+    )
+
+    candidate_gpu_value = (
+        gpu_reference(
+            candidate_gpu
+        )
+    )
+
+    gpu_delta = 0
+
+    if (
+        target_gpu_value is not None
+        and
+        candidate_gpu_value is not None
+    ):
+
+        gpu_delta = (
+            target_gpu_value
+            -
+            candidate_gpu_value
+        )
+
+    # Bezpiecznik.
+    #
+    # Similar GPU i tak są filtrowane ratio,
+    # ale nie chcemy absurdalnej korekty.
+
+    gpu_delta = max(
+        -600,
+        min(
+            600,
+            gpu_delta
+        )
+    )
+
+    # --------------------------------------------------------
+    # RAM
+    # --------------------------------------------------------
+
+    ram_delta = (
+        ram_reference(
+            target_ram
+        )
+        -
+        ram_reference(
+            candidate_ram
+        )
+    )
+
+    # --------------------------------------------------------
+    # FINAL
+    # --------------------------------------------------------
+
+    adjusted = (
+        price
+        +
+        cpu_delta
+        +
+        gpu_delta
+        +
+        ram_delta
+    )
+
+    return max(
+        500,
+        round(adjusted)
+    )
+
+
+# ============================================================
+# POBIERANIE PORÓWNAŃ
+# ============================================================
+
+def find_similar_pcs_v2(
+    cpu,
+    gpu,
+    ram,
+
+    max_age_days=30,
+
+    min_score=78,
+
+    limit=40
+):
+
+    cutoff = (
+        datetime.now()
+        -
+        timedelta(
+            days=max_age_days
+        )
+    ).isoformat(
+        timespec="seconds"
+    )
+
+    with connect() as conn:
+
+        rows = conn.execute("""
+            SELECT
+                offer_id,
+                title,
+                url,
+
+                price,
+
+                cpu,
+                gpu,
+                ram,
+
+                first_seen,
+                last_seen,
+
+                active,
+                inactive_since,
+
+                first_price,
+                lowest_price,
+                highest_price,
+
+                seen_count,
+                price_changes
+
+            FROM market_offers
+
+            WHERE
+                price IS NOT NULL
+
+                AND
+                last_seen >= ?
+        """, (
+            cutoff,
+        )).fetchall()
+
+    results = []
+
+    for row in rows:
+
+        score = pc_similarity(
+            cpu,
+            gpu,
+            ram,
+
+            row["cpu"],
+            row["gpu"],
+            row["ram"]
+        )
+
+        if score < min_score:
+            continue
+
+        adjusted_price = (
+            normalize_comparable_price(
+                row["price"],
+
+                cpu,
+                row["cpu"],
+
+                gpu,
+                row["gpu"],
+
+                ram,
+                row["ram"]
+            )
+        )
+
+        result = {
+            "offer_id":
+                row["offer_id"],
+
+            "cpu":
+                row["cpu"],
+
+            "gpu":
+                row["gpu"],
+
+            "ram":
+                row["ram"],
+
+            "original_price":
+                row["price"],
+
+            "adjusted_price":
+                adjusted_price,
+
+            "similarity":
+                score,
+
+            "gpu_similarity":
+                round(
+                    gpu_similarity(
+                        gpu,
+                        row["gpu"]
+                    )
+                    * 100,
+                    1
+                ),
+
+            "exact_gpu":
+                (
+                    normalize_gpu(gpu)
+                    ==
+                    normalize_gpu(
+                        row["gpu"]
+                    )
+                ),
+
+            "active":
+                row["active"],
+
+            "market_weight":
+                round(
+                    market_weight(
+                        row
+                    ),
+                    3
+                ),
+
+            "url":
+                row["url"]
+        }
+
+        results.append(
+            result
+        )
+
+    results.sort(
+        key=lambda x: (
+            x["similarity"],
+            x["market_weight"]
+        ),
+        reverse=True
+    )
+
+    return results[
+        :limit
+    ]
+
+
+# ============================================================
+# STATYSTYKI
+# ============================================================
+
+def similar_market_stats_v2(
+    cpu,
+    gpu,
+    ram
+):
+
+    comparables = (
+        find_similar_pcs_v2(
+            cpu,
+            gpu,
+            ram
+        )
+    )
+
+    if not comparables:
+
+        return {
+            "samples": 0,
+
+            "exact_gpu_samples": 0,
+            "neighbor_gpu_samples": 0,
+
+            "avg_similarity": None,
+
+            "p25": None,
+            "median": None,
+
+            "weighted_p20": None,
+            "weighted_p25": None,
+
+            "quick_sale": None,
+
+            "confidence": "BRAK",
+
+            "comparables": []
+        }
+
+    prices = sorted(
+        item[
+            "adjusted_price"
+        ]
+        for item
+        in comparables
+    )
+
+    exact_gpu_samples = sum(
+        1
+        for item
+        in comparables
+        if item[
+            "exact_gpu"
+        ]
+    )
+
+    neighbor_gpu_samples = (
+        len(comparables)
+        -
+        exact_gpu_samples
+    )
+
+    # --------------------------------------------------------
+    # ZWYKŁE PERCENTYLE
+    # --------------------------------------------------------
+
+    def percentile(
+        values,
+        p
+    ):
+
+        if len(values) == 1:
+            return float(
+                values[0]
+            )
+
+        index = (
+            len(values) - 1
+        ) * p
+
+        lower = int(
+            index
+        )
+
+        upper = min(
+            lower + 1,
+            len(values) - 1
+        )
+
+        fraction = (
+            index - lower
+        )
+
+        return (
+            values[lower]
+            +
+            (
+                values[upper]
+                -
+                values[lower]
+            )
+            * fraction
+        )
+
+    p25 = percentile(
+        prices,
+        0.25
+    )
+
+    median = (
+        statistics.median(
+            prices
+        )
+    )
+
+    # --------------------------------------------------------
+    # WAGI
+    # --------------------------------------------------------
+
+    weighted = []
+
+    for item in comparables:
+
+        similarity_weight = (
+            item[
+                "similarity"
+            ]
+            / 100
+        )
+
+        # Sąsiednia GPU dostaje dodatkowo
+        # trochę mniejszą wagę.
+
+        gpu_type_weight = (
+            1.0
+            if item[
+                "exact_gpu"
+            ]
+            else 0.82
+        )
+
+        weight = (
+            item[
+                "market_weight"
+            ]
+            *
+            similarity_weight
+            *
+            gpu_type_weight
+        )
+
+        weighted.append(
+            (
+                item[
+                    "adjusted_price"
+                ],
+                weight
+            )
+        )
+
+    weighted_p20 = (
+        weighted_percentile(
+            weighted,
+            0.20
+        )
+    )
+
+    weighted_p25 = (
+        weighted_percentile(
+            weighted,
+            0.25
+        )
+    )
+
+    # --------------------------------------------------------
+    # QUICK SALE
+    # --------------------------------------------------------
+
+    base = min(
+        value
+        for value in [
+            weighted_p20,
+            weighted_p25
+        ]
+        if value is not None
+    )
+
+    quick_sale = round(
+        base * 0.90
+    )
+
+    avg_similarity = (
+        sum(
+            item[
+                "similarity"
+            ]
+            for item
+            in comparables
+        )
+        /
+        len(comparables)
+    )
+
+    samples = len(
+        comparables
+    )
+
+    # --------------------------------------------------------
+    # CONFIDENCE
+    # --------------------------------------------------------
+
+    if (
+        samples >= 20
+        and
+        exact_gpu_samples >= 5
+        and
+        avg_similarity >= 88
+    ):
+
+        confidence = (
+            "BARDZO WYSOKI"
+        )
+
+    elif (
+        samples >= 12
+        and
+        exact_gpu_samples >= 3
+        and
+        avg_similarity >= 86
+    ):
+
+        confidence = (
+            "WYSOKI"
+        )
+
+    elif (
+        samples >= 7
+        and
+        avg_similarity >= 84
+    ):
+
+        confidence = (
+            "ŚREDNI"
+        )
+
+    elif samples >= 3:
+
+        confidence = (
+            "NISKI"
+        )
+
+    else:
+
+        confidence = (
+            "BARDZO NISKI"
+        )
+
+    return {
+        "samples":
+            samples,
+
+        "exact_gpu_samples":
+            exact_gpu_samples,
+
+        "neighbor_gpu_samples":
+            neighbor_gpu_samples,
+
+        "avg_similarity":
+            round(
+                avg_similarity,
+                1
+            ),
+
+        "p25":
+            round(p25),
+
+        "median":
+            round(median),
+
+        "weighted_p20":
+            round(
+                weighted_p20
+            ),
+
+        "weighted_p25":
+            round(
+                weighted_p25
+            ),
+
+        "quick_sale":
+            quick_sale,
+
+        "confidence":
+            confidence,
+
+        "comparables":
+            comparables
+    }
+
+
+# ============================================================
+# DEBUG
+# ============================================================
+
+if __name__ == "__main__":
+
+    tests = [
+        (
+            "Ryzen 5 3600",
+            "RTX 3060",
+            16
+        ),
+
+        (
+            "Ryzen 5 5600",
+            "RTX 3060 Ti",
+            16
+        ),
+
+        (
+            "i5-12400F",
+            "RTX 4060",
+            16
+        ),
+
+        (
+            "Ryzen 5 5600",
+            "RX 6700 XT",
+            16
+        ),
+    ]
+
+    for cpu, gpu, ram in tests:
+
+        print()
+        print("=" * 90)
+
+        print(
+            f"{cpu} + "
+            f"{gpu} + "
+            f"{ram} GB"
+        )
+
+        result = (
+            similar_market_stats_v2(
+                cpu,
+                gpu,
+                ram
+            )
+        )
+
+        print(
+            f"Próbek:              "
+            f"{result['samples']}"
+        )
+
+        print(
+            f"Exact GPU:           "
+            f"{result['exact_gpu_samples']}"
+        )
+
+        print(
+            f"Neighbor GPU:        "
+            f"{result['neighbor_gpu_samples']}"
+        )
+
+        print(
+            f"Średnia podobność:   "
+            f"{result['avg_similarity']}"
+        )
+
+        print(
+            f"P25:                 "
+            f"{result['p25']}"
+        )
+
+        print(
+            f"Mediana:             "
+            f"{result['median']}"
+        )
+
+        print(
+            f"Weighted P20:        "
+            f"{result['weighted_p20']}"
+        )
+
+        print(
+            f"Weighted P25:        "
+            f"{result['weighted_p25']}"
+        )
+
+        print(
+            f"Quick sale:          "
+            f"{result['quick_sale']}"
+        )
+
+        print(
+            f"Confidence:          "
+            f"{result['confidence']}"
+        )
+
+        print()
+
+        for item in (
+            result[
+                "comparables"
+            ][:15]
+        ):
+
+            gpu_type = (
+                "EXACT"
+                if item[
+                    "exact_gpu"
+                ]
+                else "NEIGH"
+            )
+
+            print(
+                f"{item['similarity']:>6}% | "
+                f"{gpu_type:<5} | "
+                f"GPU {item['gpu_similarity']:>5}% | "
+                f"{item['cpu']} | "
+                f"{item['gpu']} | "
+                f"{item['ram']} GB | "
+                f"{item['original_price']} "
+                f"-> "
+                f"{item['adjusted_price']} zł"
+            )

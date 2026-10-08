@@ -1,0 +1,182 @@
+import json
+import re
+
+
+JSON_STRING = r'"(?:\\.|[^"\\])*"'
+
+
+def decode_json_string(value):
+    if not value:
+        return None
+
+    try:
+        return json.loads(value)
+    except Exception:
+        return None
+
+
+def extract_from_script(script):
+    data = {}
+
+    # Pełny opis
+    m = re.search(
+        rf'"redacted_description":\{{"text":({JSON_STRING})\}}',
+        script,
+        re.S,
+    )
+
+    if m:
+        data["description"] = decode_json_string(
+            m.group(1)
+        )
+
+    # Tytuł
+    m = re.search(
+        rf'"marketplace_listing_title":({JSON_STRING})',
+        script,
+        re.S,
+    )
+
+    if m:
+        data["title"] = decode_json_string(
+            m.group(1)
+        )
+
+    # Lokalizacja
+    m = re.search(
+        rf'"location_text":\{{"text":({JSON_STRING})\}}',
+        script,
+        re.S,
+    )
+
+    if m:
+        data["location"] = decode_json_string(
+            m.group(1)
+        )
+
+    # Cena
+    m = re.search(
+        r'"listing_price":\{.*?"amount":"([0-9.]+)"',
+        script,
+        re.S,
+    )
+
+    if m:
+        try:
+            data["price"] = int(
+                float(m.group(1))
+            )
+        except ValueError:
+            data["price"] = None
+
+    # Stara cena
+    m = re.search(
+        rf'"strikethrough_price":\{{.*?"formattedAmountWithoutDecimals":({JSON_STRING})',
+        script,
+        re.S,
+    )
+
+    if m:
+        raw = decode_json_string(
+            m.group(1)
+        )
+
+        if raw:
+            digits = re.sub(
+                r"[^\d]",
+                "",
+                raw
+            )
+
+            data["old_price"] = (
+                int(digits)
+                if digits
+                else None
+            )
+
+    # Data dodania
+    m = re.search(
+        r'"creation_time":(\d+)',
+        script
+    )
+
+    if m:
+        data["creation_time"] = int(
+            m.group(1)
+        )
+
+    # Typ dostawy
+    m = re.search(
+        r'"delivery_types":(\[[^\]]*\])',
+        script,
+        re.S,
+    )
+
+    if m:
+        try:
+            data["delivery_types"] = json.loads(
+                m.group(1)
+            )
+        except Exception:
+            data["delivery_types"] = []
+
+    # Czy oferta aktywna
+    m = re.search(
+        r'"is_live":(true|false)',
+        script
+    )
+
+    if m:
+        data["is_live"] = (
+            m.group(1) == "true"
+        )
+
+    # Czy sprzedana
+    m = re.search(
+        r'"is_sold":(true|false)',
+        script
+    )
+
+    if m:
+        data["is_sold"] = (
+            m.group(1) == "true"
+        )
+
+    return data
+
+
+def extract_detail_metadata(page):
+
+    scripts = page.locator("script")
+
+    best = {}
+
+    for i in range(scripts.count()):
+
+        try:
+            text = scripts.nth(i).inner_text()
+        except Exception:
+            continue
+
+        if (
+            '"redacted_description"' not in text
+            or
+            '"listing_price"' not in text
+        ):
+            continue
+
+        data = extract_from_script(
+            text
+        )
+
+        # Wybieramy blok, który faktycznie zawiera opis
+        # i cenę konkretnej oferty.
+        if (
+            data.get("description")
+            and
+            data.get("price") is not None
+        ):
+            best = data
+            break
+
+    return best

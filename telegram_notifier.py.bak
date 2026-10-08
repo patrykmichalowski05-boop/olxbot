@@ -1,0 +1,661 @@
+import html
+import os
+
+import requests
+
+from dotenv import load_dotenv
+
+
+load_dotenv(
+    "/opt/olx-bot/.env"
+)
+
+
+BOT_TOKEN = os.getenv(
+    "TELEGRAM_BOT_TOKEN"
+)
+
+CHAT_ID = os.getenv(
+    "TELEGRAM_CHAT_ID"
+)
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def esc(value):
+
+    if value is None:
+        return "brak"
+
+    return html.escape(
+        str(value)
+    )
+
+
+def money(value):
+
+    if value is None:
+        return "brak"
+
+    try:
+
+        value = int(
+            round(
+                float(value)
+            )
+        )
+
+        return (
+            f"{value:,}"
+            .replace(",", " ")
+            + " zł"
+        )
+
+    except Exception:
+
+        return (
+            esc(value)
+            + " zł"
+        )
+
+
+def translate_confidence(value):
+
+    value = str(
+        value or ""
+    ).upper()
+
+    translations = {
+        "VERY_LOW":
+            "bardzo niska",
+
+        "BARDZO NISKI":
+            "bardzo niska",
+
+        "LOW":
+            "niska",
+
+        "NISKI":
+            "niska",
+
+        "MEDIUM":
+            "średnia",
+
+        "ŚREDNI":
+            "średnia",
+
+        "HIGH":
+            "wysoka",
+
+        "WYSOKI":
+            "wysoka",
+
+        "VERY_HIGH":
+            "bardzo wysoka",
+    }
+
+    return translations.get(
+        value,
+        value.lower()
+        if value
+        else "brak"
+    )
+
+
+def translate_condition(value):
+
+    value = str(
+        value or ""
+    ).lower()
+
+    translations = {
+        "excellent":
+            "bardzo dobry",
+
+        "very_good":
+            "bardzo dobry",
+
+        "good":
+            "dobry",
+
+        "average":
+            "przeciętny",
+
+        "fair":
+            "przeciętny",
+
+        "risky":
+            "ryzykowny",
+
+        "bad":
+            "zły",
+
+        "poor":
+            "zły",
+
+        "unavailable":
+            "brak analizy",
+    }
+
+    return translations.get(
+        value,
+        value
+        if value
+        else "brak"
+    )
+
+
+def translate_mode(value):
+
+    value = str(
+        value or ""
+    ).upper()
+
+    if value == "LOCAL":
+        return "Kórnik + okolica"
+
+    if value == "POLSKA":
+        return "Cała Polska"
+
+    return value or "brak"
+
+
+def translate_trigger(value):
+
+    value = str(
+        value or ""
+    ).upper()
+
+    translations = {
+        "NEW":
+            "Nowe ogłoszenie",
+
+        "PRICE_DROP":
+            "Obniżka ceny",
+
+        "BUNDLE_DISCOVERY":
+            "Wykryty zestaw / setup",
+
+        "BUNDLE_PRICE_DROP":
+            "Obniżka ceny zestawu",
+
+        "TEST_QUEUE":
+            "Test",
+    }
+
+    return translations.get(
+        value,
+        value or "brak"
+    )
+
+
+def translate_source(value):
+
+    value = str(
+        value or ""
+    ).upper()
+
+    translations = {
+        "STATIC":
+            "wycena statyczna",
+
+        "MARKET":
+            "dane rynkowe",
+
+        "MARKET+STATIC":
+            "rynek + wycena statyczna",
+
+        "MARKET+SIMILAR+STATIC":
+            "rynek + podobne oferty + wycena statyczna",
+
+        "NEIGHBOR+STATIC":
+            "podobne karty graficzne + wycena statyczna",
+
+        "LOW_EXACT+MARKET_V3":
+            "mało identycznych ofert + rynek",
+
+        "MARKET_V3":
+            "dane rynkowe V3",
+    }
+
+    return translations.get(
+        value,
+        value or "brak"
+    )
+
+
+def disk_text(disks):
+
+    if not disks:
+        return "brak danych"
+
+    if isinstance(
+        disks,
+        (list, tuple)
+    ):
+
+        return ", ".join(
+            esc(x)
+            for x in disks
+        )
+
+    return esc(disks)
+
+
+# ============================================================
+# BASIC MESSAGE
+# ============================================================
+
+def send_message(message):
+
+    if not BOT_TOKEN:
+
+        print(
+            "[TELEGRAM] Brak TELEGRAM_BOT_TOKEN"
+        )
+
+        return False
+
+    if not CHAT_ID:
+
+        print(
+            "[TELEGRAM] Brak TELEGRAM_CHAT_ID"
+        )
+
+        return False
+
+    url = (
+        "https://api.telegram.org/bot"
+        + BOT_TOKEN
+        + "/sendMessage"
+    )
+
+    payload = {
+        "chat_id":
+            CHAT_ID,
+
+        "text":
+            message,
+
+        "parse_mode":
+            "HTML",
+
+        "disable_web_page_preview":
+            True,
+    }
+
+    try:
+
+        response = requests.post(
+            url,
+            data=payload,
+            timeout=15,
+        )
+
+    except Exception as e:
+
+        print(
+            "[TELEGRAM] Błąd połączenia:",
+            e
+        )
+
+        return False
+
+    if not response.ok:
+
+        print(
+            "[TELEGRAM] Błąd API:",
+            response.status_code,
+            response.text[:500],
+        )
+
+        return False
+
+    return True
+
+
+# ============================================================
+# FLIP ALERT
+# ============================================================
+
+def send_flip_alert(
+    details,
+    valuation,
+    mode,
+    offer_url,
+):
+
+    details = details or {}
+    valuation = valuation or {}
+
+    profit = valuation.get(
+        "profit"
+    )
+
+    hot = bool(
+        valuation.get(
+            "hot"
+        )
+    )
+
+    bundle = bool(
+        valuation.get(
+            "bundle_detected"
+        )
+    )
+
+    pickup = bool(
+        valuation.get(
+            "bundle_pickup_override"
+        )
+    )
+
+    trigger = details.get(
+        "_trigger"
+    )
+
+    # ========================================================
+    # HEADER
+    # ========================================================
+
+    if bundle and hot:
+
+        header = (
+            "MOCNA OKAZJA — ZESTAW / SETUP"
+        )
+
+    elif bundle:
+
+        header = (
+            "OKAZJA — ZESTAW / SETUP"
+        )
+
+    elif hot:
+
+        header = (
+            "MOCNA OKAZJA — KOMPUTER"
+        )
+
+    else:
+
+        header = (
+            "DOBRY FLIP — KOMPUTER"
+        )
+
+    message = (
+        f"<b>{header}</b>\n\n"
+    )
+
+    # ========================================================
+    # PODSTAWOWE
+    # ========================================================
+
+    message += (
+        f"<b>{esc(details.get('title'))}</b>\n\n"
+
+        f"<b>Typ wykrycia:</b> "
+        f"{esc(translate_trigger(trigger))}\n"
+
+        f"<b>Obszar:</b> "
+        f"{esc(translate_mode(mode))}\n"
+    )
+
+    if pickup:
+
+        message += (
+            "<b>Odbiór:</b> "
+            "osobisty — brak Przesyłki OLX\n"
+        )
+
+    message += "\n"
+
+    # ========================================================
+    # SPECYFIKACJA
+    # ========================================================
+
+    message += (
+        "<b>SPECYFIKACJA</b>\n"
+
+        f"Procesor: "
+        f"<b>{esc(details.get('cpu'))}</b>\n"
+
+        f"Karta graficzna: "
+        f"<b>{esc(details.get('gpu'))}</b>\n"
+
+        f"Pamięć RAM: "
+        f"<b>{esc(details.get('ram'))} GB</b>\n"
+
+        f"Dyski: "
+        f"{disk_text(details.get('disks'))}\n\n"
+    )
+
+    # ========================================================
+    # FINANSE
+    # ========================================================
+
+    message += (
+        "<b>WYCENA</b>\n"
+
+        f"Cena zakupu: "
+        f"<b>{money(details.get('price'))}</b>\n"
+
+        f"Szacowana szybka sprzedaż: "
+        f"<b>{money(valuation.get('quick_sale'))}</b>\n"
+
+        f"Łączny koszt zakupu: "
+        f"{money(valuation.get('total_cost'))}\n"
+
+        f"Szacowany zysk: "
+        f"<b>{money(profit)}</b>\n"
+    )
+
+    # ========================================================
+    # BUNDLE
+    # ========================================================
+
+    if bundle:
+
+        message += "\n<b>ZESTAW / DODATKI</b>\n"
+
+        message += (
+            f"Wartość samego PC: "
+            f"{money(valuation.get('bundle_pc_quick_sale'))}\n"
+
+            f"Wartość dodatków: "
+            f"<b>{money(valuation.get('bundle_accessory_value'))}</b>\n"
+        )
+
+        items = valuation.get(
+            "bundle_items"
+        ) or []
+
+        for item in items:
+
+            message += (
+                "• "
+                f"{esc(item.get('label'))}: "
+                f"{money(item.get('quick_value'))}\n"
+            )
+
+    # ========================================================
+    # ŹRÓDŁA WYCENY
+    # ========================================================
+
+    message += "\n<b>WIARYGODNOŚĆ WYCENY</b>\n"
+
+    message += (
+        f"Źródło: "
+        f"{esc(translate_source(valuation.get('valuation_source')))}\n"
+
+        f"Pewność: "
+        f"{esc(translate_confidence(valuation.get('confidence')))}\n"
+    )
+
+    exact_samples = valuation.get(
+        "exact_samples"
+    )
+
+    similar_samples = valuation.get(
+        "similar_samples"
+    )
+
+    neighbor_samples = valuation.get(
+        "neighbor_samples"
+    )
+
+    market_samples = valuation.get(
+        "market_samples"
+    )
+
+    if exact_samples is not None:
+
+        message += (
+            f"Identyczne oferty: "
+            f"{esc(exact_samples)}\n"
+        )
+
+    if similar_samples is not None:
+
+        message += (
+            f"Podobne oferty: "
+            f"{esc(similar_samples)}\n"
+        )
+
+    if neighbor_samples is not None:
+
+        message += (
+            f"Oferty z podobnym GPU: "
+            f"{esc(neighbor_samples)}\n"
+        )
+
+    if market_samples is not None:
+
+        message += (
+            f"Próbek rynkowych: "
+            f"{esc(market_samples)}\n"
+        )
+
+    # ========================================================
+    # AI
+    # ========================================================
+
+    ai_condition = valuation.get(
+        "ai_condition"
+    )
+
+    ai_adjustment = valuation.get(
+        "ai_adjustment_percent"
+    )
+
+    ai_confidence = valuation.get(
+        "ai_confidence"
+    )
+
+    ai_issues = (
+        valuation.get(
+            "ai_issues"
+        )
+        or []
+    )
+
+    ai_missing = (
+        valuation.get(
+            "ai_missing_info"
+        )
+        or []
+    )
+
+    ai_summary = valuation.get(
+        "ai_summary"
+    )
+
+    message += "\n<b>ANALIZA STANU I RYZYKA</b>\n"
+
+    message += (
+        f"Stan: "
+        f"{esc(translate_condition(ai_condition))}\n"
+    )
+
+    if ai_adjustment is not None:
+
+        message += (
+            f"Korekta wyceny: "
+            f"{esc(ai_adjustment)}%\n"
+        )
+
+    if ai_confidence is not None:
+
+        try:
+
+            confidence_value = (
+                f"{float(ai_confidence) * 100:.0f}%"
+            )
+
+        except Exception:
+
+            confidence_value = str(
+                ai_confidence
+            )
+
+        message += (
+            f"Pewność analizy: "
+            f"{esc(confidence_value)}\n"
+        )
+
+    if ai_issues:
+
+        message += "\n<b>Wykryte ryzyka:</b>\n"
+
+        for issue in ai_issues:
+
+            message += (
+                f"• {esc(issue)}\n"
+            )
+
+    if ai_missing:
+
+        message += "\n<b>Brakujące informacje:</b>\n"
+
+        for item in ai_missing:
+
+            message += (
+                f"• {esc(item)}\n"
+            )
+
+    if ai_summary:
+
+        message += (
+            "\n<b>Podsumowanie AI:</b>\n"
+            f"{esc(ai_summary)}\n"
+        )
+
+    # ========================================================
+    # FLAGS
+    # ========================================================
+
+    if details.get(
+        "_spec_ai_used"
+    ):
+
+        message += (
+            "\n<b>Uwaga:</b> "
+            "część specyfikacji została "
+            "uzupełniona przez AI.\n"
+        )
+
+    # ========================================================
+    # LINK
+    # ========================================================
+
+    message += (
+        "\n"
+        f'<a href="{esc(offer_url)}">'
+        "Otwórz ogłoszenie OLX"
+        "</a>"
+    )
+
+    return send_message(
+        message
+    )

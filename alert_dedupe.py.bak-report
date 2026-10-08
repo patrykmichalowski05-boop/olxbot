@@ -1,0 +1,275 @@
+import hashlib
+import re
+import sqlite3
+from datetime import datetime
+
+
+DB_FILE = "/opt/olx-bot/alert_history.db"
+
+
+def init_db():
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            offer_key TEXT NOT NULL,
+            price INTEGER,
+            title TEXT,
+            url TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS
+        idx_alert_offer_price
+        ON alerts(
+            offer_key,
+            price
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def normalize_price(value):
+
+    try:
+
+        return int(
+            round(
+                float(value)
+            )
+        )
+
+    except Exception:
+
+        return None
+
+
+def make_offer_key(
+    details,
+    offer_url,
+):
+
+    details = (
+        details
+        or {}
+    )
+
+    url = str(
+        offer_url
+        or ""
+    )
+
+    # OLX ID, np. ID1abcXYZ
+    match = re.search(
+        r"\bID[A-Za-z0-9]+\b",
+        url,
+        re.IGNORECASE,
+    )
+
+    if match:
+
+        return (
+            "OLX:"
+            +
+            match.group(0).upper()
+        )
+
+    # Usuwamy query string.
+    if url:
+
+        clean_url = (
+            url.split(
+                "?",
+                1,
+            )[0]
+            .rstrip("/")
+            .lower()
+        )
+
+        digest = hashlib.sha256(
+            clean_url.encode(
+                "utf-8"
+            )
+        ).hexdigest()[:24]
+
+        return (
+            "URL:"
+            +
+            digest
+        )
+
+    # Ostateczny fallback.
+    title = str(
+        details.get(
+            "title"
+        )
+        or ""
+    ).lower()
+
+    digest = hashlib.sha256(
+        title.encode(
+            "utf-8"
+        )
+    ).hexdigest()[:24]
+
+    return (
+        "TITLE:"
+        +
+        digest
+    )
+
+
+def already_sent(
+    details,
+    offer_url,
+):
+
+    init_db()
+
+    offer_key = make_offer_key(
+        details,
+        offer_url,
+    )
+
+    price = normalize_price(
+        (
+            details
+            or {}
+        ).get(
+            "price"
+        )
+    )
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    row = conn.execute("""
+        SELECT id
+        FROM alerts
+
+        WHERE
+            offer_key = ?
+            AND (
+                price = ?
+                OR (
+                    price IS NULL
+                    AND ? IS NULL
+                )
+            )
+
+        LIMIT 1
+    """, (
+        offer_key,
+        price,
+        price,
+    )).fetchone()
+
+    conn.close()
+
+    return (
+        row is not None
+    )
+
+
+def record_alert(
+    details,
+    offer_url,
+):
+
+    init_db()
+
+    details = (
+        details
+        or {}
+    )
+
+    offer_key = make_offer_key(
+        details,
+        offer_url,
+    )
+
+    price = normalize_price(
+        details.get(
+            "price"
+        )
+    )
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    conn.execute("""
+        INSERT INTO alerts (
+            offer_key,
+            price,
+            title,
+            url,
+            created_at
+        )
+
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        offer_key,
+        price,
+        str(
+            details.get(
+                "title"
+            )
+            or ""
+        ),
+        str(
+            offer_url
+            or ""
+        ),
+        datetime.now().isoformat(
+            timespec="seconds"
+        ),
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def stats():
+
+    init_db()
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    total = conn.execute("""
+        SELECT COUNT(*)
+        FROM alerts
+    """).fetchone()[0]
+
+    offers = conn.execute("""
+        SELECT COUNT(
+            DISTINCT offer_key
+        )
+        FROM alerts
+    """).fetchone()[0]
+
+    conn.close()
+
+    return {
+        "alerts": total,
+        "offers": offers,
+    }
+
+
+if __name__ == "__main__":
+
+    print(
+        "ALERT HISTORY:",
+        stats()
+    )

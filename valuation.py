@@ -1,0 +1,665 @@
+import re
+
+from market_stats import get_cpu_gpu_stats
+
+
+# ============================================================
+# FALLBACKOWE CENY PODZESPOŁÓW
+#
+# Są używane tylko wtedy, gdy market.db nie ma jeszcze
+# wystarczającej liczby podobnych komputerów.
+# ============================================================
+
+CPU_VALUES = {
+    # INTEL 9 GEN
+    "I5-9400": 180,
+    "I5-9400F": 180,
+    "I5-9500": 200,
+    "I5-9600K": 230,
+
+    "I7-9700": 300,
+    "I7-9700F": 290,
+    "I7-9700K": 330,
+
+    "I9-9900K": 450,
+
+    # INTEL 10 GEN
+    "I5-10400": 250,
+    "I5-10400F": 240,
+    "I5-10600K": 290,
+
+    "I7-10700": 350,
+    "I7-10700F": 340,
+    "I7-10700K": 380,
+
+    # INTEL 11 GEN
+    "I5-11400": 300,
+    "I5-11400F": 290,
+    "I5-11600K": 340,
+
+    "I7-11700": 410,
+    "I7-11700F": 400,
+
+    # INTEL 12 GEN
+    "I5-12400": 430,
+    "I5-12400F": 400,
+    "I5-12600K": 550,
+    "I5-12600KF": 530,
+
+    "I7-12700": 650,
+    "I7-12700F": 620,
+
+    # INTEL 13 GEN
+    "I5-13400": 600,
+    "I5-13400F": 570,
+    "I5-13600K": 800,
+    "I5-13600KF": 760,
+
+    "I7-13700": 900,
+    "I7-13700F": 850,
+
+    # INTEL 14 GEN
+    "I5-14400": 650,
+    "I5-14400F": 620,
+    "I5-14600K": 850,
+    "I5-14600KF": 810,
+    "I9-14900KF": 1500,
+
+    # AMD
+    "RYZEN 5 3600": 250,
+    "RYZEN 5 3600X": 270,
+    "RYZEN 7 3700X": 350,
+
+    "RYZEN 5 5500": 270,
+    "RYZEN 5 5600": 350,
+    "RYZEN 5 5600X": 380,
+
+    "RYZEN 7 5700X": 450,
+    "RYZEN 7 5700X3D": 650,
+    "RYZEN 7 5800X": 500,
+    "RYZEN 7 5800X3D": 800,
+    "RYZEN 9 5950X": 700,
+
+    "RYZEN 5 7500F": 500,
+    "RYZEN 5 7600": 600,
+    "RYZEN 5 7600X": 650,
+
+    "RYZEN 7 7700": 850,
+    "RYZEN 7 7700X": 900,
+    "RYZEN 7 7800X3D": 1250,
+}
+
+
+GPU_VALUES = {
+    "GTX 1650": 300,
+    "GTX 1660": 350,
+    "GTX 1660 SUPER": 400,
+    "GTX 1660 TI": 420,
+
+    "RTX 2060": 500,
+    "RTX 2060 SUPER": 580,
+
+    "RTX 2070": 570,
+    "RTX 2070 SUPER": 650,
+
+    "RTX 2080": 700,
+    "RTX 2080 SUPER": 750,
+    "RTX 2080 TI": 850,
+
+    "RTX 3050": 500,
+
+    "RTX 3060": 850,
+    "RTX 3060 TI": 950,
+
+    "RTX 3070": 1050,
+    "RTX 3070 TI": 1150,
+
+    "RTX 3080": 1300,
+    "RTX 3080 TI": 1500,
+
+    "RTX 4060": 1000,
+    "RTX 4060 TI": 1250,
+
+    "RTX 4070": 1700,
+    "RTX 4070 SUPER": 2000,
+    "RTX 4080": 2800,
+
+    "RTX 5060": 1350,
+    "RTX 5060 TI": 1750,
+    "RTX 5070": 2400,
+
+    # AMD RX 5000
+    "RX 5600 XT": 400,
+    "RX 5700": 450,
+    "RX 5700 XT": 500,
+
+    # AMD RX 6000
+    "RX 6600": 600,
+    "RX 6600 XT": 700,
+    "RX 6650 XT": 750,
+
+    "RX 6700 XT": 900,
+    "RX 6750 XT": 1000,
+
+    "RX 7600": 850,
+    "RX 7700 XT": 1350,
+    "RX 7800 XT": 1700,
+}
+
+
+# ============================================================
+# NORMALIZACJA
+# ============================================================
+
+def normalize_cpu(cpu):
+
+    if not cpu:
+        return None
+
+    cpu = (
+        cpu
+        .upper()
+        .strip()
+        .replace("AMD ", "")
+        .replace("INTEL ", "")
+        .replace("CORE ", "")
+    )
+
+    cpu = re.sub(
+        r"\s+",
+        " ",
+        cpu
+    )
+
+    return cpu
+
+
+def normalize_gpu(gpu):
+
+    if not gpu:
+        return None
+
+    gpu = (
+        gpu
+        .upper()
+        .strip()
+        .replace("NVIDIA ", "")
+        .replace("GEFORCE ", "")
+        .replace("RADEON ", "")
+    )
+
+    gpu = re.sub(
+        r"\s+",
+        " ",
+        gpu
+    )
+
+    return gpu
+
+
+# ============================================================
+# RAM
+# ============================================================
+
+def ram_value(ram):
+
+    if not ram:
+        return 0
+
+    if ram >= 64:
+        return 300
+
+    if ram >= 32:
+        return 200
+
+    if ram >= 16:
+        return 120
+
+    return 0
+
+
+# ============================================================
+# DYSKI
+# ============================================================
+
+def disk_value(disks):
+
+    if not disks:
+        return 0
+
+    value = 0
+
+    capacities_seen = set()
+
+    for disk in disks:
+
+        disk = disk.upper()
+
+        match = re.search(
+            r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(GB|TB)\b",
+            disk
+        )
+
+        if not match:
+            continue
+
+        size = float(match.group(1).replace(",", "."))
+
+        unit = (
+            match.group(2)
+        )
+
+        if unit == "TB":
+            gb = size * 1000
+        else:
+            gb = size
+
+        # normalizacja pojemności
+
+        if 900 <= gb <= 1100:
+            gb = 1000
+
+        elif 450 <= gb <= 550:
+            gb = 500
+
+        elif 230 <= gb <= 280:
+            gb = 250
+
+        elif 1800 <= gb <= 2200:
+            gb = 2000
+
+        disk_type = (
+            "HDD"
+            if "HDD" in disk
+            else "SSD"
+        )
+
+        key = (
+            disk_type,
+            gb
+        )
+
+        if key in capacities_seen:
+            continue
+
+        capacities_seen.add(
+            key
+        )
+
+        if disk_type == "HDD":
+
+            if gb >= 2000:
+                value += 100
+
+            elif gb >= 1000:
+                value += 70
+
+            elif gb >= 500:
+                value += 40
+
+        else:
+
+            if gb >= 2000:
+                value += 250
+
+            elif gb >= 1000:
+                value += 160
+
+            elif gb >= 500:
+                value += 100
+
+            elif gb >= 250:
+                value += 60
+
+    return value
+
+
+# ============================================================
+# STARA WYCENA — FALLBACK
+# ============================================================
+
+def static_valuation(details):
+
+    cpu = normalize_cpu(details.get("cpu"))
+    gpu = normalize_gpu(details.get("gpu"))
+
+    cpu_price = CPU_VALUES.get(cpu)
+    gpu_price = GPU_VALUES.get(gpu)
+
+    if cpu_price is None:
+        return {
+            "ok": False,
+            "reason": f"Brak wyceny CPU: {cpu}"
+        }
+
+    if gpu_price is None:
+        return {
+            "ok": False,
+            "reason": f"Brak wyceny GPU: {gpu}"
+        }
+
+    ram_price = ram_value(details.get("ram"))
+    disks_price = disk_value(details.get("disks", []))
+
+    # Płyta główna + PSU + obudowa + chłodzenie.
+    # Wycena celowo konserwatywna, ponieważ parser
+    # nie zawsze zna dokładne modele tych elementów.
+    other_parts = 450
+
+    component_value = (
+        cpu_price
+        + gpu_price
+        + ram_price
+        + disks_price
+        + other_parts
+    )
+
+    # Kompletny, działający komputer jest zwykle wart
+    # więcej niż konserwatywna suma bazowych komponentów.
+    cpu_gpu_value = cpu_price + gpu_price
+
+    if cpu_gpu_value >= 2000:
+        complete_pc_bonus = 400
+    elif cpu_gpu_value >= 1400:
+        complete_pc_bonus = 350
+    elif cpu_gpu_value >= 1000:
+        complete_pc_bonus = 300
+    else:
+        complete_pc_bonus = 250
+
+    raw_quick_sale = (
+        component_value
+        + complete_pc_bonus
+    )
+
+    # Cena szybkiej sprzedaży.
+    # Zostawiamy 5% marginesu bezpieczeństwa.
+    quick_sale = round(
+        raw_quick_sale * 0.95
+    )
+
+    return {
+        "ok": True,
+        "quick_sale": quick_sale,
+        "raw_quick_sale": raw_quick_sale,
+        "cpu_value": cpu_price,
+        "gpu_value": gpu_price,
+        "ram_value": ram_price,
+        "disk_value": disks_price,
+        "other_parts_value": other_parts,
+        "complete_pc_bonus": complete_pc_bonus,
+        "component_value": component_value
+    }
+
+
+def estimate_flip(
+    details,
+    mode
+):
+
+    purchase_price = (
+        details.get("price")
+    )
+
+    if not purchase_price:
+
+        return {
+            "ok": False,
+            "reason": "Brak ceny zakupu"
+        }
+
+    cpu = (
+        details.get("cpu")
+    )
+
+    gpu = (
+        details.get("gpu")
+    )
+
+    if not cpu:
+
+        return {
+            "ok": False,
+            "reason": "Brak CPU"
+        }
+
+    if not gpu:
+
+        return {
+            "ok": False,
+            "reason": "Brak GPU"
+        }
+
+    # ========================================================
+    # 1. STATIC FALLBACK
+    # ========================================================
+
+    static = static_valuation(
+        details
+    )
+
+    # ========================================================
+    # 2. MARKET.DB
+    # ========================================================
+
+    market = get_cpu_gpu_stats(
+        cpu,
+        gpu,
+        max_age_hours=168
+    )
+
+    samples = market.get(
+        "samples",
+        0
+    )
+
+    market_quick = (
+        market.get(
+            "quick_sale"
+        )
+    )
+
+    source = "STATIC"
+
+    confidence = (
+        "FALLBACK"
+    )
+
+    # ========================================================
+    # 3. WYBÓR CENY
+    # ========================================================
+
+    if (
+        samples >= 5
+        and
+        market_quick
+    ):
+
+        # Przy minimum 5 podobnych PC
+        # rynek jest głównym źródłem.
+
+        quick_sale = (
+            market_quick
+        )
+
+        source = (
+            "MARKET"
+        )
+
+        confidence = (
+            market.get(
+                "confidence"
+            )
+        )
+
+    elif (
+        samples >= 3
+        and
+        market_quick
+        and
+        static.get("ok")
+    ):
+
+        # 3-4 próbki:
+        # rynek 60%
+        # fallback 40%
+
+        quick_sale = round(
+            (
+                market_quick
+                * 0.60
+            )
+            +
+            (
+                static[
+                    "quick_sale"
+                ]
+                * 0.40
+            )
+        )
+
+        source = (
+            "MARKET+STATIC"
+        )
+
+        confidence = (
+            "NISKI"
+        )
+
+    elif static.get("ok"):
+
+        # Za mało danych rynkowych.
+
+        quick_sale = (
+            static[
+                "quick_sale"
+            ]
+        )
+
+        source = (
+            "STATIC"
+        )
+
+        confidence = (
+            "FALLBACK"
+        )
+
+    else:
+
+        return {
+            "ok": False,
+            "reason":
+                static.get(
+                    "reason",
+                    "Brak wyceny"
+                )
+        }
+
+    # ========================================================
+    # KOSZTY
+    # ========================================================
+
+    service_reserve = 100
+
+    shipping_cost = (
+        50
+        if mode == "POLSKA"
+        else 0
+    )
+
+    total_cost = (
+        purchase_price
+        + service_reserve
+        + shipping_cost
+    )
+
+    profit = (
+        quick_sale
+        - total_cost
+    )
+
+    return {
+        "ok": True,
+
+        "purchase_price":
+            purchase_price,
+
+        "quick_sale":
+            round(
+                quick_sale
+            ),
+
+        "profit":
+            round(
+                profit
+            ),
+
+        "total_cost":
+            total_cost,
+
+        "shipping_cost":
+            shipping_cost,
+
+        "service_reserve":
+            service_reserve,
+
+        "profitable":
+            profit >= 400,
+
+        "hot":
+            profit >= 700,
+
+        # informacje o źródle wyceny
+
+        "valuation_source":
+            source,
+
+        "confidence":
+            confidence,
+
+        "market_samples":
+            samples,
+
+        "market_min":
+            market.get("min"),
+
+        "market_p25":
+            market.get("p25"),
+
+        "market_median":
+            market.get("median"),
+
+        "market_p75":
+            market.get("p75"),
+
+        # fallback
+
+        "static_quick_sale":
+            (
+                static.get(
+                    "quick_sale"
+                )
+                if static.get("ok")
+                else None
+            ),
+
+        "cpu_value":
+            static.get(
+                "cpu_value"
+            ),
+
+        "gpu_value":
+            static.get(
+                "gpu_value"
+            ),
+
+        "ram_value":
+            static.get(
+                "ram_value"
+            ),
+
+        "disk_value":
+            static.get(
+                "disk_value"
+            ),
+    }

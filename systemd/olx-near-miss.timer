@@ -1,0 +1,11 @@
+[Unit]
+Description=OLX Flip Hunter Almost Deals Timer
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=2h
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,251 @@
+import sqlite3
+
+from datetime import (
+    datetime,
+    date,
+)
+
+
+DB_FILE = "/opt/olx-bot/deal_crm.db"
+
+
+def connect():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = connect()
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS sale_listings (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            offer_key TEXT NOT NULL UNIQUE,
+
+            alert_id INTEGER,
+
+            listed_price REAL NOT NULL,
+
+            platform TEXT,
+
+            listed_at TEXT NOT NULL,
+
+            updated_at TEXT NOT NULL,
+
+            status TEXT NOT NULL
+                DEFAULT 'ACTIVE'
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def mark_listed(
+    offer_key,
+    alert_id,
+    listed_price,
+    platform="OLX",
+):
+    init_db()
+
+    price = float(
+        listed_price
+    )
+
+    if price <= 0:
+        raise ValueError(
+            "Nieprawidłowa cena"
+        )
+
+    now = datetime.now().isoformat(
+        timespec="seconds"
+    )
+
+    conn = connect()
+
+    conn.execute("""
+        INSERT INTO sale_listings (
+
+            offer_key,
+            alert_id,
+
+            listed_price,
+            platform,
+
+            listed_at,
+            updated_at,
+
+            status
+        )
+
+        VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')
+
+        ON CONFLICT(offer_key)
+
+        DO UPDATE SET
+
+            alert_id = excluded.alert_id,
+
+            listed_price =
+                excluded.listed_price,
+
+            platform =
+                excluded.platform,
+
+            updated_at =
+                excluded.updated_at,
+
+            status = 'ACTIVE'
+    """, (
+        offer_key,
+        alert_id,
+        price,
+        platform,
+        now,
+        now,
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def get_listing(
+    offer_key,
+):
+    init_db()
+
+    conn = connect()
+
+    row = conn.execute("""
+        SELECT *
+        FROM sale_listings
+
+        WHERE offer_key = ?
+    """, (
+        offer_key,
+    )).fetchone()
+
+    conn.close()
+
+    return row
+
+
+def days_listed(
+    listing,
+):
+    if not listing:
+        return 0
+
+    raw = listing["listed_at"]
+
+    try:
+        listed = datetime.fromisoformat(
+            raw
+        ).date()
+
+    except Exception:
+        return 0
+
+    return max(
+        0,
+        (
+            date.today()
+            - listed
+        ).days,
+    )
+
+
+def price_advice(
+    listing,
+    minimum_price=None,
+):
+    if not listing:
+
+        return {
+            "days": 0,
+            "status": "NOT_LISTED",
+            "label": "Jeszcze niewystawiony",
+            "suggested_price": None,
+            "discount": 0,
+        }
+
+
+    days = days_listed(
+        listing
+    )
+
+    current = float(
+        listing["listed_price"]
+    )
+
+    minimum = (
+        float(minimum_price)
+        if minimum_price is not None
+        else 0
+    )
+
+
+    if days < 7:
+
+        return {
+            "days": days,
+            "status": "HOLD",
+            "label":
+                "ZOSTAW CENĘ — ZA WCZEŚNIE NA OBNIŻKĘ",
+
+            "suggested_price":
+                current,
+
+            "discount":
+                0,
+        }
+
+
+    if days < 14:
+        discount = 100
+
+    elif days < 21:
+        discount = 150
+
+    else:
+        discount = 200
+
+
+    suggested = max(
+        minimum,
+        current - discount,
+    )
+
+
+    if suggested >= current:
+
+        return {
+            "days": days,
+            "status": "MINIMUM",
+            "label":
+                "JESTEŚ JUŻ PRZY CENIE MINIMALNEJ",
+
+            "suggested_price":
+                current,
+
+            "discount":
+                0,
+        }
+
+
+    return {
+        "days": days,
+        "status": "REDUCE",
+        "label":
+            "ROZWAŻ OBNIŻKĘ CENY",
+
+        "suggested_price":
+            suggested,
+
+        "discount":
+            current - suggested,
+    }

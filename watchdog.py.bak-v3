@@ -1,0 +1,1341 @@
+import json
+import os
+import sqlite3
+import subprocess
+
+from datetime import (
+    datetime,
+    timedelta,
+)
+
+from telegram_notifier import (
+    send_message,
+)
+
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+STATE_FILE = (
+    "/opt/olx-bot/watchdog_state.json"
+)
+
+FAST_DB = (
+    "/opt/olx-bot/fast.db"
+)
+
+MARKET_DB = (
+    "/opt/olx-bot/market.db"
+)
+
+
+MAX_PENDING_WARNING = 15
+MAX_PENDING_ERROR = 40
+
+MAX_FAILED_WARNING = 3
+
+STALE_PROCESSING_MINUTES = 30
+
+MARKET_WARNING_HOURS = 18
+MARKET_ERROR_HOURS = 36
+
+
+# ============================================================
+# SYSTEMD UNITS
+# ============================================================
+
+TIMERS = [
+    "olx-fast.timer",
+    "olx-deep.timer",
+    "olx-bundle.timer",
+    "olx-market.timer",
+    "olx-lifecycle.timer",
+    "olx-watchdog.timer",
+]
+
+
+SERVICES = [
+    "olx-fast.service",
+    "olx-deep.service",
+    "olx-bundle.service",
+    "olx-market.service",
+    "olx-lifecycle.service",
+]
+
+
+# ============================================================
+# COMMAND
+# ============================================================
+
+def run_command(args):
+
+    try:
+
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+
+        return (
+            result.returncode,
+            result.stdout.strip(),
+            result.stderr.strip(),
+        )
+
+    except Exception as e:
+
+        return (
+            1,
+            "",
+            str(e),
+        )
+
+
+# ============================================================
+# SYSTEMD
+# ============================================================
+
+def system_state(unit):
+
+    _, stdout, _ = run_command([
+        "systemctl",
+        "is-active",
+        unit,
+    ])
+
+    return (
+        stdout.strip()
+        or
+        "unknown"
+    )
+
+
+def service_result(unit):
+
+    _, stdout, _ = run_command([
+        "systemctl",
+        "show",
+        unit,
+        "--property=Result",
+        "--value",
+    ])
+
+    return (
+        stdout.strip()
+        or
+        "unknown"
+    )
+
+
+# ============================================================
+# JOURNAL
+# ============================================================
+
+def get_logs(
+    unit,
+    since="45 minutes ago",
+):
+
+    code, stdout, _ = run_command([
+        "journalctl",
+        "-u",
+        unit,
+        "--since",
+        since,
+        "--no-pager",
+        "-o",
+        "cat",
+    ])
+
+    if code != 0:
+        return ""
+
+    return stdout
+
+
+# ============================================================
+# FAST QUEUE
+# ============================================================
+
+def queue_stats():
+
+    result = {
+        "pending": 0,
+        "processing": 0,
+        "done": 0,
+        "failed": 0,
+        "stale_processing": 0,
+    }
+
+    if not os.path.exists(
+        FAST_DB
+    ):
+
+        result[
+            "db_error"
+        ] = "fast.db nie istnieje"
+
+        return result
+
+    try:
+
+        conn = sqlite3.connect(
+            FAST_DB
+        )
+
+        conn.row_factory = (
+            sqlite3.Row
+        )
+
+        rows = conn.execute("""
+            SELECT
+                status,
+                COUNT(*) AS cnt
+
+            FROM queue
+
+            GROUP BY status
+        """).fetchall()
+
+        for row in rows:
+
+            key = (
+                str(
+                    row["status"]
+                )
+                .lower()
+            )
+
+            if key in result:
+
+                result[
+                    key
+                ] = row["cnt"]
+
+        cutoff = (
+            datetime.now()
+            -
+            timedelta(
+                minutes=
+                    STALE_PROCESSING_MINUTES
+            )
+        ).isoformat(
+            timespec="seconds"
+        )
+
+        result[
+            "stale_processing"
+        ] = conn.execute("""
+            SELECT COUNT(*)
+
+            FROM queue
+
+            WHERE
+                status = 'PROCESSING'
+                AND updated_at < ?
+        """, (
+            cutoff,
+        )).fetchone()[0]
+
+        conn.close()
+
+    except Exception as e:
+
+        result[
+            "db_error"
+        ] = str(e)
+
+    return result
+
+
+# ============================================================
+# MARKET DB
+# ============================================================
+
+def market_stats():
+
+    result = {
+        "total": 0,
+        "active": 0,
+        "inactive": 0,
+        "price_changes": 0,
+        "last_seen": None,
+        "age_hours": None,
+    }
+
+    if not os.path.exists(
+        MARKET_DB
+    ):
+
+        result[
+            "db_error"
+        ] = "market.db nie istnieje"
+
+        return result
+
+    try:
+
+        conn = sqlite3.connect(
+            MARKET_DB
+        )
+
+        conn.row_factory = (
+            sqlite3.Row
+        )
+
+        row = conn.execute("""
+            SELECT
+                COUNT(*) AS total,
+
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN active = 1
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS active,
+
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN active = 0
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS inactive,
+
+                COALESCE(
+                    SUM(price_changes),
+                    0
+                ) AS price_changes,
+
+                MAX(last_seen)
+                    AS last_seen
+
+            FROM market_offers
+        """).fetchone()
+
+        conn.close()
+
+        if row:
+
+            result[
+                "total"
+            ] = row["total"]
+
+            result[
+                "active"
+            ] = row["active"]
+
+            result[
+                "inactive"
+            ] = row["inactive"]
+
+            result[
+                "price_changes"
+            ] = row["price_changes"]
+
+            result[
+                "last_seen"
+            ] = row["last_seen"]
+
+        # ----------------------------------------------------
+        # AGE
+        # ----------------------------------------------------
+
+        if result[
+            "last_seen"
+        ]:
+
+            try:
+
+                last_seen = (
+                    datetime.fromisoformat(
+                        str(
+                            result[
+                                "last_seen"
+                            ]
+                        )
+                    )
+                )
+
+                age = (
+                    datetime.now()
+                    -
+                    last_seen
+                )
+
+                result[
+                    "age_hours"
+                ] = round(
+                    age.total_seconds()
+                    /
+                    3600,
+                    1,
+                )
+
+            except Exception:
+
+                pass
+
+    except Exception as e:
+
+        result[
+            "db_error"
+        ] = str(e)
+
+    return result
+
+
+# ============================================================
+# STATE
+# ============================================================
+
+def load_state():
+
+    if not os.path.exists(
+        STATE_FILE
+    ):
+
+        return {
+            "status": "UNKNOWN",
+            "signature": None,
+        }
+
+    try:
+
+        with open(
+            STATE_FILE,
+            "r",
+            encoding="utf-8",
+        ) as f:
+
+            return json.load(
+                f
+            )
+
+    except Exception:
+
+        return {
+            "status": "UNKNOWN",
+            "signature": None,
+        }
+
+
+def save_state(
+    status,
+    signature,
+):
+
+    data = {
+        "status":
+            status,
+
+        "signature":
+            signature,
+
+        "updated_at":
+            datetime.now().isoformat(
+                timespec="seconds"
+            ),
+    }
+
+    with open(
+        STATE_FILE,
+        "w",
+        encoding="utf-8",
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+
+# ============================================================
+# ANALYZE
+# ============================================================
+
+def analyze():
+
+    problems = []
+    warnings = []
+
+    # ========================================================
+    # TIMER STATES
+    # ========================================================
+
+    timer_states = {}
+
+    for timer in TIMERS:
+
+        state = system_state(
+            timer
+        )
+
+        timer_states[
+            timer
+        ] = state
+
+        if state != "active":
+
+            problems.append(
+                f"{timer} = {state}"
+            )
+
+    # ========================================================
+    # SERVICES
+    # ========================================================
+
+    service_results = {}
+
+    for service in SERVICES:
+
+        result = service_result(
+            service
+        )
+
+        service_results[
+            service
+        ] = result
+
+        if result == "failed":
+
+            problems.append(
+                f"{service} result=failed"
+            )
+
+    # ========================================================
+    # LOGS
+    # ========================================================
+
+    fast_logs = get_logs(
+        "olx-fast.service",
+        "45 minutes ago",
+    )
+
+    deep_logs = get_logs(
+        "olx-deep.service",
+        "45 minutes ago",
+    )
+
+    bundle_logs = get_logs(
+        "olx-bundle.service",
+        "75 minutes ago",
+    )
+
+    market_logs = get_logs(
+        "olx-market.service",
+        "10 hours ago",
+    )
+
+    lifecycle_logs = get_logs(
+        "olx-lifecycle.service",
+        "36 hours ago",
+    )
+
+    # ========================================================
+    # HEARTBEATS
+    # ========================================================
+
+    fast_scans = fast_logs.count(
+        "FAST RADAR GOTOWY"
+    )
+
+    deep_runs = deep_logs.count(
+        "DEEP WORKER GOTOWY"
+    )
+
+    bundle_runs = bundle_logs.count(
+        "BUNDLE FAST RADAR — KONIEC"
+    )
+
+    market_runs = market_logs.count(
+        "MARKET COLLECTOR V2 — KONIEC"
+    )
+
+    # FAST i DEEP muszą działać stale.
+
+    if fast_scans == 0:
+
+        problems.append(
+            "Brak FAST RADAR GOTOWY "
+            "w ostatnich 45 minutach"
+        )
+
+    if deep_runs == 0:
+
+        problems.append(
+            "Brak DEEP WORKER GOTOWY "
+            "w ostatnich 45 minutach"
+        )
+
+    # Bundle i Market są rzadsze.
+    # Brak heartbeat nie oznacza od razu awarii,
+    # ponieważ timer mógł zostać dopiero uruchomiony.
+
+    # ========================================================
+    # ERRORS
+    # ========================================================
+
+    fast_tracebacks = (
+        fast_logs.lower().count(
+            "traceback"
+        )
+    )
+
+    deep_tracebacks = (
+        deep_logs.lower().count(
+            "traceback"
+        )
+    )
+
+    bundle_tracebacks = (
+        bundle_logs.lower().count(
+            "traceback"
+        )
+    )
+
+    market_tracebacks = (
+        market_logs.lower().count(
+            "traceback"
+        )
+    )
+
+    lifecycle_tracebacks = (
+        lifecycle_logs.lower().count(
+            "traceback"
+        )
+    )
+
+    fast_errors = (
+        fast_tracebacks
+        +
+        fast_logs.count(
+            "[FAST FEED ERROR]"
+        )
+    )
+
+    deep_errors = (
+        deep_tracebacks
+        +
+        deep_logs.count(
+            "[DEEP EXCEPTION]"
+        )
+    )
+
+    bundle_errors = (
+        bundle_tracebacks
+        +
+        bundle_logs.count(
+            "[BUNDLE SEARCH ERROR]"
+        )
+    )
+
+    bundle_card_errors = (
+        bundle_logs.count(
+            "[BUNDLE CARD ERROR"
+        )
+    )
+
+    market_errors = (
+        market_tracebacks
+        +
+        market_logs.count(
+            "[SEARCH ERROR]"
+        )
+        +
+        market_logs.count(
+            "[DETAIL ERROR]"
+        )
+    )
+
+    if fast_tracebacks > 0:
+
+        problems.append(
+            f"FAST Traceback: "
+            f"{fast_tracebacks}"
+        )
+
+    if deep_tracebacks > 0:
+
+        problems.append(
+            f"DEEP Traceback: "
+            f"{deep_tracebacks}"
+        )
+
+    if bundle_tracebacks > 0:
+
+        problems.append(
+            f"BUNDLE Traceback: "
+            f"{bundle_tracebacks}"
+        )
+
+    if market_tracebacks > 0:
+
+        problems.append(
+            f"MARKET Traceback: "
+            f"{market_tracebacks}"
+        )
+
+    if lifecycle_tracebacks > 0:
+
+        problems.append(
+            f"LIFECYCLE Traceback: "
+            f"{lifecycle_tracebacks}"
+        )
+
+    if fast_errors > 0:
+
+        warnings.append(
+            f"FAST errors: "
+            f"{fast_errors}"
+        )
+
+    if deep_errors > 0:
+
+        warnings.append(
+            f"DEEP errors: "
+            f"{deep_errors}"
+        )
+
+    if bundle_errors > 0:
+
+        warnings.append(
+            f"BUNDLE errors: "
+            f"{bundle_errors}"
+        )
+
+    if bundle_card_errors >= 5:
+
+        warnings.append(
+            f"BUNDLE card errors: "
+            f"{bundle_card_errors}"
+        )
+
+    if market_errors >= 5:
+
+        warnings.append(
+            f"MARKET errors: "
+            f"{market_errors}"
+        )
+
+    # ========================================================
+    # QUEUE
+    # ========================================================
+
+    queue = queue_stats()
+
+    if "db_error" in queue:
+
+        problems.append(
+            "FAST DB error: "
+            + queue["db_error"]
+        )
+
+    pending = queue.get(
+        "pending",
+        0,
+    )
+
+    failed = queue.get(
+        "failed",
+        0,
+    )
+
+    stale = queue.get(
+        "stale_processing",
+        0,
+    )
+
+    if pending >= MAX_PENDING_ERROR:
+
+        problems.append(
+            f"Queue PENDING = "
+            f"{pending}"
+        )
+
+    elif pending >= MAX_PENDING_WARNING:
+
+        warnings.append(
+            f"Queue PENDING = "
+            f"{pending}"
+        )
+
+    if failed >= MAX_FAILED_WARNING:
+
+        warnings.append(
+            f"Queue FAILED = "
+            f"{failed}"
+        )
+
+    if stale > 0:
+
+        warnings.append(
+            f"Stale PROCESSING = "
+            f"{stale}"
+        )
+
+    # ========================================================
+    # MARKET DB
+    # ========================================================
+
+    market = market_stats()
+
+    if "db_error" in market:
+
+        problems.append(
+            "MARKET DB error: "
+            + market["db_error"]
+        )
+
+    market_age = (
+        market.get(
+            "age_hours"
+        )
+    )
+
+    if market_age is not None:
+
+        if (
+            market_age
+            >= MARKET_ERROR_HOURS
+        ):
+
+            problems.append(
+                "MARKET DB nieaktualna: "
+                f"{market_age}h"
+            )
+
+        elif (
+            market_age
+            >= MARKET_WARNING_HOURS
+        ):
+
+            warnings.append(
+                "MARKET DB stara: "
+                f"{market_age}h"
+            )
+
+    # ========================================================
+    # RESULT
+    # ========================================================
+
+    return {
+        "timer_states":
+            timer_states,
+
+        "service_results":
+            service_results,
+
+        "fast_scans":
+            fast_scans,
+
+        "deep_runs":
+            deep_runs,
+
+        "bundle_runs":
+            bundle_runs,
+
+        "market_runs":
+            market_runs,
+
+        "fast_errors":
+            fast_errors,
+
+        "deep_errors":
+            deep_errors,
+
+        "bundle_errors":
+            bundle_errors,
+
+        "market_errors":
+            market_errors,
+
+        "queue":
+            queue,
+
+        "market":
+            market,
+
+        "problems":
+            problems,
+
+        "warnings":
+            warnings,
+    }
+
+
+# ============================================================
+# AUTO RECOVERY
+# ============================================================
+
+def auto_recovery(
+    result,
+):
+
+    actions = []
+
+    # ========================================================
+    # TIMERS
+    # ========================================================
+
+    for timer, state in (
+        result[
+            "timer_states"
+        ].items()
+    ):
+
+        if state == "active":
+            continue
+
+        run_command([
+            "systemctl",
+            "restart",
+            timer,
+        ])
+
+        actions.append(
+            f"restart {timer}"
+        )
+
+    # ========================================================
+    # FAILED SERVICES
+    # ========================================================
+
+    for service, service_result_value in (
+        result[
+            "service_results"
+        ].items()
+    ):
+
+        if service_result_value != "failed":
+            continue
+
+        run_command([
+            "systemctl",
+            "reset-failed",
+            service,
+        ])
+
+        actions.append(
+            f"reset-failed {service}"
+        )
+
+    return actions
+
+
+# ============================================================
+# SIGNATURE
+# ============================================================
+
+def make_signature(
+    result,
+):
+
+    data = {
+        "problems":
+            sorted(
+                result[
+                    "problems"
+                ]
+            ),
+
+        "warnings":
+            sorted(
+                result[
+                    "warnings"
+                ]
+            ),
+    }
+
+    return json.dumps(
+        data,
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+
+
+# ============================================================
+# TELEGRAM ERROR
+# ============================================================
+
+def problem_alert(
+    result,
+    recovery,
+):
+
+    queue = result[
+        "queue"
+    ]
+
+    market = result[
+        "market"
+    ]
+
+    message = (
+        "<b>OLX FLIP HUNTER — WATCHDOG</b>\n\n"
+        "<b>Wykryto problem z działaniem bota</b>\n\n"
+    )
+
+    for item in (
+        result["problems"]
+    ):
+
+        message += (
+            f"• {item}\n"
+        )
+
+    if result[
+        "warnings"
+    ]:
+
+        message += (
+            "\n<b>Ostrzeżenia</b>\n"
+        )
+
+        for item in (
+            result["warnings"]
+        ):
+
+            message += (
+                f"• {item}\n"
+            )
+
+    message += (
+        "\n<b>AKTYWNOŚĆ MODUŁÓW</b>\n"
+        f"Skan nowych komputerów / 45 min: "
+        f"{result['fast_scans']}\n"
+
+        f"Pełna analiza ofert / 15 min: "
+        f"{result['deep_runs']}\n"
+
+        f"Skan zestawów / 75 min: "
+        f"{result['bundle_runs']}\n"
+
+        f"Aktualizacja rynku / 10 h: "
+        f"{result['market_runs']}\n"
+    )
+
+    message += (
+        "\n<b>KOLEJKA ANALIZY</b>\n"
+
+        f"Oczekujące: "
+        f"{queue.get('pending', 0)}\n"
+
+        f"Aktualnie analizowane: "
+        f"{queue.get('processing', 0)}\n"
+
+        f"Zablokowane: "
+        f"{queue.get('stale_processing', 0)}\n"
+
+        f"Zakończone: "
+        f"{queue.get('done', 0)}\n"
+
+        f"Nieudane: "
+        f"{queue.get('failed', 0)}\n"
+    )
+
+    message += (
+        "\n<b>BAZA RYNKOWA</b>\n"
+
+        f"Liczba ofert: "
+        f"{market.get('total', 0)}\n"
+
+        f"Aktywne oferty: "
+        f"{market.get('active', 0)}\n"
+
+        f"Nieaktywne oferty: "
+        f"{market.get('inactive', 0)}\n"
+
+        f"Zarejestrowane zmiany cen: "
+        f"{market.get('price_changes', 0)}\n"
+
+        f"Dane zaktualizowano: "
+        f"{market.get('age_hours')} h"
+    )
+
+    if recovery:
+
+        message += (
+            "\n\n<b>AUTOMATYCZNA NAPRAWA</b>\n"
+        )
+
+        for action in recovery:
+
+            message += (
+                f"• {action}\n"
+            )
+
+    send_message(
+        message
+    )
+
+
+# ============================================================
+# RECOVERY ALERT
+# ============================================================
+
+def recovery_alert(
+    result,
+):
+
+    queue = result[
+        "queue"
+    ]
+
+    send_message(
+        "<b>OLX FLIP HUNTER — SYSTEM NAPRAWIONY</b>\n\n"
+        "Wszystkie moduły ponownie działają prawidłowo.\n\n"
+
+        f"FAST: "
+        f"{result['fast_scans']}\n"
+
+        f"DEEP: "
+        f"{result['deep_runs']}\n"
+
+        f"BUNDLE: "
+        f"{result['bundle_runs']}\n"
+
+        f"MARKET: "
+        f"{result['market_runs']}\n"
+
+        f"Oferty oczekujące: "
+        f"{queue.get('pending', 0)}"
+    )
+
+
+# ============================================================
+# PRINT STATUS
+# ============================================================
+
+def print_status(
+    result,
+):
+
+    print()
+
+    print(
+        "=" * 72
+    )
+
+    print(
+        "OLX FLIP HUNTER — WATCHDOG V3"
+    )
+
+    print(
+        "=" * 72
+    )
+
+    print()
+
+    print(
+        "TIMERY:"
+    )
+
+    for timer, state in (
+        result[
+            "timer_states"
+        ].items()
+    ):
+
+        print(
+            f"{timer:24} "
+            f"{state}"
+        )
+
+    print()
+
+    print(
+        "HEARTBEAT:"
+    )
+
+    print(
+        "FAST:   ",
+        result["fast_scans"]
+    )
+
+    print(
+        "DEEP:   ",
+        result["deep_runs"]
+    )
+
+    print(
+        "BUNDLE: ",
+        result["bundle_runs"]
+    )
+
+    print(
+        "MARKET: ",
+        result["market_runs"]
+    )
+
+    print()
+
+    print(
+        "QUEUE:",
+        result["queue"]
+    )
+
+    print()
+
+    print(
+        "MARKET:",
+        result["market"]
+    )
+
+    if result[
+        "problems"
+    ]:
+
+        print()
+
+        print(
+            "PROBLEMY:"
+        )
+
+        for item in (
+            result["problems"]
+        ):
+
+            print(
+                " -",
+                item
+            )
+
+    if result[
+        "warnings"
+    ]:
+
+        print()
+
+        print(
+            "OSTRZEŻENIA:"
+        )
+
+        for item in (
+            result["warnings"]
+        ):
+
+            print(
+                " -",
+                item
+            )
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    result = analyze()
+
+    print_status(
+        result
+    )
+
+    state = load_state()
+
+    signature = make_signature(
+        result
+    )
+
+    # ========================================================
+    # ERROR
+    # ========================================================
+
+    if result[
+        "problems"
+    ]:
+
+        recovery = auto_recovery(
+            result
+        )
+
+        if (
+            state.get(
+                "status"
+            )
+            != "ERROR"
+            or
+            state.get(
+                "signature"
+            )
+            != signature
+        ):
+
+            problem_alert(
+                result,
+                recovery
+            )
+
+        save_state(
+            "ERROR",
+            signature,
+        )
+
+        print()
+
+        print(
+            "STATUS: ERROR"
+        )
+
+        return
+
+    # ========================================================
+    # RECOVERY
+    # ========================================================
+
+    if state.get(
+        "status"
+    ) == "ERROR":
+
+        recovery_alert(
+            result
+        )
+
+    # ========================================================
+    # WARNING / OK
+    # ========================================================
+
+    if result[
+        "warnings"
+    ]:
+
+        status = (
+            "WARNING"
+        )
+
+    else:
+
+        status = (
+            "OK"
+        )
+
+    save_state(
+        status,
+        signature,
+    )
+
+    print()
+
+    print(
+        "STATUS:",
+        status
+    )
+
+
+if __name__ == "__main__":
+
+    main()

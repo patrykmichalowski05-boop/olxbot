@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Oferty — Flip Hunter{% endblock %}
+{% block heading %}Oferty{% endblock %}
+{% block content %}
+<div class="panel filter-panel">
+    <form method="get" class="filter-grid">
+        <label>Szukaj<input name="q" value="{{ filters.q }}" placeholder="RTX 3070, Ryzen 5600..."></label>
+        <label>Źródło<select name="source"><option value="ALL">Wszystkie</option><option value="OLX" {{ 'selected' if filters.source == 'OLX' else '' }}>OLX</option><option value="FACEBOOK" {{ 'selected' if filters.source == 'FACEBOOK' else '' }}>Facebook</option></select></label>
+        <label>Decyzja<select name="decision"><option value="ALL">Wszystkie</option>{% for value in ['BUY_NOW','BUY','NEGOTIATE','WATCH','SKIP'] %}<option value="{{ value }}" {{ 'selected' if filters.decision == value else '' }}>{{ value }}</option>{% endfor %}</select></label>
+        <label>Min. score<input type="number" min="0" max="100" name="min_score" value="{{ filters.min_score }}" placeholder="0"></label>
+        <button class="btn btn-primary filter-submit" type="submit">Filtruj</button>
+        <a class="btn btn-ghost filter-submit" href="{{ url_for('main.offers') }}">Wyczyść</a>
+    </form>
+</div>
+
+<div class="panel">
+    <div class="panel-head"><div><h2>Alerty</h2><p>{{ items|length }} rekordów po filtrach</p></div></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Score</th><th>Oferta</th><th>Źródło</th><th>Cena</th><th>Quick sale</th><th>Zysk</th><th>ROI</th><th>Decyzja</th></tr></thead>
+            <tbody>
+            {% for item in items %}
+            <tr class="clickable-row" data-href="{{ url_for('main.offer', alert_id=item.id) }}">
+                <td><span class="score score-{{ 'hot' if (item.score or 0) >= 85 else 'good' if (item.score or 0) >= 75 else 'mid' }}">{{ item.score or 0 }}</span></td>
+                <td><strong>{{ item.title }}</strong><div class="subtle">{{ item.created_at }} · {{ item.trigger or 'NEW' }}</div></td>
+                <td><span class="source source-{{ item.source|lower }}">{{ item.source }}</span></td>
+                <td>{{ money(item.price) }}</td><td>{{ money(item.quick_sale) }}</td><td class="profit">{{ money(item.profit) }}</td><td>{{ percent(item.roi) }}</td>
+                <td><span class="decision decision-{{ item.decision|lower }}">{{ item.decision }}</span></td>
+            </tr>
+            {% else %}<tr><td class="empty" colspan="8">Brak ofert spełniających filtry.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

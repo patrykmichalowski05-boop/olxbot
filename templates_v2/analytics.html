@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Analityka — Flip Hunter{% endblock %}
+{% block heading %}Analityka flipów{% endblock %}
+{% block content %}
+<div class="metric-grid metric-grid-5">
+    <div class="metric-card"><span>Sprzedane</span><strong>{{ data.sold_count }}</strong><small>zamknięte transakcje</small></div>
+    <div class="metric-card"><span>Otwarte</span><strong>{{ data.open_count }}</strong><small>w kapitale</small></div>
+    <div class="metric-card"><span>Zysk zrealizowany</span><strong class="profit">{{ money(data.realized_profit) }}</strong><small>łącznie</small></div>
+    <div class="metric-card"><span>Śr. zysk</span><strong>{{ money(data.avg_profit) }}</strong><small>na sprzedany komputer</small></div>
+    <div class="metric-card"><span>Kapitał otwarty</span><strong>{{ money(data.capital_open) }}</strong><small>prognozowany zysk {{ money(data.predicted_open_profit) }}</small></div>
+</div>
+<div class="layout-1-1">
+<div class="panel"><div class="panel-head"><div><h2>Ostatnie sprzedaże</h2><p>Realne wyniki</p></div></div><div class="table-wrap"><table><thead><tr><th>Komputer</th><th>Zakup</th><th>Sprzedaż</th><th>Koszty</th><th>Zysk</th></tr></thead><tbody>{% for item in data.sold %}<tr><td><strong>{{ item.title }}</strong><div class="subtle">{{ item.sold_at }}</div></td><td>{{ money(item.purchase_price) }}</td><td>{{ money(item.sale_price) }}</td><td>{{ money(item.extra_cost) }}</td><td class="profit">{{ money(item.real_profit) }}</td></tr>{% else %}<tr><td colspan="5" class="empty">Brak sprzedaży.</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="panel"><div class="panel-head"><div><h2>Otwarte flipy</h2><p>Prognoza vs kapitał</p></div></div><div class="table-wrap"><table><thead><tr><th>Komputer</th><th>Zakup</th><th>Prognoza</th><th>Status</th></tr></thead><tbody>{% for item in data.open %}<tr><td><strong>{{ item.title }}</strong><div class="subtle">{{ item.bought_at }}</div></td><td>{{ money(item.purchase_price) }}</td><td class="profit">{{ money(item.predicted_profit) }}</td><td><span class="tag">{{ item.status }}</span></td></tr>{% else %}<tr><td colspan="4" class="empty">Brak otwartych flipów.</td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+{% endblock %}

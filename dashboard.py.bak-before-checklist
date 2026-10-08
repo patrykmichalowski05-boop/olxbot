@@ -1,0 +1,1775 @@
+from flask import redirect as root_redirect
+import sqlite3
+import subprocess
+from datetime import datetime
+
+from flask import (
+    Flask,
+    render_template_string,
+    request,
+    redirect,
+    url_for,
+)
+
+
+from dashboard_analytics import analytics_bp
+
+
+from dashboard_watchlist import watchlist_bp
+
+
+from dashboard_health import health_bp
+
+
+from dashboard_control import control_bp
+
+
+from dashboard_actions import actions_bp
+
+from dashboard_offer import offer_bp
+
+app = Flask(__name__)
+
+app.register_blueprint(offer_bp)
+
+app.register_blueprint(actions_bp)
+
+app.register_blueprint(control_bp)
+
+app.register_blueprint(health_bp)
+
+app.register_blueprint(watchlist_bp)
+
+app.register_blueprint(analytics_bp)
+
+
+FAST_DB = "/opt/olx-bot/fast.db"
+MARKET_DB = "/opt/olx-bot/market.db"
+ALERT_DB = "/opt/olx-bot/alert_history.db"
+FLIP_DB = "/opt/olx-bot/flip_results.db"
+
+
+MODULES = {
+    "FAST": "olx-fast.timer",
+    "DEEP": "olx-deep.timer",
+    "BUNDLE": "olx-bundle.timer",
+    "MARKET": "olx-market.timer",
+    "LIFECYCLE": "olx-lifecycle.timer",
+    "WATCHDOG": "olx-watchdog.timer",
+    "RAPORT": "olx-daily-report.timer",
+    "DASHBOARD": "olx-dashboard.service",
+}
+
+
+# ============================================================
+# DB
+# ============================================================
+
+def connect(database):
+
+    conn = sqlite3.connect(
+        database
+    )
+
+    conn.row_factory = sqlite3.Row
+
+    return conn
+
+
+def rows(
+    database,
+    query,
+    params=(),
+):
+
+    try:
+
+        conn = connect(
+            database
+        )
+
+        result = conn.execute(
+            query,
+            params,
+        ).fetchall()
+
+        conn.close()
+
+        return result
+
+    except Exception as e:
+
+        print(
+            "[DASHBOARD DB ERROR]",
+            database,
+            e,
+        )
+
+        return []
+
+
+def one(
+    database,
+    query,
+    params=(),
+):
+
+    result = rows(
+        database,
+        query,
+        params,
+    )
+
+    if result:
+
+        return result[0]
+
+    return None
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def system_state(unit):
+
+    try:
+
+        result = subprocess.run(
+            [
+                "systemctl",
+                "is-active",
+                unit,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+
+        return (
+            result.stdout.strip()
+            or "unknown"
+        )
+
+    except Exception:
+
+        return "unknown"
+
+
+def to_float(
+    value,
+    default=0,
+):
+
+    try:
+
+        return float(
+            str(value)
+            .replace(",", ".")
+        )
+
+    except Exception:
+
+        return default
+
+
+def money(value):
+
+    try:
+
+        if value is None:
+            return "-"
+
+        number = int(
+            round(
+                float(value)
+            )
+        )
+
+        return (
+            f"{number:,}"
+            .replace(",", " ")
+            + " zł"
+        )
+
+    except Exception:
+
+        return "-"
+
+
+app.jinja_env.filters[
+    "money"
+] = money
+
+
+# ============================================================
+# DASHBOARD
+# ============================================================
+
+HTML = """
+<!doctype html>
+<html lang="pl">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>OLX Flip Hunter</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0d1014;
+    color: #edf0f3;
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+}
+
+.container {
+    max-width: 1450px;
+    margin: auto;
+    padding: 24px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 30px;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+.subtitle {
+    color: #818a94;
+    margin-top: 5px;
+}
+
+.clock {
+    color: #818a94;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(175px, 1fr));
+    gap: 14px;
+}
+
+.card {
+    background: #171b20;
+    border: 1px solid #272d34;
+    border-radius: 14px;
+    padding: 18px;
+}
+
+.label {
+    color: #8d97a2;
+    font-size: 13px;
+}
+
+.value {
+    font-size: 27px;
+    font-weight: 700;
+    margin-top: 7px;
+}
+
+.good {
+    color: #66d98b;
+}
+
+.warn {
+    color: #ffd166;
+}
+
+.bad {
+    color: #ff6b6b;
+}
+
+.section {
+    margin-top: 30px;
+}
+
+.modules {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+}
+
+.module {
+    background: #171b20;
+    border: 1px solid #272d34;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 7px;
+}
+
+.dot-ok {
+    background: #66d98b;
+}
+
+.dot-bad {
+    background: #ff6b6b;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 850px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 11px;
+    border-bottom: 1px solid #292f36;
+    vertical-align: middle;
+}
+
+th {
+    color: #8d97a2;
+    font-size: 12px;
+}
+
+a {
+    color: #74b9ff;
+    text-decoration: none;
+}
+
+.score {
+    display: inline-block;
+    min-width: 54px;
+    text-align: center;
+    padding: 5px 8px;
+    border-radius: 8px;
+    font-weight: 700;
+}
+
+.score-top {
+    background: #402020;
+    color: #ff7474;
+}
+
+.score-hot {
+    background: #403519;
+    color: #ffd166;
+}
+
+.score-good {
+    background: #173a26;
+    color: #6cdb91;
+}
+
+.score-normal {
+    background: #262c33;
+    color: #bac2ca;
+}
+
+input {
+    background: #0e1115;
+    color: #fff;
+    border: 1px solid #303841;
+    border-radius: 7px;
+    padding: 7px;
+    width: 95px;
+}
+
+button {
+    background: #2563eb;
+    border: 0;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: .85;
+}
+
+.sell-button {
+    background: #14804a;
+}
+
+.alert {
+    padding: 12px 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.alert-ok {
+    background: #153422;
+    border: 1px solid #245c39;
+}
+
+.alert-error {
+    background: #3a1c1c;
+    border: 1px solid #713434;
+}
+
+small {
+    color: #8d97a2;
+}
+
+@media(max-width: 700px) {
+
+    .container {
+        padding: 12px;
+    }
+
+    .header {
+        display: block;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    .clock {
+        margin-top: 8px;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+<div class="header">
+
+    <div>
+
+        <h1>
+            OLX Flip Hunter
+        </h1>
+
+        <div class="subtitle">
+            Dashboard V3 · LIVE
+            ·
+            <a href="/analytics">
+                📊 Analityka
+            </a>
+        </div>
+
+    </div>
+
+    <div class="clock">
+        {{ now }}
+    </div>
+
+</div>
+
+
+{% if message %}
+
+<div class="alert alert-ok">
+    {{ message }}
+</div>
+
+{% endif %}
+
+
+{% if error %}
+
+<div class="alert alert-error">
+    {{ error }}
+</div>
+
+{% endif %}
+
+
+<div class="modules">
+
+{% for name, state in modules.items() %}
+
+<div class="module">
+
+    {% if state == "active" %}
+
+    <span class="dot dot-ok"></span>
+
+    {% else %}
+
+    <span class="dot dot-bad"></span>
+
+    {% endif %}
+
+    <b>{{ name }}</b>
+
+    <br>
+
+    <small>
+        {{ state }}
+    </small>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+
+<div class="section">
+
+<div class="grid">
+
+<div class="card">
+
+    <div class="label">
+        Queue pending
+    </div>
+
+    <div class="value">
+        {{ queue.pending }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Queue failed
+    </div>
+
+    <div class="
+        value
+        {% if queue.failed > 0 %}
+        bad
+        {% else %}
+        good
+        {% endif %}
+    ">
+        {{ queue.failed }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Market
+    </div>
+
+    <div class="value">
+        {{ market.total }}
+    </div>
+
+    <small>
+        aktywne: {{ market.active }}
+    </small>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Alerty
+    </div>
+
+    <div class="value">
+        {{ alert_count }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Kupione
+    </div>
+
+    <div class="value">
+        {{ open_count }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Sprzedane
+    </div>
+
+    <div class="value">
+        {{ sold_count }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Realny zysk
+    </div>
+
+    <div class="value good">
+        {{ total_profit|money }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Średni zysk / PC
+    </div>
+
+    <div class="value">
+        {{ avg_profit|money }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="label">
+        Trafność wycen
+    </div>
+
+    <div class="value">
+        {% if accuracy is not none %}
+            {{ "%.1f"|format(accuracy) }}%
+        {% else %}
+            -
+        {% endif %}
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+🔥 TOP okazje
+</h2>
+
+<div class="card table-wrap">
+
+<table>
+
+<tr>
+    <th>Score</th>
+    <th>Oferta</th>
+    <th>Cena</th>
+    <th>Zysk</th>
+    <th>ROI</th>
+    <th>OLX</th>
+</tr>
+
+{% for row in top_alerts %}
+
+<tr>
+
+<td>
+
+{% set score = row["score"] or 0 %}
+
+<span class="
+score
+{% if score >= 90 %}
+score-top
+{% elif score >= 80 %}
+score-hot
+{% elif score >= 70 %}
+score-good
+{% else %}
+score-normal
+{% endif %}
+">
+
+{{ score }}
+
+</span>
+
+</td>
+
+<td>
+    {{ row["title"] }}
+</td>
+
+<td>
+    {{ row["price"]|money }}
+</td>
+
+<td class="good">
+    {{ row["profit"]|money }}
+</td>
+
+<td>
+
+{% if row["roi"] is not none %}
+
+{{ "%.0f"|format(row["roi"]) }}%
+
+{% else %}
+
+-
+
+{% endif %}
+
+</td>
+
+<td>
+
+{% if row["url"] %}
+
+<a
+    href="{{ row['url'] }}"
+    target="_blank"
+>
+    otwórz
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+🆕 Najnowsze alerty
+</h2>
+
+<div class="card table-wrap">
+
+<table>
+
+<tr>
+    <th>ID</th>
+    <th>Score</th>
+    <th>Oferta</th>
+    <th>Cena</th>
+    <th>Zysk</th>
+    <th>Akcja</th>
+</tr>
+
+
+{% for row in alerts %}
+
+<tr>
+
+<td>
+    {{ row["id"] }}
+</td>
+
+<td>
+
+{% if row["score"] is not none %}
+
+<b>
+    {{ row["score"] }}/100
+</b>
+
+{% else %}
+
+-
+
+{% endif %}
+
+</td>
+
+<td>
+
+{% if row["url"] %}
+
+<a
+    href="{{ row['url'] }}"
+    target="_blank"
+>
+    {{ row["title"] }}
+</a>
+
+{% else %}
+
+{{ row["title"] }}
+
+{% endif %}
+
+</td>
+
+<td>
+    {{ row["price"]|money }}
+</td>
+
+<td class="good">
+    {{ row["profit"]|money }}
+</td>
+
+<td>
+
+{% if row["id"] not in tracked_alert_ids %}
+
+<form
+    method="post"
+    action="/buy/{{ row['id'] }}"
+>
+
+<input
+    name="purchase_price"
+    type="number"
+    step="1"
+    placeholder="zakup"
+    required
+>
+
+<input
+    name="extra_cost"
+    type="number"
+    step="1"
+    value="0"
+    placeholder="koszty"
+>
+
+<button type="submit">
+    KUPIONY
+</button>
+
+</form>
+
+{% else %}
+
+<span class="good">
+    ✓ śledzony
+</span>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+📦 Kupione / niesprzedane
+</h2>
+
+<div class="card table-wrap">
+
+<table>
+
+<tr>
+    <th>Flip ID</th>
+    <th>Komputer</th>
+    <th>Kupiono</th>
+    <th>Koszty</th>
+    <th>Prognoza</th>
+    <th>Prognozowany zysk</th>
+    <th>Sprzedaż</th>
+</tr>
+
+
+{% for row in open_flips %}
+
+<tr>
+
+<td>
+    {{ row["id"] }}
+</td>
+
+<td>
+    {{ row["title"] }}
+</td>
+
+<td>
+    {{ row["purchase_price"]|money }}
+</td>
+
+<td>
+    {{ row["extra_cost"]|money }}
+</td>
+
+<td>
+    {{ row["predicted_quick_sale"]|money }}
+</td>
+
+<td class="good">
+    {{ row["predicted_profit"]|money }}
+</td>
+
+<td>
+
+<form
+    method="post"
+    action="/sell/{{ row['id'] }}"
+>
+
+<input
+    name="sale_price"
+    type="number"
+    step="1"
+    placeholder="sprzedaż"
+    required
+>
+
+<input
+    name="extra_cost"
+    type="number"
+    step="1"
+    value="{{ row['extra_cost'] or 0 }}"
+>
+
+<button
+    class="sell-button"
+    type="submit"
+>
+    SPRZEDANY
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+💰 Ostatnie sprzedaże
+</h2>
+
+<div class="card table-wrap">
+
+<table>
+
+<tr>
+    <th>Komputer</th>
+    <th>Kupiono</th>
+    <th>Sprzedano</th>
+    <th>Koszty</th>
+    <th>Realny zysk</th>
+    <th>Prognoza</th>
+    <th>Błąd</th>
+</tr>
+
+
+{% for row in sold %}
+
+<tr>
+
+<td>
+    {{ row["title"] }}
+</td>
+
+<td>
+    {{ row["purchase_price"]|money }}
+</td>
+
+<td>
+    {{ row["sale_price"]|money }}
+</td>
+
+<td>
+    {{ row["extra_cost"]|money }}
+</td>
+
+<td class="good">
+    {{ row["real_profit"]|money }}
+</td>
+
+<td>
+    {{ row["predicted_quick_sale"]|money }}
+</td>
+
+<td>
+    {{ row["price_error"]|money }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+setInterval(
+    function () {
+
+        const tag =
+            document.activeElement
+            ? document.activeElement.tagName
+            : "";
+
+        if (
+            tag !== "INPUT"
+            &&
+            tag !== "TEXTAREA"
+        ) {
+
+            window.location.reload();
+
+        }
+
+    },
+    30000
+);
+
+</script>
+
+</body>
+
+</html>
+"""
+
+
+# ============================================================
+# INDEX
+# ============================================================
+
+@app.route("/legacy")
+def index():
+
+    queue_rows = rows(
+        FAST_DB,
+        """
+        SELECT
+            status,
+            COUNT(*) AS count
+
+        FROM queue
+
+        GROUP BY status
+        """
+    )
+
+    queue = {
+        "pending": 0,
+        "processing": 0,
+        "done": 0,
+        "failed": 0,
+    }
+
+    for row in queue_rows:
+
+        key = str(
+            row["status"]
+        ).lower()
+
+        queue[key] = (
+            row["count"]
+        )
+
+
+    market_row = one(
+        MARKET_DB,
+        """
+        SELECT
+            COUNT(*) AS total,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN active = 1
+                        THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS active
+
+        FROM market_offers
+        """
+    )
+
+    market = {
+        "total": 0,
+        "active": 0,
+    }
+
+    if market_row:
+
+        market = dict(
+            market_row
+        )
+
+
+    alerts = rows(
+        ALERT_DB,
+        """
+        SELECT *
+        FROM alerts
+
+        ORDER BY id DESC
+
+        LIMIT 20
+        """
+    )
+
+
+    top_alerts = rows(
+        ALERT_DB,
+        """
+        SELECT *
+        FROM alerts
+
+        WHERE score IS NOT NULL
+
+        ORDER BY
+            score DESC,
+            profit DESC
+
+        LIMIT 10
+        """
+    )
+
+
+    alert_count_row = one(
+        ALERT_DB,
+        """
+        SELECT
+            COUNT(*) AS count
+        FROM alerts
+        """
+    )
+
+    alert_count = (
+        alert_count_row["count"]
+        if alert_count_row
+        else 0
+    )
+
+
+    open_flips = rows(
+        FLIP_DB,
+        """
+        SELECT *
+        FROM flips
+
+        WHERE status = 'BOUGHT'
+
+        ORDER BY id DESC
+        """
+    )
+
+
+    sold = rows(
+        FLIP_DB,
+        """
+        SELECT
+            *,
+
+            (
+                sale_price
+                -
+                purchase_price
+                -
+                COALESCE(
+                    extra_cost,
+                    0
+                )
+            ) AS real_profit,
+
+            (
+                sale_price
+                -
+                predicted_quick_sale
+            ) AS price_error
+
+        FROM flips
+
+        WHERE status = 'SOLD'
+
+        ORDER BY sold_at DESC
+
+        LIMIT 20
+        """
+    )
+
+
+    stats = one(
+        FLIP_DB,
+        """
+        SELECT
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN status = 'BOUGHT'
+                        THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS open_count,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN status = 'SOLD'
+                        THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS sold_count,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN status = 'SOLD'
+                        THEN (
+                            sale_price
+                            -
+                            purchase_price
+                            -
+                            COALESCE(
+                                extra_cost,
+                                0
+                            )
+                        )
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS total_profit
+
+        FROM flips
+        """
+    )
+
+
+    open_count = 0
+    sold_count = 0
+    total_profit = 0
+
+    if stats:
+
+        open_count = (
+            stats["open_count"]
+            or 0
+        )
+
+        sold_count = (
+            stats["sold_count"]
+            or 0
+        )
+
+        total_profit = (
+            stats["total_profit"]
+            or 0
+        )
+
+
+    avg_profit = (
+        total_profit
+        /
+        sold_count
+
+        if sold_count
+        else 0
+    )
+
+
+    accuracy_rows = rows(
+        FLIP_DB,
+        """
+        SELECT
+            sale_price,
+            predicted_quick_sale
+
+        FROM flips
+
+        WHERE
+            status = 'SOLD'
+            AND predicted_quick_sale > 0
+        """
+    )
+
+    errors = []
+
+    for row in accuracy_rows:
+
+        predicted = float(
+            row[
+                "predicted_quick_sale"
+            ]
+        )
+
+        actual = float(
+            row[
+                "sale_price"
+            ]
+        )
+
+        errors.append(
+            abs(
+                actual
+                -
+                predicted
+            )
+            /
+            predicted
+            *
+            100
+        )
+
+
+    accuracy = None
+
+    if errors:
+
+        accuracy = max(
+            0,
+            100
+            -
+            (
+                sum(errors)
+                /
+                len(errors)
+            )
+        )
+
+
+    tracked_rows = rows(
+        FLIP_DB,
+        """
+        SELECT alert_id
+        FROM flips
+
+        WHERE alert_id IS NOT NULL
+        """
+    )
+
+    tracked_alert_ids = {
+        row["alert_id"]
+        for row in tracked_rows
+    }
+
+
+    modules = {
+        name:
+            system_state(
+                unit
+            )
+
+        for name, unit
+        in MODULES.items()
+    }
+
+
+    return render_template_string(
+        HTML,
+
+        queue=queue,
+        market=market,
+
+        alerts=alerts,
+        top_alerts=top_alerts,
+
+        alert_count=alert_count,
+
+        open_flips=open_flips,
+        sold=sold,
+
+        open_count=open_count,
+        sold_count=sold_count,
+
+        total_profit=total_profit,
+        avg_profit=avg_profit,
+
+        accuracy=accuracy,
+
+        tracked_alert_ids=
+            tracked_alert_ids,
+
+        modules=modules,
+
+        now=datetime.now().strftime(
+            "%d.%m.%Y %H:%M:%S"
+        ),
+
+        message=request.args.get(
+            "message"
+        ),
+
+        error=request.args.get(
+            "error"
+        ),
+    )
+
+
+# ============================================================
+# BUY
+# ============================================================
+
+@app.post(
+    "/buy/<int:alert_id>"
+)
+def buy(
+    alert_id,
+):
+
+    purchase_price = to_float(
+        request.form.get(
+            "purchase_price"
+        ),
+        None,
+    )
+
+    extra_cost = to_float(
+        request.form.get(
+            "extra_cost"
+        ),
+        0,
+    )
+
+    if (
+        purchase_price is None
+        or
+        purchase_price <= 0
+    ):
+
+        return redirect(
+            url_for(
+                "index",
+                error="Nieprawidłowa cena zakupu.",
+            )
+        )
+
+
+    alert = one(
+        ALERT_DB,
+        """
+        SELECT *
+        FROM alerts
+
+        WHERE id = ?
+        """,
+        (
+            alert_id,
+        ),
+    )
+
+
+    if alert is None:
+
+        return redirect(
+            url_for(
+                "index",
+                error="Nie znaleziono alertu.",
+            )
+        )
+
+
+    existing = one(
+        FLIP_DB,
+        """
+        SELECT id
+        FROM flips
+
+        WHERE alert_id = ?
+        """,
+        (
+            alert_id,
+        ),
+    )
+
+
+    if existing:
+
+        return redirect(
+            url_for(
+                "index",
+                error="Ta oferta jest już śledzona.",
+            )
+        )
+
+
+    conn = connect(
+        FLIP_DB
+    )
+
+    conn.execute("""
+        INSERT INTO flips (
+
+            alert_id,
+
+            title,
+            url,
+
+            predicted_score,
+            predicted_quick_sale,
+            predicted_profit,
+
+            asking_price,
+            purchase_price,
+
+            extra_cost,
+
+            bought_at,
+
+            status
+        )
+
+        VALUES (
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, 'BOUGHT'
+        )
+    """, (
+
+        alert_id,
+
+        alert["title"],
+        alert["url"],
+
+        alert["score"],
+        alert["quick_sale"],
+        alert["profit"],
+
+        alert["price"],
+        purchase_price,
+
+        extra_cost,
+
+        datetime.now().isoformat(
+            timespec="seconds"
+        ),
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+    return redirect(
+        url_for(
+            "index",
+            message=(
+                "Komputer oznaczony jako KUPIONY."
+            ),
+        )
+    )
+
+
+# ============================================================
+# SELL
+# ============================================================
+
+@app.post(
+    "/sell/<int:flip_id>"
+)
+def sell(
+    flip_id,
+):
+
+    sale_price = to_float(
+        request.form.get(
+            "sale_price"
+        ),
+        None,
+    )
+
+    extra_cost = to_float(
+        request.form.get(
+            "extra_cost"
+        ),
+        0,
+    )
+
+
+    if (
+        sale_price is None
+        or
+        sale_price <= 0
+    ):
+
+        return redirect(
+            url_for(
+                "index",
+                error=(
+                    "Nieprawidłowa cena sprzedaży."
+                ),
+            )
+        )
+
+
+    flip = one(
+        FLIP_DB,
+        """
+        SELECT *
+        FROM flips
+
+        WHERE
+            id = ?
+            AND status = 'BOUGHT'
+        """,
+        (
+            flip_id,
+        ),
+    )
+
+
+    if flip is None:
+
+        return redirect(
+            url_for(
+                "index",
+                error=(
+                    "Nie znaleziono otwartego flipu."
+                ),
+            )
+        )
+
+
+    conn = connect(
+        FLIP_DB
+    )
+
+    conn.execute("""
+        UPDATE flips
+
+        SET
+            sale_price = ?,
+            extra_cost = ?,
+            sold_at = ?,
+            status = 'SOLD'
+
+        WHERE id = ?
+    """, (
+
+        sale_price,
+        extra_cost,
+
+        datetime.now().isoformat(
+            timespec="seconds"
+        ),
+
+        flip_id,
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+    real_profit = (
+        sale_price
+        -
+        float(
+            flip[
+                "purchase_price"
+            ]
+        )
+        -
+        extra_cost
+    )
+
+
+    return redirect(
+        url_for(
+            "index",
+            message=(
+                "Sprzedaż zapisana. "
+                f"Realny zysk: "
+                f"{money(real_profit)}"
+            ),
+        )
+    )
+
+
+
+# ============================================================
+# ROOT -> CONTROL CENTER
+# ============================================================
+
+@app.route("/")
+def root_control():
+    return root_redirect("/control")
+
+
+# ============================================================
+# START
+# ============================================================
+
+if __name__ == "__main__":
+
+    app.run(
+        host="0.0.0.0",
+        port=8088,
+        debug=False,
+    )

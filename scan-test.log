@@ -1,0 +1,1442 @@
+
+================================================================================
+SKAN: KÓRNIK + 30 KM
+================================================================================
+Ofert w feedzie: 52
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cCzWL
+[LOCAL] Komputer gamingowy RX 5700, i5 10400
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-rx-5700-i5-10400-CID99-ID1cCzWL.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-rx-5700-i5-10400-CID99-ID1cCzWL.html
+[CENA] 1990 zł | źródło: PARSER
+
+[SPECYFIKACJA]
+CPU: i5-10400
+GPU: RX 5700
+RAM: 16
+DYSKI: []
+
+[WYCENA V3]
+Zakup: 1990 zł
+Szybka sprzedaż: 1444 zł
+Koszt razem: 2090 zł
+Zysk: -646 zł
+Źródło: STATIC
+Confidence: FALLBACK
+Static: 1444 zł
+Exact: 0 | quick=None
+Similar same GPU: 0 | quick=None | similarity=None
+Neighbor market: 0 | neighbor GPU=0 | similarity=None
+Neighbor quick raw: None zł
+Neighbor quick protected: None zł
+Neighbor protection: False
+Sanity cap: False | limit=1661
+[ODRZUT PRZED AI] -646 zł < 300 zł
+
+--------------------------------------------------------------------------------
+[NOWA] IDQF5J7
+[LOCAL] Komputer Stacjonarny
+CENA FEED: 350 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-IDQF5J7.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-IDQF5J7.html
+[CENA] 350 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: 4
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: 4
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDfpq
+[LOCAL] Komputer Ryzen 9 5950X / RTX 3060 Ti / 32 GB RAM / SSD 1 TB [prawie nie używany]
+CENA FEED: 5500 zł
+LINK: https://www.olx.pl/d/oferta/komputer-ryzen-9-5950x-rtx-3060-ti-32-gb-ram-ssd-1-tb-prawie-nie-uzywany-CID99-ID1cDfpq.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-ryzen-9-5950x-rtx-3060-ti-32-gb-ram-ssd-1-tb-prawie-nie-uzywany-CID99-ID1cDfpq.html
+[CENA] 5500 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 9 5950X
+GPU: RTX 3060 TI
+RAM: 32
+DYSKI: ['SSD 1 TB']
+[ODRZUT WYCENA] Brak bezpiecznej wyceny statycznej i za mało próbek rynku (1)
+
+--------------------------------------------------------------------------------
+[NOWA] ID17O8xJ
+[LOCAL] Zestaw MSI B250 GAMING M3 + SSD M.2 + Wi-Fi + chłodzenie Intel
+CENA FEED: 800 zł
+LINK: https://www.olx.pl/d/oferta/zestaw-msi-b250-gaming-m3-ssd-m-2-wi-fi-chlodzenie-intel-CID99-ID17O8xJ.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/zestaw-msi-b250-gaming-m3-ssd-m-2-wi-fi-chlodzenie-intel-CID99-ID17O8xJ.html
+[CENA] 800 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cE2eD
+[LOCAL] MSI Genesis GTX 1070 ryzen 5
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/msi-genesis-gtx-1070-ryzen-5-CID99-ID1cE2eD.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/msi-genesis-gtx-1070-ryzen-5-CID99-ID1cE2eD.html
+[CENA] 1100 zł | źródło: PARSER
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 3500X
+GPU: GTX 1070
+RAM: 8
+DYSKI: ['HDD 1 TB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Ryzen 5 3500X
+ - RAM poniżej 16 GB: 8
+
+--------------------------------------------------------------------------------
+[NOWA] ID1bKVcT
+[LOCAL] Apple iMac Pro 8 rdzeni 3,2GHz/32G ram/1T SSD - okazja
+CENA FEED: 4200 zł
+LINK: https://www.olx.pl/d/oferta/apple-imac-pro-8-rdzeni-3-2ghz-32g-ram-1t-ssd-okazja-CID99-ID1bKVcT.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/apple-imac-pro-8-rdzeni-3-2ghz-32g-ram-1t-ssd-okazja-CID99-ID1bKVcT.html
+[CENA] 4200 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: 8 rdzeni, 3,2 GHz | conf=1.0 | dowód=8 rdzeni 3,2GHz
+
+[SPECYFIKACJA]
+CPU: 8 rdzeni, 3,2 GHz
+GPU: None
+RAM: 32
+DYSKI: ['SSD 1 TB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: 8 rdzeni, 3,2 GHz
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cE1xJ
+[LOCAL] Imac apple M1 16/512GB gwarancja apple care
+CENA FEED: 3600 zł
+LINK: https://www.olx.pl/d/oferta/imac-apple-m1-16-512gb-gwarancja-apple-care-CID99-ID1cE1xJ.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/imac-apple-m1-16-512gb-gwarancja-apple-care-CID99-ID1cE1xJ.html
+[CENA] 3600 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+[SPEC AI OK] cpu: Apple M1 | conf=0.95 | dowód=M1
+[SPEC AI OK] ram: 16 | conf=0.9 | dowód=16/512GB
+
+[SPECYFIKACJA]
+CPU: Apple M1
+GPU: None
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Apple M1
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cE1hF
+[LOCAL] Apple iMac 27” 2020 Retina 5K i7 64 GB / 1 TB
+CENA FEED: 4199 zł
+LINK: https://www.olx.pl/d/oferta/apple-imac-27-2020-retina-5k-i7-64-gb-1-tb-CID99-ID1cE1hF.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/apple-imac-27-2020-retina-5k-i7-64-gb-1-tb-CID99-ID1cE1hF.html
+[CENA] 4199 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: i7 | conf=0.99 | dowód=i7
+
+[SPECYFIKACJA]
+CPU: i7
+GPU: None
+RAM: 64
+DYSKI: ['SSD 1 TB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i7
+
+--------------------------------------------------------------------------------
+[NOWA] ID12shd9
+[LOCAL] Komputer gamingowy AMD Phenom II X4 955,Radeon HD5870 Vapor-X,16GB RAM
+CENA FEED: 300 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-amd-phenom-ii-x4-955-radeon-hd5870-vapor-x-16gb-ram-CID99-ID12shd9.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-amd-phenom-ii-x4-955-radeon-hd5870-vapor-x-16gb-ram-CID99-ID12shd9.html
+[CENA] 300 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: AMD Phenom II X4 955 | conf=1.0 | dowód=AMD Phenom II X4 955
+[SPEC AI OK] gpu: Radeon HD 5870 Vapor-X | conf=1.0 | dowód=Radeon HD5870 Vapor-X
+
+[SPECYFIKACJA]
+CPU: AMD Phenom II X4 955
+GPU: Radeon HD 5870 Vapor-X
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: AMD Phenom II X4 955
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDYjV
+[LOCAL] Komputer Ryzen 7 3700X | RX 5700 XT 8GB | 32GB RAM | SSD 512GB + HDD 2TB
+CENA FEED: 3150 zł
+LINK: https://www.olx.pl/d/oferta/komputer-ryzen-7-3700x-rx-5700-xt-8gb-32gb-ram-ssd-512gb-hdd-2tb-CID99-ID1cDYjV.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-ryzen-7-3700x-rx-5700-xt-8gb-32gb-ram-ssd-512gb-hdd-2tb-CID99-ID1cDYjV.html
+[CENA] 3150 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 7 3700X
+GPU: RX 5700 XT
+RAM: 32
+DYSKI: ['HDD 2 TB', 'NVME 512 GB', 'SSD 512 GB']
+[ODRZUT WYCENA] Brak bezpiecznej wyceny statycznej i za mało próbek rynku (0)
+
+--------------------------------------------------------------------------------
+[NOWA] ID1bgcXo
+[LOCAL] Terminal Nexineo Go
+CENA FEED: 600 zł
+LINK: https://www.olx.pl/d/oferta/terminal-nexineo-go-CID99-ID1bgcXo.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/terminal-nexineo-go-CID99-ID1bgcXo.html
+[CENA] 600 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDVBB
+[LOCAL] komputer Apple iMac A1418 1TB, 16GB, Core i5, 21,5"
+CENA FEED: 999 zł
+LINK: https://www.olx.pl/d/oferta/komputer-apple-imac-a1418-1tb-16gb-core-i5-21-5-CID99-ID1cDVBB.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-apple-imac-a1418-1tb-16gb-core-i5-21-5-CID99-ID1cDVBB.html
+[CENA] 999 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: Core i5 | conf=0.95 | dowód=Core i5
+
+[SPECYFIKACJA]
+CPU: Core i5
+GPU: None
+RAM: 16
+DYSKI: ['HDD 1 TB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Core i5
+
+--------------------------------------------------------------------------------
+[NOWA] ID1ce25c
+[LOCAL] Gamingowy komputer z monitorem 16gb ddr4 i3-9100f ssd rx580 8gb
+CENA FEED: 1650 zł
+LINK: https://www.olx.pl/d/oferta/gamingowy-komputer-z-monitorem-16gb-ddr4-i3-9100f-ssd-rx580-8gb-CID99-ID1ce25c.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/gamingowy-komputer-z-monitorem-16gb-ddr4-i3-9100f-ssd-rx580-8gb-CID99-ID1ce25c.html
+[CENA] 1650 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: gpu
+[SPEC AI OK] gpu: RX 580 | conf=1.0 | dowód=rx580 8gb
+
+[BUNDLE DETECTED]
+Score: 4
+Confidence: MEDIUM
+Strong: False
+Dodatki quick value: 400 zł
+  + Monitor ~400 zł [MEDIUM]
+
+[SPECYFIKACJA]
+CPU: i3-9100F
+GPU: RX 580
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i3-9100F
+
+--------------------------------------------------------------------------------
+[NOWA] ID16ZdYz
+[LOCAL] Gotowy do użycia komputer stacjonarny i3/8GB/500GB czytnik kart Zorin
+CENA FEED: 360 zł
+LINK: https://www.olx.pl/d/oferta/gotowy-do-uzycia-komputer-stacjonarny-i3-8gb-500gb-czytnik-kart-zorin-CID99-ID16ZdYz.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/gotowy-do-uzycia-komputer-stacjonarny-i3-8gb-500gb-czytnik-kart-zorin-CID99-ID16ZdYz.html
+[CENA] 360 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: gpu, ram
+[SPEC AI OK] ram: 8 | conf=1.0 | dowód=8GB
+
+[SPECYFIKACJA]
+CPU: i3-4130
+GPU: None
+RAM: 8
+DYSKI: ['HDD 1 GB', 'HDD 500 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i3-4130
+ - RAM poniżej 16 GB: 8
+
+--------------------------------------------------------------------------------
+[NOWA] ID18D0pa
+[LOCAL] Komputer stacjonarny
+CENA FEED: 400 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-ID18D0pa.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-ID18D0pa.html
+[CENA] 400 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cdD8b
+[LOCAL] Asic Bitmain antminer Z11 135k
+CENA FEED: 10000 zł
+LINK: https://www.olx.pl/d/oferta/asic-bitmain-antminer-z11-135k-CID99-ID1cdD8b.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/asic-bitmain-antminer-z11-135k-CID99-ID1cdD8b.html
+[CENA] 10000 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDPSd
+[LOCAL] Komputer Gamingowy i9-14900KF / RTX 5070 / 64GB RAM / 1TB SSD M2 + 2TB HDD
+CENA FEED: 7900 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-i9-14900kf-rtx-5070-64gb-ram-1tb-ssd-m2-2tb-hdd-CID99-ID1cDPSd.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-i9-14900kf-rtx-5070-64gb-ram-1tb-ssd-m2-2tb-hdd-CID99-ID1cDPSd.html
+[CENA] 7900 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i9-14900KF
+GPU: RTX 5070
+RAM: 64
+DYSKI: ['HDD 2 TB', 'NVME 1 TB', 'SSD 1 TB']
+[ODRZUT WYCENA] Brak bezpiecznej wyceny statycznej i za mało próbek rynku (0)
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDOQ6
+[LOCAL] Full zestaw gamingowy z monitorem
+CENA FEED: 2000 zł
+LINK: https://www.olx.pl/d/oferta/full-zestaw-gamingowy-z-monitorem-CID99-ID1cDOQ6.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/full-zestaw-gamingowy-z-monitorem-CID99-ID1cDOQ6.html
+[CENA] 2000 zł | źródło: CARD
+
+[BUNDLE DETECTED]
+Score: 4
+Confidence: MEDIUM
+Strong: False
+Dodatki quick value: 400 zł
+  + Monitor ~400 zł [MEDIUM]
+
+[SPECYFIKACJA]
+CPU: i7-2600
+GPU: RTX 3060
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i7-2600
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cam6U
+[LOCAL] Apple Mac mini M2 Pro 16GB 512GB SSD
+CENA FEED: 3150 zł
+LINK: https://www.olx.pl/d/oferta/apple-mac-mini-m2-pro-16gb-512gb-ssd-CID99-ID1cam6U.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/apple-mac-mini-m2-pro-16gb-512gb-ssd-CID99-ID1cam6U.html
+[CENA] 3150 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+[SPEC AI OK] cpu: Apple M2 Pro | conf=0.99 | dowód=M2 Pro
+[SPEC AI OK] ram: 16 | conf=1.0 | dowód=16GB
+
+[SPECYFIKACJA]
+CPU: Apple M2 Pro
+GPU: None
+RAM: 16
+DYSKI: ['SSD 512 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Apple M2 Pro
+
+--------------------------------------------------------------------------------
+[NOWA] ID18CAbd
+[LOCAL] HP Workstation Z4 G5 Tower 4U - 1xXeon W5-2545/3.5 GHz 5E8X5EA#ABD
+CENA FEED: 24999 zł
+LINK: https://www.olx.pl/d/oferta/hp-workstation-z4-g5-tower-4u-1xxeon-w5-2545-3-5-ghz-5e8x5ea-abd-CID99-ID18CAbd.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/hp-workstation-z4-g5-tower-4u-1xxeon-w5-2545-3-5-ghz-5e8x5ea-abd-CID99-ID18CAbd.html
+[CENA] 24999 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+[SPEC AI OK] cpu: Xeon W5-2545 | conf=1.0 | dowód=1xXeon W5-2545/3.5 GHz
+
+[SPECYFIKACJA]
+CPU: Xeon W5-2545
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Xeon W5-2545
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID17GpYA
+[LOCAL] Pc I5-6600k/Asus gtx1060 6GB/płyta msi/24GB ram DDR4/2T DYSKU/Monitor
+CENA FEED: 1000 zł
+LINK: https://www.olx.pl/d/oferta/pc-i5-6600k-asus-gtx1060-6gb-plyta-msi-24gb-ram-ddr4-2t-dysku-monitor-CID99-ID17GpYA.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/pc-i5-6600k-asus-gtx1060-6gb-plyta-msi-24gb-ram-ddr4-2t-dysku-monitor-CID99-ID17GpYA.html
+[CENA] 1000 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-6600K
+GPU: GTX 1060
+RAM: 24
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-6600K
+
+--------------------------------------------------------------------------------
+[NOWA] ID19uL9Q
+[LOCAL] Komputer gamingowy i5 14600k/32gb RAM/RTX 5070
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-i5-14600k-32gb-ram-rtx-5070-CID99-ID19uL9Q.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-i5-14600k-32gb-ram-rtx-5070-CID99-ID19uL9Q.html
+[CENA] 9700 zł | źródło: PARSER
+
+[SPECYFIKACJA]
+CPU: i5-14600K
+GPU: RTX 5070
+RAM: 32
+DYSKI: []
+
+[WYCENA V3]
+Zakup: 9700 zł
+Szybka sprzedaż: 4085 zł
+Koszt razem: 9800 zł
+Zysk: -5715 zł
+Źródło: STATIC
+Confidence: FALLBACK
+Static: 4085 zł
+Exact: 0 | quick=None
+Similar same GPU: 2 | quick=5958 | similarity=89.5
+Neighbor market: 2 | neighbor GPU=0 | similarity=89.5
+Neighbor quick raw: 5958 zł
+Neighbor quick protected: 5958 zł
+Neighbor protection: False
+Sanity cap: False | limit=4698
+[ODRZUT PRZED AI] -5715 zł < 300 zł
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cAaW5
+[LOCAL] Dostawa gratis
+CENA FEED: 2999 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-pc-r5-5600-rtx3060-12gb-CID99-ID1cAaW5.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-pc-r5-5600-rtx3060-12gb-CID99-ID1cAaW5.html
+[CENA] 2999 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 5600
+GPU: RTX 3060
+RAM: 32
+DYSKI: []
+
+[WYCENA V3]
+Zakup: 2999 zł
+Szybka sprzedaż: 2461 zł
+Koszt razem: 3099 zł
+Zysk: -638 zł
+Źródło: MARKET_V3
+Confidence: ŚREDNI
+Static: 2042 zł
+Exact: 3 | quick=2610
+Similar same GPU: 13 | quick=2493 | similarity=89.7
+Neighbor market: 31 | neighbor GPU=18 | similarity=86.4
+Neighbor quick raw: 2493 zł
+Neighbor quick protected: 2493 zł
+Neighbor protection: False
+Sanity cap: False | limit=2552
+[ODRZUT PRZED AI] -638 zł < 300 zł
+
+[PRICE DROP] ID1cib8y: 1750 zł -> 1690 zł
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDD2I
+[LOCAL] Komputer Gamingowy budżetowy
+CENA FEED: 550 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-budzetowy-CID99-ID1cDD2I.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-budzetowy-CID99-ID1cDD2I.html
+[CENA] 550 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDAQK
+[LOCAL] Zestaw: Apple Mac Mini M1 (16GB RAM / 256GB SSD) + Monitor Asus ProArt 27" 4K | Poznań / Wysyłka
+CENA FEED: 3150 zł
+LINK: https://www.olx.pl/d/oferta/zestaw-apple-mac-mini-m1-16gb-ram-256gb-ssd-monitor-asus-proart-27-4k-poznan-wysylka-CID99-ID1cDAQK.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/zestaw-apple-mac-mini-m1-16gb-ram-256gb-ssd-monitor-asus-proart-27-4k-poznan-wysylka-CID99-ID1cDAQK.html
+[CENA] 3150 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: Apple M1 | conf=0.98 | dowód=Apple Mac Mini M1
+
+[SPECYFIKACJA]
+CPU: Apple M1
+GPU: None
+RAM: 16
+DYSKI: ['SSD 256 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Apple M1
+
+--------------------------------------------------------------------------------
+[NOWA] ID17gv0V
+[LOCAL] Komputer i5-11400 RTX 3070 16gb ram 512 SSD gamingowy mocny!
+CENA FEED: 3400 zł
+LINK: https://www.olx.pl/d/oferta/komputer-i5-11400-rtx-3070-16gb-ram-512-ssd-gamingowy-mocny-CID99-ID17gv0V.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-i5-11400-rtx-3070-16gb-ram-512-ssd-gamingowy-mocny-CID99-ID17gv0V.html
+[CENA] 3400 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-11400
+GPU: RTX 3070
+RAM: 16
+DYSKI: ['SSD 512 GB']
+
+[WYCENA V3]
+Zakup: 3400 zł
+Szybka sprzedaż: 2510 zł
+Koszt razem: 3500 zł
+Zysk: -990 zł
+Źródło: LOW_EXACT+MARKET_V3
+Confidence: NISKI
+Static: 2204 zł
+Exact: 2 | quick=2745
+Similar same GPU: 7 | quick=2673 | similarity=90.6
+Neighbor market: 36 | neighbor GPU=29 | similarity=84.1
+Neighbor quick raw: 2564 zł
+Neighbor quick protected: 2564 zł
+Neighbor protection: False
+Sanity cap: False | limit=2645
+[ODRZUT PRZED AI] -990 zł < 300 zł
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDzpC
+[LOCAL] Apple Mac Mini M1 / 16GB RAM / 256GB SSD + opcja monitora Asus ProArt 27" 4K | Poznań / Wysyłka
+CENA FEED: 1850 zł
+LINK: https://www.olx.pl/d/oferta/apple-mac-mini-m1-16gb-ram-256gb-ssd-opcja-monitora-asus-proart-27-4k-poznan-wysylka-CID99-ID1cDzpC.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/apple-mac-mini-m1-16gb-ram-256gb-ssd-opcja-monitora-asus-proart-27-4k-poznan-wysylka-CID99-ID1cDzpC.html
+[CENA] 1850 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: Apple M1 | conf=0.9 | dowód=Apple Mac Mini M1
+
+[SPECYFIKACJA]
+CPU: Apple M1
+GPU: None
+RAM: 16
+DYSKI: ['SSD 256 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Apple M1
+
+--------------------------------------------------------------------------------
+[NOWA] ID18BEcp
+[LOCAL] Komputer stacjonarny gamingowy
+CENA FEED: 1300 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-gamingowy-CID99-ID18BEcp.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-gamingowy-CID99-ID18BEcp.html
+[CENA] 1300 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+
+[SPECYFIKACJA]
+CPU: i5-8400
+GPU: GTX 1060
+RAM: None
+DYSKI: ['HDD 1 TB', 'SSD 128 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-8400
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cDyws
+[LOCAL] Zestaw części komputerowych
+CENA FEED: 1600 zł
+LINK: https://www.olx.pl/d/oferta/zestaw-czesci-komputerowych-CID99-ID1cDyws.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/zestaw-czesci-komputerowych-CID99-ID1cDyws.html
+[CENA] 1600 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 5500
+GPU: GTX 1660
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID18c7Ja
+[LOCAL] Komputer RX 6700xt 12gb 5 5600
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/komputer-rx-6700xt-12gb-5-5600-CID99-ID18c7Ja.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-rx-6700xt-12gb-5-5600-CID99-ID18c7Ja.html
+[CENA] 6000 zł | źródło: PARSER
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 5600
+GPU: RX 6700 XT
+RAM: 16
+DYSKI: ['SSD 240 GB']
+
+[WYCENA V3]
+Zakup: 6000 zł
+Szybka sprzedaż: 2445 zł
+Koszt razem: 6100 zł
+Zysk: -3655 zł
+Źródło: LOW_EXACT+MARKET_V3
+Confidence: NISKI
+Static: 2071 zł
+Exact: 1 | quick=2700
+Similar same GPU: 1 | quick=2700 | similarity=100.0
+Neighbor market: 24 | neighbor GPU=23 | similarity=84.2
+Neighbor quick raw: 2466 zł
+Neighbor quick protected: 2466 zł
+Neighbor protection: False
+Sanity cap: False | limit=2485
+[ODRZUT PRZED AI] -3655 zł < 300 zł
+
+--------------------------------------------------------------------------------
+[NOWA] IDW73UP
+[LOCAL] Komputer stacjonarny AORUS ELITE z monitorem LG klawiaturą mechaniczną
+CENA FEED: 4400 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-aorus-elite-z-monitorem-lg-klawiatura-mechaniczna-CID99-IDW73UP.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-aorus-elite-z-monitorem-lg-klawiatura-mechaniczna-CID99-IDW73UP.html
+[CENA] 4400 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu
+
+[BUNDLE DETECTED]
+Score: 4
+Confidence: MEDIUM
+Strong: False
+Dodatki quick value: 400 zł
+  + Monitor ~400 zł [MEDIUM]
+
+[SPECYFIKACJA]
+CPU: None
+GPU: GTX 1650
+RAM: 8
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: 8
+
+--------------------------------------------------------------------------------
+[NOWA] ID1bu74f
+[LOCAL] imac 27 retina 5k 2019 Core i5 3.76C 8GB 512GB RP580X Sklep Górna Wilda 72
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/imac-27-retina-5k-2019-core-i5-3-76c-8gb-512gb-rp580x-sklep-gorna-wilda-72-CID99-ID1bu74f.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/imac-27-retina-5k-2019-core-i5-3-76c-8gb-512gb-rp580x-sklep-gorna-wilda-72-CID99-ID1bu74f.html
+[CENA] 3999 zł | źródło: PARSER
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: Core i5 | conf=1.0 | dowód=Core i5
+[SPEC AI OK] gpu: Radeon Pro 580X | conf=0.95 | dowód=RP580X
+
+[SPECYFIKACJA]
+CPU: Core i5
+GPU: Radeon Pro 580X
+RAM: 8
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Core i5
+ - RAM poniżej 16 GB: 8
+
+================================================================================
+SKAN: CAŁA POLSKA
+================================================================================
+Ofert w feedzie: 51
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEkuc
+[POLSKA] Zestaw komputer monitor klawiatura myszka głośniki
+CENA FEED: 360 zł
+LINK: https://www.olx.pl/d/oferta/zestaw-komputer-monitor-klawiatura-myszka-glosniki-CID99-ID1cEkuc.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/zestaw-komputer-monitor-klawiatura-myszka-glosniki-CID99-ID1cEkuc.html
+[CENA] 360 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+
+[BUNDLE DETECTED]
+Score: 2
+Confidence: MEDIUM
+Strong: False
+Dodatki quick value: 500 zł
+  + Monitor ~400 zł [MEDIUM]
+  + Peryferia ~100 zł [LOW]
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: 4
+DYSKI: ['HDD 1 TB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: 4
+
+--------------------------------------------------------------------------------
+[NOWA] ID19QDgO
+[POLSKA] Komputer gracza | GTX 1060 | i5 7500 | 12gb ram
+CENA FEED: 850 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gracza-gtx-1060-i5-7500-12gb-ram-CID99-ID19QDgO.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gracza-gtx-1060-i5-7500-12gb-ram-CID99-ID19QDgO.html
+[CENA] 850 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-7500
+GPU: GTX 1060
+RAM: 12
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-7500
+ - RAM poniżej 16 GB: 12
+
+--------------------------------------------------------------------------------
+[NOWA] ID19kIdL
+[POLSKA] Komputer gamingowy
+CENA FEED: 480 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-ID19kIdL.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-ID19kIdL.html
+[CENA] 480 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1aCKvz
+[POLSKA] Nowy komputer Gamingowy GTX 1660 SUPER + i5 9400f + 16GB RAM
+CENA FEED: 1550 zł
+LINK: https://www.olx.pl/d/oferta/nowy-komputer-gamingowy-gtx-1660-super-i5-9400f-16gb-ram-CID99-ID1aCKvz.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/nowy-komputer-gamingowy-gtx-1660-super-i5-9400f-16gb-ram-CID99-ID1aCKvz.html
+[CENA] 1550 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-9400F
+GPU: GTX 1660 SUPER
+RAM: 16
+DYSKI: []
+
+[WYCENA V3]
+Zakup: 1550 zł
+Szybka sprzedaż: 1330 zł
+Koszt razem: 1700 zł
+Zysk: -370 zł
+Źródło: STATIC
+Confidence: FALLBACK
+Static: 1330 zł
+Exact: 0 | quick=None
+Similar same GPU: 0 | quick=None | similarity=None
+Neighbor market: 5 | neighbor GPU=5 | similarity=81.3
+Neighbor quick raw: 1575 zł
+Neighbor quick protected: 1575 zł
+Neighbor protection: False
+Sanity cap: False | limit=1529
+[ODRZUT PRZED AI] -370 zł < 300 zł
+
+--------------------------------------------------------------------------------
+[NOWA] ID199W1z
+[POLSKA] Komputer stacjonarny + monitor Samsung + klawiatura | Windows 10 | TV
+CENA FEED: 250 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-monitor-samsung-klawiatura-windows-10-tv-CID99-ID199W1z.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-monitor-samsung-klawiatura-windows-10-tv-CID99-ID199W1z.html
+[CENA] 250 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+
+[BUNDLE DETECTED]
+Score: 4
+Confidence: MEDIUM
+Strong: False
+Dodatki quick value: 400 zł
+  + Monitor ~400 zł [MEDIUM]
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: 4
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: 4
+
+--------------------------------------------------------------------------------
+[NOWA] ID1ccYUO
+[POLSKA] komputer stacjonarny
+CENA FEED: 1250 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-ID1ccYUO.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-ID1ccYUO.html
+[CENA] 1250 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID19Ag3F
+[POLSKA] Nowy komputer Gamingowy GTX 1660 SUPER Gaming + i7 6700 + 16GB RAM
+CENA FEED: 1700 zł
+LINK: https://www.olx.pl/d/oferta/nowy-komputer-gamingowy-gtx-1660-super-gaming-i7-6700-16gb-ram-CID99-ID19Ag3F.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/nowy-komputer-gamingowy-gtx-1660-super-gaming-i7-6700-16gb-ram-CID99-ID19Ag3F.html
+[CENA] 1700 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i7-6700
+GPU: GTX 1660 SUPER
+RAM: 16
+DYSKI: ['SSD 512 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i7-6700
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEk6D
+[POLSKA] Dell OptiPlex 9020 SFF – i5 / 16 GB RAM / SSD 250 GB + HDD 250 GB
+CENA FEED: 299 zł
+LINK: https://www.olx.pl/d/oferta/dell-optiplex-9020-sff-i5-16-gb-ram-ssd-250-gb-hdd-250-gb-CID99-ID1cEk6D.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/dell-optiplex-9020-sff-i5-16-gb-ram-ssd-250-gb-hdd-250-gb-CID99-ID1cEk6D.html
+[CENA] 299 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: gpu
+
+[SPECYFIKACJA]
+CPU: i5-4430
+GPU: None
+RAM: 16
+DYSKI: ['HDD 250 GB', 'SSD 250 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-4430
+
+--------------------------------------------------------------------------------
+[NOWA] ID1caYqh
+[POLSKA] iMac 27" Retina 5K – Intel Core i5 | 24 GB RAM | bardzo dobry stan
+CENA FEED: 1500 zł
+LINK: https://www.olx.pl/d/oferta/imac-27-retina-5k-intel-core-i5-24-gb-ram-bardzo-dobry-stan-CID99-ID1caYqh.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/imac-27-retina-5k-intel-core-i5-24-gb-ram-bardzo-dobry-stan-CID99-ID1caYqh.html
+[CENA] 1500 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] cpu: Intel Core i5 | conf=1.0 | dowód=Intel Core i5
+
+[SPECYFIKACJA]
+CPU: Intel Core i5
+GPU: None
+RAM: 24
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Intel Core i5
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEjPU
+[POLSKA] Dostawa gratis
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/zestaw-dell-wyse-3030-CID99-ID1cEjPU.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/zestaw-dell-wyse-3030-CID99-ID1cEjPU.html
+[CENA] 355 zł | źródło: PARSER
+
+[SPEC AI] Brakujące dane: cpu, gpu
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: 4
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: 4
+
+[PRICE DROP] ID1cC7By: 2000 zł -> 1700 zł
+
+--------------------------------------------------------------------------------
+[NOWA] ID1ctOZX
+[POLSKA] Komputer do gier I7 GTX 1660 TI 6GB 16GB RAM gamingowy gwarancja
+CENA FEED: 1700 zł
+LINK: https://www.olx.pl/d/oferta/komputer-do-gier-i7-gtx-1660-ti-6gb-16gb-ram-gamingowy-gwarancja-CID99-ID1ctOZX.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-do-gier-i7-gtx-1660-ti-6gb-16gb-ram-gamingowy-gwarancja-CID99-ID1ctOZX.html
+[ERROR OPEN] Page.goto: Timeout 60000ms exceeded.
+Call log:
+  - navigating to "https://www.olx.pl/d/oferta/komputer-do-gier-i7-gtx-1660-ti-6gb-16gb-ram-gamingowy-gwarancja-CID99-ID1ctOZX.html", waiting until "domcontentloaded"
+
+[ERROR PARSER] Brak danych.
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEjIj
+[POLSKA] Komputer Stacjonarny
+CENA FEED: 4800 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-ID1cEjIj.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-CID99-ID1cEjIj.html
+[CENA] 4800 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 7 7700
+GPU: RX 7800 XT
+RAM: 16
+DYSKI: ['M.2 1 TB', 'NVME 1 TB']
+[ODRZUT POLSKA] Brak Przesyłki OLX / Kup teraz
+
+--------------------------------------------------------------------------------
+[NOWA] ID19jgvm
+[POLSKA] Komputer PC niesprawny
+CENA FEED: 50 zł
+LINK: https://www.olx.pl/d/oferta/komputer-pc-niesprawny-CID99-ID19jgvm.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-pc-niesprawny-CID99-ID19jgvm.html
+[CENA ERROR] Nie udało się ustalić ceny.
+
+--------------------------------------------------------------------------------
+[NOWA] ID1bLiui
+[POLSKA] Komputer stacjonarny do gier
+CENA FEED: 1700 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-do-gier-CID99-ID1bLiui.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-do-gier-CID99-ID1bLiui.html
+[CENA] 1700 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+
+[SPECYFIKACJA]
+CPU: i5-9600KF
+GPU: GTX 1660 SUPER
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID10DYUM
+[POLSKA] Komputer Gamingowy | RYZEN 5 3600 | RX 5700 XT | 16GB RAM | SSD 960GB
+CENA FEED: 2000 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-ryzen-5-3600-rx-5700-xt-16gb-ram-ssd-960gb-CID99-ID10DYUM.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-ryzen-5-3600-rx-5700-xt-16gb-ram-ssd-960gb-CID99-ID10DYUM.html
+[CENA] 2000 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 3600
+GPU: RX 5700 XT
+RAM: 16
+DYSKI: ['SSD 960 GB']
+[ODRZUT POLSKA] Brak Przesyłki OLX / Kup teraz
+
+--------------------------------------------------------------------------------
+[NOWA] ID1bqM9E
+[POLSKA] Sprzedam komputer stacjonarny
+CENA FEED: 3500 zł
+LINK: https://www.olx.pl/d/oferta/sprzedam-komputer-stacjonarny-CID99-ID1bqM9E.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/sprzedam-komputer-stacjonarny-CID99-ID1bqM9E.html
+[CENA] 3500 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] IDUNcS0
+[POLSKA] Komputer Gamingowy
+CENA FEED: 2299 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-IDUNcS0.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-IDUNcS0.html
+[CENA] 2299 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+
+[SPECYFIKACJA]
+CPU: i5-9400F
+GPU: GTX 1080
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID197QAl
+[POLSKA] Dell optiplex 9020 i7
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/dell-optiplex-9020-i7-CID99-ID197QAl.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/dell-optiplex-9020-i7-CID99-ID197QAl.html
+[CENA] 330 zł | źródło: PARSER
+
+[SPEC AI] Brakujące dane: cpu, gpu
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: 8
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: 8
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cE6Hu
+[POLSKA] Komputer gamingowy
+CENA FEED: 2000 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-ID1cE6Hu.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-ID1cE6Hu.html
+[CENA] 2000 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 5600X
+GPU: RTX 3060 TI
+RAM: 16
+DYSKI: []
+
+[WYCENA V3]
+Zakup: 2000 zł
+Szybka sprzedaż: 2176 zł
+Koszt razem: 2150 zł
+Zysk: 26 zł
+Źródło: LOW_EXACT+MARKET_V3
+Confidence: NISKI
+Static: 2090 zł
+Exact: 1 | quick=1980
+Similar same GPU: 7 | quick=2276 | similarity=95.2
+Neighbor market: 33 | neighbor GPU=26 | similarity=85.6
+Neighbor quick raw: 2538 zł
+Neighbor quick protected: 2538 zł
+Neighbor protection: False
+Sanity cap: False | limit=2508
+[ODRZUT PRZED AI] 26 zł < 300 zł
+
+--------------------------------------------------------------------------------
+[NOWA] IDTjjxA
+[POLSKA] Komputer Game X G300, Core i5-11400F, 16 GB, GTX 1650, 512 GB M.2 PCIe
+CENA FEED: 4000 zł
+LINK: https://www.olx.pl/d/oferta/komputer-game-x-g300-core-i5-11400f-16-gb-gtx-1650-512-gb-m-2-pcie-CID99-IDTjjxA.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-game-x-g300-core-i5-11400f-16-gb-gtx-1650-512-gb-m-2-pcie-CID99-IDTjjxA.html
+[CENA] 4000 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+[SPEC AI OK] ram: 16 | conf=1.0 | dowód=16 GB
+
+[SPECYFIKACJA]
+CPU: i5-11400F
+GPU: GTX 1650
+RAM: 16
+DYSKI: ['M.2 512 GB']
+[ODRZUT POLSKA] Brak Przesyłki OLX / Kup teraz
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEjak
+[POLSKA] Dell Optiplex 7020 SFF i5 4570 4GB ram
+CENA FEED: 120 zł
+LINK: https://www.olx.pl/d/oferta/dell-optiplex-7020-sff-i5-4570-4gb-ram-CID99-ID1cEjak.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/dell-optiplex-7020-sff-i5-4570-4gb-ram-CID99-ID1cEjak.html
+[CENA] 120 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: gpu
+
+[SPECYFIKACJA]
+CPU: i5-4570
+GPU: None
+RAM: 4
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-4570
+ - RAM poniżej 16 GB: 4
+
+--------------------------------------------------------------------------------
+[NOWA] ID1czWdp
+[POLSKA] PC Gamingowy R7/GTX1080-8GB/DDR4-16GB/SSD
+CENA FEED: 1590 zł
+LINK: https://www.olx.pl/d/oferta/pc-gamingowy-r7-gtx1080-8gb-ddr4-16gb-ssd-CID99-ID1czWdp.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/pc-gamingowy-r7-gtx1080-8gb-ddr4-16gb-ssd-CID99-ID1czWdp.html
+[CENA] 1590 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+[SPEC AI OK] ram: 16 | conf=1.0 | dowód=DDR4-16GB
+
+[SPECYFIKACJA]
+CPU: Ryzen 7 2700
+GPU: GTX 1080
+RAM: 16
+DYSKI: ['HDD 1 TB', 'SSD 120 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: Ryzen 7 2700
+
+--------------------------------------------------------------------------------
+[NOWA] ID10dBfh
+[POLSKA] Komputer biurowy Optiplex 5050
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/komputer-biurowy-optiplex-5050-CID99-ID10dBfh.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-biurowy-optiplex-5050-CID99-ID10dBfh.html
+[CENA] 650 zł | źródło: PARSER
+
+[SPEC AI] Brakujące dane: gpu
+
+[SPECYFIKACJA]
+CPU: i5-7500
+GPU: None
+RAM: 16
+DYSKI: ['HDD 256 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-7500
+
+--------------------------------------------------------------------------------
+[NOWA] ID14WPlD
+[POLSKA] PC składak używany z GTX 950
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/pc-skladak-uzywany-z-gtx-950-CID99-ID14WPlD.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/pc-skladak-uzywany-z-gtx-950-CID99-ID14WPlD.html
+[CENA] 650 zł | źródło: PARSER
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] gpu: GTX 950 | conf=1.0 | dowód=GTX 950
+
+[SPECYFIKACJA]
+CPU: None
+GPU: GTX 950
+RAM: 16
+DYSKI: ['HDD 512 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID19YRPD
+[POLSKA] Komputer i5-4590 4x3,3GHz/16gb/SSD 240GB/GTX 1050Ti/win11 dla gracza CS-GO
+CENA FEED: 590 zł
+LINK: https://www.olx.pl/d/oferta/komputer-i5-4590-4x3-3ghz-16gb-ssd-240gb-gtx-1050ti-win11-dla-gracza-cs-go-CID99-ID19YRPD.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-i5-4590-4x3-3ghz-16gb-ssd-240gb-gtx-1050ti-win11-dla-gracza-cs-go-CID99-ID19YRPD.html
+[CENA] 590 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-4590
+GPU: GTX 1050 TI
+RAM: 16
+DYSKI: ['SSD 240 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-4590
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEiVL
+[POLSKA] Komputer gamingowy
+CENA FEED: 800 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-ID1cEiVL.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-CID99-ID1cEiVL.html
+[CENA] 800 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i3-9100F
+GPU: GTX 1060
+RAM: 16
+DYSKI: ['SSD 120 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i3-9100F
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEiU8
+[POLSKA] Komputer stacjonarny DELL VOSTRO 3668 i5/16GB/1TB GRAFIKA DEDYKOWANA
+CENA FEED: 600 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-dell-vostro-3668-i5-16gb-1tb-grafika-dedykowana-CID99-ID1cEiU8.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-dell-vostro-3668-i5-16gb-1tb-grafika-dedykowana-CID99-ID1cEiU8.html
+[CENA] 600 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: gpu
+
+[SPECYFIKACJA]
+CPU: i5-7400
+GPU: None
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-7400
+
+[PRICE DROP] ID1awFs9: 3499 zł -> 3449 zł
+
+--------------------------------------------------------------------------------
+[OBNIŻKA CENY] ID1awFs9
+[POLSKA] Komputer Gamingowy RTX 3060 Ti / RYZEN 5 5500 / Nvme m.2 / Do wszystkich nowych gier
+CENA FEED: 3449 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-rtx-3060-ti-ryzen-5-5500-nvme-m-2-do-wszystkich-nowych-gier-CID99-ID1awFs9.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-rtx-3060-ti-ryzen-5-5500-nvme-m-2-do-wszystkich-nowych-gier-CID99-ID1awFs9.html
+[CENA] 3449 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 5500
+GPU: RTX 3060 TI
+RAM: 16
+DYSKI: ['SSD 512 GB']
+[ODRZUT POLSKA] Brak Przesyłki OLX / Kup teraz
+
+--------------------------------------------------------------------------------
+[NOWA] ID1blQQy
+[POLSKA] Komputer Gamingowy Intel i7 Nvidia GTX 16GB RAM
+CENA FEED: 750 zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-intel-i7-nvidia-gtx-16gb-ram-CID99-ID1blQQy.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-intel-i7-nvidia-gtx-16gb-ram-CID99-ID1blQQy.html
+[CENA] 750 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i7-3770
+GPU: GTX 1050 TI
+RAM: 16
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i7-3770
+
+--------------------------------------------------------------------------------
+[NOWA] ID18d3WX
+[POLSKA] Gotowy zestaw komputerowy
+CENA FEED: 6000 zł
+LINK: https://www.olx.pl/d/oferta/gotowy-zestaw-komputerowy-CID99-ID18d3WX.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/gotowy-zestaw-komputerowy-CID99-ID18d3WX.html
+[CENA] 6000 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: ram
+
+[SPECYFIKACJA]
+CPU: i5-14600KF
+GPU: RTX 4070
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID18DuEQ
+[POLSKA] Komputer Gamingowy NVIDIA GeForce GTX1070
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/komputer-gamingowy-nvidia-geforce-gtx1070-CID99-ID18DuEQ.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-gamingowy-nvidia-geforce-gtx1070-CID99-ID18DuEQ.html
+[CENA] 1900 zł | źródło: JSON_LD
+
+[SPECYFIKACJA]
+CPU: Ryzen 5 3600
+GPU: GTX 1070
+RAM: 16
+DYSKI: []
+[ODRZUT POLSKA] Brak Przesyłki OLX / Kup teraz
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEiJn
+[POLSKA] Komputer stacjonarny Intercore i7-9700f /Nvidia geForce GTX 1650
+CENA FEED: None zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-intercore-i7-9700f-nvidia-geforce-gtx-1650-CID99-ID1cEiJn.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-intercore-i7-9700f-nvidia-geforce-gtx-1650-CID99-ID1cEiJn.html
+[CENA] 900 zł | źródło: JSON_LD
+
+[SPEC AI] Brakujące dane: ram
+
+[SPECYFIKACJA]
+CPU: i7-9700F
+GPU: GTX 1650
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1c5nsN
+[POLSKA] Stare Komputery Compact
+CENA FEED: 499 zł
+LINK: https://www.olx.pl/d/oferta/stare-komputery-compact-CID99-ID1c5nsN.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/stare-komputery-compact-CID99-ID1c5nsN.html
+[CENA] 499 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] IDV0Pgw
+[POLSKA] Dell inspiron 5400 AIO ALL IN ONE
+CENA FEED: 2799 zł
+LINK: https://www.olx.pl/d/oferta/dell-inspiron-5400-aio-all-in-one-CID99-IDV0Pgw.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/dell-inspiron-5400-aio-all-in-one-CID99-IDV0Pgw.html
+[CENA] 2799 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu, ram
+
+[SPECYFIKACJA]
+CPU: None
+GPU: None
+RAM: None
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+ - RAM poniżej 16 GB: None
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEixw
+[POLSKA] Komputer stacjonarny i5-4590 | GTX 1650 4GB | 16GB RAM | SSD 512GB
+CENA FEED: 750 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-i5-4590-gtx-1650-4gb-16gb-ram-ssd-512gb-CID99-ID1cEixw.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-i5-4590-gtx-1650-4gb-16gb-ram-ssd-512gb-CID99-ID1cEixw.html
+[CENA] 750 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-4590
+GPU: GTX 1650
+RAM: 16
+DYSKI: ['SSD 512 GB']
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: i5-4590
+
+--------------------------------------------------------------------------------
+[NOWA] ID1agigZ
+[POLSKA] Komputer do gier + Zakrzywiony Monitor Ultrawide 34" 240Hz (Zestaw)
+CENA FEED: 6999 zł
+LINK: https://www.olx.pl/d/oferta/komputer-do-gier-zakrzywiony-monitor-ultrawide-34-240hz-zestaw-CID99-ID1agigZ.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-do-gier-zakrzywiony-monitor-ultrawide-34-240hz-zestaw-CID99-ID1agigZ.html
+[CENA] 6999 zł | źródło: CARD
+
+[SPECYFIKACJA]
+CPU: i5-14400F
+GPU: RTX 5060 TI
+RAM: 16
+DYSKI: []
+[ODRZUT POLSKA] Brak Przesyłki OLX / Kup teraz
+
+--------------------------------------------------------------------------------
+[NOWA] ID1cEiw5
+[POLSKA] Komputer stacjonarny 64 GB RAM / NVIDIA T600 4 GB / SSD / Windows 10 Pro
+CENA FEED: 1350 zł
+LINK: https://www.olx.pl/d/oferta/komputer-stacjonarny-64-gb-ram-nvidia-t600-4-gb-ssd-windows-10-pro-CID99-ID1cEiw5.html
+
+[OTWIERAM] https://www.olx.pl/d/oferta/komputer-stacjonarny-64-gb-ram-nvidia-t600-4-gb-ssd-windows-10-pro-CID99-ID1cEiw5.html
+[CENA] 1350 zł | źródło: CARD
+
+[SPEC AI] Brakujące dane: cpu, gpu
+[SPEC AI OK] gpu: NVIDIA T600 4 GB | conf=1.0 | dowód=NVIDIA T600 4 GB
+
+[SPECYFIKACJA]
+CPU: None
+GPU: NVIDIA T600 4 GB
+RAM: 64
+DYSKI: []
+[ODRZUT SPRZĘTOWY]
+ - CPU nie spełnia minimum: None
+
+================================================================================
+SKAN GOTOWY | nowe: 67 | obniżki: 3 | flipy: 0
+================================================================================

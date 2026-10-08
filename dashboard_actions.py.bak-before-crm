@@ -1,0 +1,301 @@
+import sqlite3
+from datetime import datetime
+
+from flask import (
+    Blueprint,
+    redirect,
+    request,
+)
+
+
+actions_bp = Blueprint(
+    "control_actions",
+    __name__,
+)
+
+
+ALERT_DB = "/opt/olx-bot/alert_history.db"
+FLIP_DB = "/opt/olx-bot/flip_results.db"
+WATCHLIST_DB = "/opt/olx-bot/watchlist.db"
+
+
+def number(value, default=None):
+
+    try:
+        return float(
+            str(value).replace(",", ".")
+        )
+
+    except Exception:
+        return default
+
+
+def connect(database):
+
+    conn = sqlite3.connect(
+        database
+    )
+
+    conn.row_factory = sqlite3.Row
+
+    return conn
+
+
+# ============================================================
+# BUY
+# ============================================================
+
+@actions_bp.post(
+    "/control/buy/<int:alert_id>"
+)
+def buy(alert_id):
+
+    purchase_price = number(
+        request.form.get(
+            "purchase_price"
+        )
+    )
+
+    extra_cost = number(
+        request.form.get(
+            "extra_cost"
+        ),
+        0,
+    )
+
+    if (
+        purchase_price is None
+        or purchase_price <= 0
+    ):
+        return redirect(
+            "/control"
+        )
+
+    alert_conn = connect(
+        ALERT_DB
+    )
+
+    alert = alert_conn.execute(
+        """
+        SELECT *
+        FROM alerts
+        WHERE id = ?
+        """,
+        (
+            alert_id,
+        ),
+    ).fetchone()
+
+    alert_conn.close()
+
+    if alert is None:
+        return redirect(
+            "/control"
+        )
+
+    flip_conn = connect(
+        FLIP_DB
+    )
+
+    existing = flip_conn.execute(
+        """
+        SELECT id
+        FROM flips
+        WHERE alert_id = ?
+        """,
+        (
+            alert_id,
+        ),
+    ).fetchone()
+
+    if existing:
+
+        flip_conn.close()
+
+        return redirect(
+            "/control"
+        )
+
+    flip_conn.execute(
+        """
+        INSERT INTO flips (
+
+            alert_id,
+
+            title,
+            url,
+
+            predicted_score,
+            predicted_quick_sale,
+            predicted_profit,
+
+            asking_price,
+            purchase_price,
+            extra_cost,
+
+            bought_at,
+            status
+        )
+
+        VALUES (
+            ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?,
+            ?, 'BOUGHT'
+        )
+        """,
+        (
+            alert_id,
+
+            alert["title"],
+            alert["url"],
+
+            alert["score"],
+            alert["quick_sale"],
+            alert["profit"],
+
+            alert["price"],
+            purchase_price,
+            extra_cost,
+
+            datetime.now().isoformat(
+                timespec="seconds"
+            ),
+        ),
+    )
+
+    flip_conn.commit()
+    flip_conn.close()
+
+    return redirect(
+        "/control"
+    )
+
+
+# ============================================================
+# SELL
+# ============================================================
+
+@actions_bp.post(
+    "/control/sell/<int:flip_id>"
+)
+def sell(flip_id):
+
+    sale_price = number(
+        request.form.get(
+            "sale_price"
+        )
+    )
+
+    extra_cost = number(
+        request.form.get(
+            "extra_cost"
+        ),
+        0,
+    )
+
+    if (
+        sale_price is None
+        or sale_price <= 0
+    ):
+        return redirect(
+            "/control"
+        )
+
+    conn = connect(
+        FLIP_DB
+    )
+
+    flip = conn.execute(
+        """
+        SELECT *
+        FROM flips
+
+        WHERE
+            id = ?
+            AND status = 'BOUGHT'
+        """,
+        (
+            flip_id,
+        ),
+    ).fetchone()
+
+    if flip is None:
+
+        conn.close()
+
+        return redirect(
+            "/control"
+        )
+
+    conn.execute(
+        """
+        UPDATE flips
+
+        SET
+            sale_price = ?,
+            extra_cost = ?,
+            sold_at = ?,
+            status = 'SOLD'
+
+        WHERE id = ?
+        """,
+        (
+            sale_price,
+            extra_cost,
+
+            datetime.now().isoformat(
+                timespec="seconds"
+            ),
+
+            flip_id,
+        ),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect(
+        "/control"
+    )
+
+
+# ============================================================
+# WATCHLIST CLOSE
+# ============================================================
+
+@actions_bp.post(
+    "/control/watchlist/close/<int:item_id>"
+)
+def close_watch(item_id):
+
+    conn = connect(
+        WATCHLIST_DB
+    )
+
+    conn.execute(
+        """
+        UPDATE watchlist
+
+        SET
+            status = 'CLOSED',
+            close_reason = 'USER_SKIP',
+            last_seen = ?
+
+        WHERE id = ?
+        """,
+        (
+            datetime.now().isoformat(
+                timespec="seconds"
+            ),
+
+            item_id,
+        ),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect(
+        "/control"
+    )

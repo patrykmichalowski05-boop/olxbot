@@ -1,0 +1,38 @@
+def get_meta_content(page, selector):
+    element = page.locator(selector)
+
+    if element.count() == 0:
+        return None
+
+    value = element.first.get_attribute(
+        "content"
+    )
+
+    if not value:
+        return None
+
+    return value.strip()
+
+
+def extract_detail_metadata(page):
+
+    title = get_meta_content(
+        page,
+        'meta[property="og:title"]'
+    )
+
+    description = get_meta_content(
+        page,
+        'meta[property="og:description"]'
+    )
+
+    if not description:
+        description = get_meta_content(
+            page,
+            'meta[name="description"]'
+        )
+
+    return {
+        "title": title,
+        "description": description,
+    }

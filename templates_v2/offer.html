@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} — Flip Hunter{% endblock %}
+{% block heading %}Szczegóły oferty{% endblock %}
+{% block topbar_actions %}<a class="btn btn-primary" href="{{ item.url }}" target="_blank" rel="noopener">Otwórz ogłoszenie</a>{% endblock %}
+{% block content %}
+<div class="offer-hero panel">
+    <div>
+        <div class="offer-tags"><span class="source source-{{ item.source|lower }}">{{ item.source }}</span><span class="decision decision-{{ item.decision|lower }}">{{ item.decision }}</span>{% if item.bundle %}<span class="tag">BUNDLE</span>{% endif %}</div>
+        <h2>{{ item.title }}</h2>
+        <p class="muted">{{ item.created_at }} · {{ item.offer_key }}</p>
+    </div>
+    <div class="hero-score"><span>DEAL SCORE</span><strong>{{ item.score or 0 }}</strong><small>/100</small></div>
+</div>
+
+<div class="metric-grid metric-grid-5">
+    <div class="metric-card"><span>Cena</span><strong>{{ money(item.price) }}</strong><small>asking</small></div>
+    <div class="metric-card"><span>Quick sale</span><strong>{{ money(item.quick_sale) }}</strong><small>{{ item.valuation.valuation_source or 'wycena' }}</small></div>
+    <div class="metric-card"><span>Zysk</span><strong class="profit">{{ money(item.profit) }}</strong><small>prognoza</small></div>
+    <div class="metric-card"><span>ROI</span><strong>{{ percent(item.roi) }}</strong><small>prognoza</small></div>
+    <div class="metric-card"><span>Max buy</span><strong>{{ money(item.action.max_buy) }}</strong><small>otwarcie {{ money(item.action.opening) }}</small></div>
+</div>
+
+<div class="layout-2-1">
+    <div class="stack">
+        <div class="panel">
+            <div class="panel-head"><div><h2>Specyfikacja</h2><p>Dane z parsera i ewentualnego recovery AI</p></div></div>
+            <div class="spec-grid">
+                <div><span>CPU</span><strong>{{ item.details.cpu or '—' }}</strong></div>
+                <div><span>GPU</span><strong>{{ item.details.gpu or '—' }}</strong></div>
+                <div><span>RAM</span><strong>{% if item.details.ram %}{{ item.details.ram }} GB{% else %}—{% endif %}</strong></div>
+                <div><span>Dyski</span><strong>{{ item.details.disks|join(', ') if item.details.disks is iterable and item.details.disks is not string else (item.details.disks or '—') }}</strong></div>
+                <div><span>Płyta</span><strong>{{ item.details.motherboard or '—' }}</strong></div>
+                <div><span>Zasilacz</span><strong>{{ item.details.psu or '—' }}</strong></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head"><div><h2>Rozbicie wyceny V3</h2><p>Statyczna wycena + rynek dokładny + podobne zestawy</p></div></div>
+            <div class="valuation-grid">
+                <div class="valuation-row"><span>Final quick sale</span><strong>{{ money(item.valuation.quick_sale) }}</strong><small>{{ item.valuation.confidence or '—' }}</small></div>
+                <div class="valuation-row"><span>Static</span><strong>{{ money(item.valuation.static_quick_sale) }}</strong><small>punkt odniesienia</small></div>
+                <div class="valuation-row"><span>Exact CPU+GPU</span><strong>{{ money(item.valuation.exact_quick_sale) }}</strong><small>{{ item.valuation.exact_samples or 0 }} próbek</small></div>
+                <div class="valuation-row"><span>Same GPU / similar PC</span><strong>{{ money(item.valuation.similar_quick_sale) }}</strong><small>{{ item.valuation.similar_samples or 0 }} próbek · similarity {{ item.valuation.similarity or '—' }}</small></div>
+                <div class="valuation-row"><span>Neighbor GPU</span><strong>{{ money(item.valuation.neighbor_quick_protected or item.valuation.neighbor_quick_raw) }}</strong><small>{{ item.valuation.neighbor_samples or 0 }} próbek{% if item.valuation.neighbor_protected %} · zabezpieczone{% endif %}</small></div>
+                <div class="valuation-row"><span>Sanity cap</span><strong>{{ money(item.valuation.sanity_cap) }}</strong><small>{{ 'zastosowany' if item.valuation.sanity_cap_applied else 'nieaktywny' }}</small></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head"><div><h2>Decyzja i negocjacja</h2><p>{{ item.action.reason or 'Brak dodatkowego uzasadnienia.' }}</p></div></div>
+            <div class="metric-grid metric-grid-3 compact">
+                <div class="metric-card"><span>Akcja</span><strong>{{ item.action.action or item.decision }}</strong></div>
+                <div class="metric-card"><span>Zacznij od</span><strong>{{ money(item.action.opening) }}</strong></div>
+                <div class="metric-card"><span>Maksymalnie</span><strong>{{ money(item.action.max_buy) }}</strong></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head"><div><h2>Kontakt ze sprzedającym</h2><p>Pytania i negocjacja generowane przez istniejące moduły</p></div></div>
+            {% if item.seller_message %}
+            <div class="copy-box"><pre>{{ item.seller_message }}</pre><button class="btn btn-ghost btn-small" type="button" data-copy-text="{{ item.seller_message|e }}">Kopiuj pytania</button></div>
+            {% endif %}
+            {% if item.negotiation_message %}
+            <div class="copy-box"><div class="subtle">Rekomendowana wiadomość</div><pre>{{ item.negotiation_message }}</pre><button class="btn btn-primary btn-small" type="button" data-copy-text="{{ item.negotiation_message|e }}">Kopiuj negocjację</button></div>
+            {% endif %}
+            {% if item.negotiation_variants %}
+            <div class="variant-grid">{% for variant in item.negotiation_variants %}<div class="variant-card"><strong>{{ variant.label }}</strong><div class="profit">{{ money(variant.price) }}</div><p>{{ variant.message }}</p><button class="btn btn-ghost btn-small" type="button" data-copy-text="{{ variant.message|e }}">Kopiuj</button></div>{% endfor %}</div>
+            {% endif %}
+        </div>
+
+        {% if item.flip and item.listing %}
+        <div class="panel">
+            <div class="panel-head"><div><h2>Przygotowanie sprzedaży</h2><p>sale_prep.py + sale_pricing.py + listing_generator.py</p></div></div>
+            <div class="metric-grid metric-grid-3 compact">
+                <div class="metric-card"><span>Łączna inwestycja</span><strong>{{ money(item.sale_prep.total_investment) }}</strong></div>
+                <div class="metric-card"><span>Cena wystawienia</span><strong>{{ money(item.sale_prep.target_price) }}</strong></div>
+                <div class="metric-card"><span>Minimum</span><strong>{{ money(item.sale_prep.minimum_price) }}</strong></div>
+            </div>
+            <div class="sale-action-grid">
+                <form method="post" action="{{ url_for('main.action_sale_cost', alert_id=item.id) }}" class="form-stack mini-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <strong>Dodaj koszt</strong>
+                    <select name="kind">{% for kind in ['SSD','RAM','CASE','PASTE','CLEANING','REPAIR','OTHER'] %}<option>{{ kind }}</option>{% endfor %}</select>
+                    <input name="cost" type="number" min="0" step="1" placeholder="Koszt" required>
+                    <input name="note" placeholder="Notatka">
+                    <button class="btn btn-ghost btn-small" type="submit">Dodaj</button>
+                </form>
+                <form method="post" action="{{ url_for('main.action_sale_plan', alert_id=item.id) }}" class="form-stack mini-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <strong>Plan sprzedaży</strong>
+                    <input name="target_price" type="number" min="1" step="1" value="{{ item.sale_prep.target_price or item.sale_prices.target_price or '' }}" placeholder="Cena wystawienia" required>
+                    <input name="minimum_price" type="number" min="1" step="1" value="{{ item.sale_prep.minimum_price or item.sale_prices.minimum_price or '' }}" placeholder="Minimum" required>
+                    <button class="btn btn-ghost btn-small" type="submit">Zapisz plan</button>
+                </form>
+                {% if not item.sale_listing %}
+                <form method="post" action="{{ url_for('main.action_listing', alert_id=item.id) }}" class="form-stack mini-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <strong>Wystawienie</strong>
+                    <input name="listed_price" type="number" min="1" step="1" value="{{ item.sale_prep.target_price or item.sale_prices.target_price or '' }}" placeholder="Cena" required>
+                    <select name="platform"><option>OLX</option><option>FACEBOOK</option><option>ALLEGRO</option></select>
+                    <button class="btn btn-primary btn-small" type="submit">Oznacz jako wystawiony</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ url_for('main.action_listing_price', alert_id=item.id) }}" class="form-stack mini-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <strong>Aktywne: {{ item.sale_listing.platform }} · {{ money(item.sale_listing.listed_price) }}</strong>
+                    <input name="new_price" type="number" min="1" step="1" value="{{ item.sale_listing.listed_price }}" required>
+                    <input name="reason" value="MANUAL" placeholder="Powód">
+                    <button class="btn btn-primary btn-small" type="submit">Zmień cenę</button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="listing-grid">
+                <div class="copy-box"><div class="subtle">Tytuł</div><pre>{{ item.listing.title }}</pre><button class="btn btn-ghost btn-small" type="button" data-copy-text="{{ item.listing.title|e }}">Kopiuj tytuł</button></div>
+                <div class="copy-box"><div class="subtle">OLX</div><pre>{{ item.listing.olx }}</pre><button class="btn btn-ghost btn-small" type="button" data-copy-text="{{ item.listing.olx|e }}">Kopiuj OLX</button></div>
+                <div class="copy-box"><div class="subtle">Facebook</div><pre>{{ item.listing.facebook }}</pre><button class="btn btn-ghost btn-small" type="button" data-copy-text="{{ item.listing.facebook|e }}">Kopiuj Facebook</button></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="stack">
+        <div class="panel sticky-panel">
+            <div class="panel-head"><div><h2>CRM</h2><p>Aktualny etap transakcji</p></div></div>
+            <div class="current-status">{{ crm_labels.get(item.deal.status if item.deal else 'NEW', item.deal.status if item.deal else 'NEW') }}</div>
+            <div class="action-grid">
+                {% for status in ['CONTACTED','NEGOTIATING','PICKUP','SKIPPED'] %}
+                <form method="post" action="{{ url_for('main.action_crm', alert_id=item.id, status=status) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-ghost btn-block" type="submit">{{ crm_labels[status] }}</button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head"><div><h2>Historia i follow-up</h2><p>CRM history + automatyczne przypomnienia</p></div></div>
+            <form method="post" action="{{ url_for('main.action_history_add', alert_id=item.id) }}" class="form-stack panel-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="kind"><option value="NOTE">Notatka</option><option value="MY_OFFER">Moja oferta</option><option value="SELLER_OFFER">Oferta sprzedającego</option><option value="MESSAGE">Wiadomość</option></select>
+                <input type="number" name="amount" step="1" placeholder="Kwota (opcjonalnie)">
+                <input name="note" placeholder="Treść / notatka">
+                <button class="btn btn-ghost btn-block" type="submit">Dodaj do historii</button>
+            </form>
+            {% if item.history %}<div class="timeline">{% for h in item.history[:6] %}<div><strong>{{ h.kind }}</strong>{% if h.amount %}<span>{{ money(h.amount) }}</span>{% endif %}<p>{{ h.note or '' }}</p><small>{{ h.created_at }}</small></div>{% endfor %}</div>{% endif %}
+            <form method="post" action="{{ url_for('main.action_followup_add', alert_id=item.id) }}" class="form-stack panel-form border-top">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="mode"><option value="1h">Za 1 godzinę</option><option value="3h">Za 3 godziny</option><option value="tomorrow">Jutro 09:00</option></select>
+                <input name="note" placeholder="Przypomnienie">
+                <button class="btn btn-ghost btn-block" type="submit">Ustaw follow-up</button>
+            </form>
+            {% for f in item.followups if f.status == 'ACTIVE' %}<div class="active-followup"><strong>{{ f.due_at }}</strong><span>{{ f.note or 'Follow-up' }}</span><div class="button-row"><form method="post" action="{{ url_for('main.action_followup_update', followup_id=f.id, action='done') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success btn-small" type="submit">Gotowe</button></form><form method="post" action="{{ url_for('main.action_followup_update', followup_id=f.id, action='cancel') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-small" type="submit">Anuluj</button></form></div></div>{% endfor %}
+        </div>
+
+        {% if not item.flip %}
+        <div class="panel">
+            <div class="panel-head"><div><h2>Zakup</h2><p>Zapisz realną cenę zakupu</p></div></div>
+            <form method="post" action="{{ url_for('main.action_buy', alert_id=item.id) }}" class="form-stack">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label>Cena zakupu<input type="number" step="1" min="1" name="purchase_price" value="{{ item.price or '' }}" required></label>
+                <label>Dodatkowy koszt<input type="number" step="1" min="0" name="extra_cost" value="0"></label>
+                <button class="btn btn-success btn-block" type="submit" data-confirm="Oznaczyć komputer jako kupiony?">Kupiony</button>
+            </form>
+        </div>
+        {% else %}
+        <div class="panel">
+            <div class="panel-head"><div><h2>Zakup zapisany</h2><p>{{ item.flip.bought_at }}</p></div></div>
+            <div class="kv-list"><div><span>Cena zakupu</span><strong>{{ money(item.flip.purchase_price) }}</strong></div><div><span>Status</span><strong>{{ item.flip.status }}</strong></div></div>
+            {% if item.flip.status != 'SOLD' %}
+            <form method="post" action="{{ url_for('main.action_sell', flip_id=item.flip.id) }}" class="form-stack top-gap">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label>Cena sprzedaży<input type="number" min="1" step="1" name="sale_price" required></label>
+                <label>Łączne dodatkowe koszty<input type="number" min="0" step="1" name="extra_cost" value="{{ item.flip.extra_cost or 0 }}"></label>
+                <button class="btn btn-primary btn-block" type="submit" data-confirm="Zapisać sprzedaż?">Sprzedany</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if item.purchase_checks %}
+<div class="panel">
+    <div class="panel-head"><div><h2>Checklista przed zakupem</h2><p>purchase_checklist.py — weryfikacja informacji od sprzedającego</p></div></div>
+    <div class="check-grid">
+    {% for check in item.purchase_checks %}
+        {% set key = check.key or check.item_key %}
+        <div class="check-item">
+            <strong>{{ check.label or key }}</strong><span class="tag">{{ check.status }}</span>
+            <div class="check-actions">{% for status in ['OK','MISSING','PROBLEM','UNKNOWN'] %}<form method="post" action="{{ url_for('main.action_purchase_check', alert_id=item.id, item_key=key, status=status) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small {{ 'btn-primary' if check.status == status else 'btn-ghost' }}" type="submit">{{ status }}</button></form>{% endfor %}</div>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if item.flip and item.pickup_checks %}
+<div class="panel">
+    <div class="panel-head"><div><h2>Checklista odbioru</h2><p>pickup_checklist.py · gotowe: {{ 'TAK' if item.pickup_readiness.ready else 'NIE' }}</p></div></div>
+    <div class="check-grid">{% for check in item.pickup_checks %}<div class="check-item"><strong>{{ check.label }}</strong><span class="tag">{{ check.status }}</span><div class="check-actions">{% for status in ['OK','PROBLEM','PENDING'] %}<form method="post" action="{{ url_for('main.action_pickup_check', alert_id=item.id, item_key=check.key, status=status) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small {{ 'btn-primary' if check.status == status else 'btn-ghost' }}" type="submit">{{ status }}</button></form>{% endfor %}</div></div>{% endfor %}</div>
+</div>
+{% endif %}
+{% endblock %}

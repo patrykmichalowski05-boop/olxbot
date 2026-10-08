@@ -1,0 +1,1670 @@
+import sqlite3
+from datetime import datetime
+
+from flask import (
+    Blueprint,
+    render_template_string,
+)
+
+from dashboard_health import (
+    collect_health,
+)
+
+
+control_bp = Blueprint(
+    "control_dashboard",
+    __name__,
+)
+
+
+ALERT_DB = "/opt/olx-bot/alert_history.db"
+FLIP_DB = "/opt/olx-bot/flip_results.db"
+WATCHLIST_DB = "/opt/olx-bot/watchlist.db"
+
+
+# ============================================================
+# DB
+# ============================================================
+
+def rows(
+    database,
+    query,
+    params=(),
+):
+
+    try:
+
+        conn = sqlite3.connect(
+            database
+        )
+
+        conn.row_factory = sqlite3.Row
+
+        result = conn.execute(
+            query,
+            params,
+        ).fetchall()
+
+        conn.close()
+
+        return result
+
+    except Exception as e:
+
+        print(
+            "[CONTROL DB ERROR]",
+            database,
+            e,
+        )
+
+        return []
+
+
+def one(
+    database,
+    query,
+    params=(),
+):
+
+    result = rows(
+        database,
+        query,
+        params,
+    )
+
+    if result:
+        return result[0]
+
+    return None
+
+
+def money(value):
+
+    if value is None:
+        return "-"
+
+    try:
+
+        value = int(
+            round(
+                float(value)
+            )
+        )
+
+        return (
+            f"{value:,}"
+            .replace(",", " ")
+            + " zł"
+        )
+
+    except Exception:
+
+        return "-"
+
+
+# ============================================================
+# HTML
+# ============================================================
+
+HTML = """
+<!doctype html>
+<html lang="pl">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>
+OLX Flip Hunter — Control Center
+</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0b0e12;
+    color: #edf1f5;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1500px;
+    margin: auto;
+    padding: 22px;
+}
+
+a {
+    color: #75baff;
+    text-decoration: none;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.title {
+    font-size: 31px;
+    font-weight: bold;
+}
+
+.sub {
+    color: #84909c;
+    margin-top: 4px;
+    font-size: 13px;
+}
+
+.nav {
+    text-align: right;
+}
+
+.health {
+    margin-top: 22px;
+    background: #151a20;
+    border: 1px solid #29313a;
+    border-radius: 18px;
+    padding: 22px;
+
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.health-circle {
+    width: 120px;
+    height: 120px;
+    min-width: 120px;
+
+    border-radius: 50%;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    border: 9px solid #313943;
+}
+
+.health-ok {
+    border-color: #5bd889;
+}
+
+.health-warning {
+    border-color: #ffd166;
+}
+
+.health-error {
+    border-color: #ff6767;
+}
+
+.health-number {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.health-small {
+    font-size: 11px;
+    color: #8d98a3;
+}
+
+.good {
+    color: #67dc91;
+}
+
+.warn {
+    color: #ffd166;
+}
+
+.bad {
+    color: #ff7171;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(175px, 1fr)
+        );
+    gap: 13px;
+
+    margin-top: 22px;
+}
+
+.card {
+    background: #171c22;
+    border: 1px solid #29313a;
+    border-radius: 14px;
+    padding: 17px;
+}
+
+.label {
+    color: #8b96a2;
+    font-size: 12px;
+}
+
+.value {
+    margin-top: 7px;
+    font-size: 27px;
+    font-weight: bold;
+}
+
+.section {
+    margin-top: 30px;
+}
+
+.section-title {
+    margin-bottom: 12px;
+    font-size: 21px;
+    font-weight: bold;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 850px;
+}
+
+th,
+td {
+    padding: 11px;
+    text-align: left;
+    border-bottom: 1px solid #29313a;
+    vertical-align: middle;
+}
+
+th {
+    color: #87929d;
+    font-size: 12px;
+}
+
+.badge {
+    display: inline-block;
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-red {
+    background: #422020;
+    color: #ff8080;
+}
+
+.badge-yellow {
+    background: #41371b;
+    color: #ffd166;
+}
+
+.badge-green {
+    background: #173a25;
+    color: #70db94;
+}
+
+.badge-gray {
+    background: #272d34;
+    color: #bbc3cc;
+}
+
+.score {
+    display: inline-block;
+    min-width: 50px;
+    text-align: center;
+    border-radius: 8px;
+    padding: 5px 7px;
+    font-weight: bold;
+}
+
+.score-top {
+    background: #452020;
+    color: #ff8080;
+}
+
+.score-hot {
+    background: #41371b;
+    color: #ffd166;
+}
+
+.score-good {
+    background: #173a25;
+    color: #70db94;
+}
+
+.score-normal {
+    background: #292f36;
+    color: #bbc3cc;
+}
+
+.module-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(160px, 1fr)
+        );
+    gap: 10px;
+}
+
+.module {
+    background: #171c22;
+    border: 1px solid #29313a;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.dot {
+    width: 9px;
+    height: 9px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 7px;
+}
+
+.dot-ok {
+    background: #63db8e;
+}
+
+.dot-warning {
+    background: #ffd166;
+}
+
+.dot-error {
+    background: #ff6e6e;
+}
+
+.small {
+    color: #8c97a3;
+    font-size: 11px;
+    margin-top: 7px;
+}
+
+.empty {
+    color: #86919c;
+    padding: 25px 0;
+}
+
+/* CONTROL ACTION BUTTONS V1 */
+
+.action-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.action-input {
+    width: 90px;
+    padding: 7px;
+    border-radius: 7px;
+    border: 1px solid #343c45;
+    background: #0e1216;
+    color: white;
+}
+
+.btn {
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-buy {
+    background: #2563eb;
+}
+
+.btn-sell {
+    background: #15834e;
+}
+
+.btn-close {
+    background: #9b3434;
+}
+
+.btn:hover {
+    opacity: .85;
+}
+
+
+@media(max-width: 700px) {
+
+    .container {
+        padding: 12px;
+    }
+
+    .header {
+        display: block;
+    }
+
+    .nav {
+        margin-top: 10px;
+        text-align: left;
+    }
+
+    .health {
+        display: block;
+    }
+
+    .health-circle {
+        margin-bottom: 16px;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+<div class="header">
+
+<div>
+
+<div class="title">
+🖥 OLX Flip Hunter
+</div>
+
+<div class="sub">
+Control Center V5 · LIVE
+</div>
+
+</div>
+
+
+<div class="nav">
+
+<a href="/">
+Dashboard
+</a>
+
+&nbsp; · &nbsp;
+
+<a href="/health">
+Health
+</a>
+
+&nbsp; · &nbsp;
+
+<a href="/watchlist">
+Watchlista
+</a>
+
+&nbsp; · &nbsp;
+
+<a href="/analytics">
+Analityka
+</a>
+
+</div>
+
+</div>
+
+
+<div class="health">
+
+<div class="
+health-circle
+{% if health.status == 'OK' %}
+health-ok
+{% elif health.status == 'WARNING' %}
+health-warning
+{% else %}
+health-error
+{% endif %}
+">
+
+<div class="health-number">
+{{ health.score }}%
+</div>
+
+<div class="health-small">
+BOT HEALTH
+</div>
+
+</div>
+
+
+<div>
+
+<h2>
+
+{% if health.status == "OK" %}
+
+<span class="good">
+✅ SYSTEM OK
+</span>
+
+{% elif health.status == "WARNING" %}
+
+<span class="warn">
+⚠ SYSTEM WARNING
+</span>
+
+{% else %}
+
+<span class="bad">
+❌ SYSTEM ERROR
+</span>
+
+{% endif %}
+
+</h2>
+
+<div class="sub">
+
+{{ health.active_timers }}
+/
+{{ health.total_timers }}
+timerów aktywnych
+
+·
+
+{{ health.errors }}
+błędów / 24 h
+
+·
+
+MARKET:
+{% if health.market.age_hours is not none %}
+{{ health.market.age_hours }} h
+{% else %}
+-
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="grid">
+
+
+<div class="card">
+
+<div class="label">
+💰 Realny zysk
+</div>
+
+<div class="value good">
+{{ money(total_profit) }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+📅 Zysk w tym miesiącu
+</div>
+
+<div class="value good">
+{{ money(month_profit) }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+📦 PC na stanie
+</div>
+
+<div class="value">
+{{ inventory_count }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+💳 Kapitał w magazynie
+</div>
+
+<div class="value">
+{{ money(inventory_cost) }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+🔥 TOP DEAL
+</div>
+
+<div class="value bad">
+{{ top_deal_count }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+🚨 KUP TERAZ
+</div>
+
+<div class="value bad">
+{{ health.watchlist.triggered }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+👀 Watchlista
+</div>
+
+<div class="value">
+{{ health.watchlist.watching }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+📥 Queue pending
+</div>
+
+<div class="value">
+{{ health.queue.pending }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+❌ Queue failed
+</div>
+
+<div class="
+value
+{% if health.queue.failed == 0 %}
+good
+{% elif health.queue.failed < 10 %}
+warn
+{% else %}
+bad
+{% endif %}
+">
+{{ health.queue.failed }}
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="label">
+📊 Sprzedane PC
+</div>
+
+<div class="value">
+{{ sold_count }}
+</div>
+
+</div>
+
+
+</div>
+
+
+<div class="section">
+
+<div class="section-title">
+🚨 KUP TERAZ
+</div>
+
+<div class="card table-wrap">
+
+{% if triggered %}
+
+<table>
+
+<tr>
+<th>Score</th>
+<th>Oferta</th>
+<th>Cena</th>
+<th>MAX</th>
+<th>Start negocjacji</th>
+<th>OLX</th>
+</tr>
+
+
+{% for row in triggered %}
+
+<tr>
+
+<td>
+<b>
+{{ row.score or "-" }}/100
+</b>
+</td>
+
+<td>
+{{ row.title }}
+</td>
+
+<td>
+{{ money(row.current_price) }}
+</td>
+
+<td class="good">
+<b>
+{{ money(row.max_buy) }}
+</b>
+</td>
+
+<td>
+{{ money(row.opening) }}
+</td>
+
+<td>
+
+{% if row.url %}
+
+<a
+    href="{{ row.url }}"
+    target="_blank"
+>
+OTWÓRZ
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="empty">
+Brak ofert KUP TERAZ.
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<div class="section-title">
+🔥 Najmocniejsze alerty
+</div>
+
+<div class="card table-wrap">
+
+{% if top_alerts %}
+
+<table>
+
+<tr>
+<th>Score</th>
+<th>Oferta</th>
+<th>Cena</th>
+<th>Quick sale</th>
+<th>Zysk</th>
+<th>ROI</th>
+<th>OLX</th>
+<th>Kupiono</th>
+</tr>
+
+
+{% for row in top_alerts %}
+
+<tr>
+
+<td>
+
+{% set score = row.score or 0 %}
+
+<span class="
+score
+{% if score >= 90 %}
+score-top
+{% elif score >= 80 %}
+score-hot
+{% elif score >= 70 %}
+score-good
+{% else %}
+score-normal
+{% endif %}
+">
+
+{{ score }}
+
+</span>
+
+</td>
+
+<td>
+{{ row.title }}
+</td>
+
+<td>
+{{ money(row.price) }}
+</td>
+
+<td>
+{{ money(row.quick_sale) }}
+</td>
+
+<td class="good">
+<b>
+{{ money(row.profit) }}
+</b>
+</td>
+
+<td>
+
+{% if row.roi is not none %}
+{{ "%.0f"|format(row.roi) }}%
+{% else %}
+-
+{% endif %}
+
+</td>
+
+<td>
+
+{% if row.url %}
+
+<a
+    href="{{ row.url }}"
+    target="_blank"
+>
+OLX
+</a>
+
+&nbsp; | &nbsp;
+
+<a
+    href="/offer/{{ row.id }}"
+>
+SZCZEGÓŁY
+</a>
+
+{% endif %}
+
+</td>
+
+<td>
+
+<form
+    class="action-form"
+    method="post"
+    action="/control/buy/{{ row.id }}"
+>
+
+<input
+    class="action-input"
+    type="number"
+    name="purchase_price"
+    placeholder="zakup"
+    value="{{ row.price|int if row.price else '' }}"
+    required
+>
+
+<input
+    class="action-input"
+    type="number"
+    name="extra_cost"
+    placeholder="koszt"
+    value="0"
+>
+
+<button
+    class="btn btn-buy"
+    type="submit"
+>
+KUPIONY
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="empty">
+Brak alertów.
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<div class="section-title">
+📦 Magazyn
+</div>
+
+<div class="card table-wrap">
+
+{% if inventory %}
+
+<table>
+
+<tr>
+<th>ID</th>
+<th>Komputer</th>
+<th>Kupiono</th>
+<th>Koszty</th>
+<th>Prognoza</th>
+<th>Potencjalny zysk</th>
+<th>Na stanie</th>
+<th>Sprzedaż</th>
+</tr>
+
+
+{% for row in inventory %}
+
+<tr>
+
+<td>
+{{ row.id }}
+</td>
+
+<td>
+{{ row.title }}
+</td>
+
+<td>
+{{ money(row.purchase_price) }}
+</td>
+
+<td>
+{{ money(row.extra_cost) }}
+</td>
+
+<td>
+{{ money(row.predicted_quick_sale) }}
+</td>
+
+<td class="good">
+{{ money(row.expected_profit) }}
+</td>
+
+<td>
+{{ row.days_held }} dni
+</td>
+
+<td>
+
+<form
+    class="action-form"
+    method="post"
+    action="/control/sell/{{ row.id }}"
+>
+
+<input
+    class="action-input"
+    type="number"
+    name="sale_price"
+    placeholder="sprzedaż"
+    required
+>
+
+<input
+    class="action-input"
+    type="number"
+    name="extra_cost"
+    value="{{ row.extra_cost or 0 }}"
+    placeholder="koszt"
+>
+
+<button
+    class="btn btn-sell"
+    type="submit"
+>
+SPRZEDANY
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="empty">
+Brak komputerów na stanie.
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<div class="section-title">
+👀 Najbliżej ceny zakupu
+</div>
+
+<div class="card table-wrap">
+
+{% if watch_candidates %}
+
+<table>
+
+<tr>
+<th>Score</th>
+<th>Oferta</th>
+<th>Cena</th>
+<th>MAX</th>
+<th>Brakuje</th>
+<th>OLX</th>
+<th>Akcja</th>
+</tr>
+
+
+{% for row in watch_candidates %}
+
+<tr>
+
+<td>
+{{ row.score or "-" }}
+</td>
+
+<td>
+{{ row.title }}
+</td>
+
+<td>
+{{ money(row.current_price) }}
+</td>
+
+<td>
+{{ money(row.max_buy) }}
+</td>
+
+<td>
+
+{% if row.gap <= 100 %}
+
+<span class="good">
+<b>
+{{ money(row.gap) }}
+</b>
+</span>
+
+{% elif row.gap <= 300 %}
+
+<span class="warn">
+{{ money(row.gap) }}
+</span>
+
+{% else %}
+
+{{ money(row.gap) }}
+
+{% endif %}
+
+</td>
+
+<td>
+
+{% if row.url %}
+
+<a
+    href="{{ row.url }}"
+    target="_blank"
+>
+OLX
+</a>
+
+{% endif %}
+
+</td>
+
+<td>
+
+<form
+    method="post"
+    action="/control/watchlist/close/{{ row.id }}"
+>
+
+<button
+    class="btn btn-close"
+    type="submit"
+>
+ODPUŚĆ
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="empty">
+Watchlista jest pusta.
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<div class="section-title">
+⚙ Status modułów
+</div>
+
+<div class="module-grid">
+
+{% for module in health.modules %}
+
+<div class="module">
+
+<div>
+
+{% if module.status == "OK" %}
+
+<span class="dot dot-ok"></span>
+
+{% elif module.status == "WARNING" %}
+
+<span class="dot dot-warning"></span>
+
+{% else %}
+
+<span class="dot dot-error"></span>
+
+{% endif %}
+
+<b>
+{{ module.name }}
+</b>
+
+</div>
+
+<div class="small">
+
+Timer:
+{{ module.timer }}
+
+<br>
+
+Errors 24h:
+{{ module.errors }}
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+setTimeout(
+    function () {
+        window.location.reload();
+    },
+    30000
+);
+
+</script>
+
+</body>
+
+</html>
+"""
+
+
+# ============================================================
+# ROUTE
+# ============================================================
+
+@control_bp.route(
+    "/control"
+)
+def control():
+
+    health = (
+        collect_health()
+    )
+
+
+    # ========================================================
+    # FLIP STATS
+    # ========================================================
+
+    stats = one(
+        FLIP_DB,
+        """
+        SELECT
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN status = 'SOLD'
+                        THEN (
+                            sale_price
+                            -
+                            purchase_price
+                            -
+                            COALESCE(
+                                extra_cost,
+                                0
+                            )
+                        )
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS total_profit,
+
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN status = 'SOLD'
+                        THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS sold_count
+
+        FROM flips
+        """
+    )
+
+
+    total_profit = 0
+    sold_count = 0
+
+    if stats:
+
+        total_profit = (
+            stats["total_profit"]
+            or 0
+        )
+
+        sold_count = (
+            stats["sold_count"]
+            or 0
+        )
+
+
+    month_key = (
+        datetime.now()
+        .strftime("%Y-%m")
+    )
+
+
+    month = one(
+        FLIP_DB,
+        """
+        SELECT
+
+            COALESCE(
+                SUM(
+                    sale_price
+                    -
+                    purchase_price
+                    -
+                    COALESCE(
+                        extra_cost,
+                        0
+                    )
+                ),
+                0
+            ) AS profit
+
+        FROM flips
+
+        WHERE
+            status = 'SOLD'
+            AND sold_at LIKE ?
+        """,
+        (
+            month_key + "%",
+        ),
+    )
+
+
+    month_profit = (
+        month["profit"]
+        if month
+        else 0
+    ) or 0
+
+
+    # ========================================================
+    # INVENTORY
+    # ========================================================
+
+    inventory_rows = rows(
+        FLIP_DB,
+        """
+        SELECT
+            *,
+
+            (
+                predicted_quick_sale
+                -
+                purchase_price
+                -
+                COALESCE(
+                    extra_cost,
+                    0
+                )
+            ) AS expected_profit
+
+        FROM flips
+
+        WHERE status = 'BOUGHT'
+
+        ORDER BY bought_at DESC
+        """
+    )
+
+
+    inventory = []
+
+    inventory_cost = 0
+
+
+    for row in inventory_rows:
+
+        item = dict(
+            row
+        )
+
+        inventory_cost += (
+            float(
+                item.get(
+                    "purchase_price"
+                )
+                or 0
+            )
+            +
+            float(
+                item.get(
+                    "extra_cost"
+                )
+                or 0
+            )
+        )
+
+
+        try:
+
+            bought = datetime.fromisoformat(
+                item[
+                    "bought_at"
+                ]
+            )
+
+            item[
+                "days_held"
+            ] = (
+                datetime.now()
+                -
+                bought
+            ).days
+
+        except Exception:
+
+            item[
+                "days_held"
+            ] = 0
+
+
+        inventory.append(
+            item
+        )
+
+
+    # ========================================================
+    # ALERTS
+    # ========================================================
+
+    top_alerts = rows(
+        ALERT_DB,
+        """
+        SELECT *
+
+        FROM alerts
+
+        WHERE score IS NOT NULL
+
+        ORDER BY
+            score DESC,
+            profit DESC,
+            id DESC
+
+        LIMIT 10
+        """
+    )
+
+
+    top_deal_row = one(
+        ALERT_DB,
+        """
+        SELECT COUNT(*) AS count
+
+        FROM alerts
+
+        WHERE score >= 90
+        """
+    )
+
+
+    top_deal_count = (
+        top_deal_row["count"]
+        if top_deal_row
+        else 0
+    )
+
+
+    # ========================================================
+    # WATCHLIST TRIGGERED
+    # ========================================================
+
+    triggered = rows(
+        WATCHLIST_DB,
+        """
+        SELECT *
+
+        FROM watchlist
+
+        WHERE status = 'TRIGGERED'
+
+        ORDER BY
+            score DESC,
+            triggered_at DESC
+
+        LIMIT 10
+        """
+    )
+
+
+    # ========================================================
+    # WATCHLIST WATCHING
+    # ========================================================
+
+    watch_raw = rows(
+        WATCHLIST_DB,
+        """
+        SELECT *
+
+        FROM watchlist
+
+        WHERE status = 'WATCHING'
+        """
+    )
+
+
+    watch_candidates = []
+
+
+    for row in watch_raw:
+
+        item = dict(
+            row
+        )
+
+        price = item.get(
+            "current_price"
+        )
+
+        max_buy = item.get(
+            "max_buy"
+        )
+
+        if (
+            price is None
+            or
+            max_buy is None
+        ):
+
+            continue
+
+
+        item[
+            "gap"
+        ] = max(
+            0,
+            float(price)
+            -
+            float(max_buy)
+        )
+
+        watch_candidates.append(
+            item
+        )
+
+
+    watch_candidates.sort(
+        key=lambda item: (
+            item["gap"],
+            -(
+                item.get(
+                    "score"
+                )
+                or 0
+            ),
+        )
+    )
+
+
+    watch_candidates = (
+        watch_candidates[:10]
+    )
+
+
+    return render_template_string(
+        HTML,
+
+        health=health,
+
+        money=money,
+
+        total_profit=
+            total_profit,
+
+        month_profit=
+            month_profit,
+
+        sold_count=
+            sold_count,
+
+        inventory=
+            inventory,
+
+        inventory_count=
+            len(inventory),
+
+        inventory_cost=
+            inventory_cost,
+
+        top_alerts=
+            top_alerts,
+
+        top_deal_count=
+            top_deal_count,
+
+        triggered=
+            triggered,
+
+        watch_candidates=
+            watch_candidates,
+    )

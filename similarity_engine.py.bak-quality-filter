@@ -1,0 +1,1306 @@
+import re
+import sqlite3
+import statistics
+
+from datetime import datetime, timedelta
+
+
+DB_FILE = "/opt/olx-bot/market.db"
+
+
+# ============================================================
+# ORIENTACYJNE WARTOŚCI CPU
+#
+# To NIE jest główna wycena komputera.
+# Służy tylko do skorygowania różnicy CPU pomiędzy
+# porównywanymi komputerami z tą samą kartą graficzną.
+# ============================================================
+
+CPU_REFERENCE = {
+
+    # INTEL 9 GEN
+
+    "I5-9400": 180,
+    "I5-9400F": 180,
+    "I5-9500": 200,
+    "I5-9600": 215,
+    "I5-9600K": 230,
+    "I5-9600KF": 230,
+
+    "I7-9700": 300,
+    "I7-9700F": 290,
+    "I7-9700K": 330,
+    "I7-9700KF": 330,
+
+    "I9-9900": 400,
+    "I9-9900K": 450,
+
+    # INTEL 10 GEN
+
+    "I5-10400": 250,
+    "I5-10400F": 240,
+    "I5-10500": 260,
+    "I5-10600": 280,
+    "I5-10600K": 290,
+    "I5-10600KF": 290,
+
+    "I7-10700": 350,
+    "I7-10700F": 340,
+    "I7-10700K": 380,
+    "I7-10700KF": 380,
+
+    # INTEL 11 GEN
+
+    "I5-11400": 300,
+    "I5-11400F": 290,
+    "I5-11500": 315,
+    "I5-11600": 330,
+    "I5-11600K": 340,
+    "I5-11600KF": 340,
+
+    "I7-11700": 410,
+    "I7-11700F": 400,
+    "I7-11700K": 440,
+
+    # INTEL 12 GEN
+
+    "I5-12400": 430,
+    "I5-12400F": 400,
+    "I5-12500": 460,
+    "I5-12600K": 550,
+    "I5-12600KF": 530,
+
+    "I7-12700": 650,
+    "I7-12700F": 620,
+    "I7-12700K": 700,
+
+    # INTEL 13 GEN
+
+    "I5-13400": 600,
+    "I5-13400F": 570,
+    "I5-13500": 680,
+    "I5-13600K": 800,
+    "I5-13600KF": 760,
+
+    "I7-13700": 900,
+    "I7-13700F": 850,
+    "I7-13700K": 950,
+
+    # INTEL 14 GEN
+
+    "I5-14400": 650,
+    "I5-14400F": 620,
+    "I5-14500": 720,
+    "I5-14600K": 850,
+    "I5-14600KF": 810,
+
+    # AMD AM4
+
+    "RYZEN 5 3600": 250,
+    "RYZEN 5 3600X": 270,
+
+    "RYZEN 5 5500": 270,
+    "RYZEN 5 5600": 350,
+    "RYZEN 5 5600X": 380,
+
+    "RYZEN 7 3700X": 330,
+    "RYZEN 7 3800X": 350,
+
+    "RYZEN 7 5700X": 450,
+    "RYZEN 7 5700X3D": 650,
+
+    "RYZEN 7 5800X": 500,
+    "RYZEN 7 5800X3D": 800,
+
+    "RYZEN 9 5900X": 650,
+    "RYZEN 9 5950X": 800,
+
+    # AMD AM5
+
+    "RYZEN 5 7500F": 500,
+    "RYZEN 5 7600": 600,
+    "RYZEN 5 7600X": 650,
+
+    "RYZEN 7 7700": 850,
+    "RYZEN 7 7700X": 900,
+    "RYZEN 7 7800X3D": 1250,
+}
+
+
+RAM_REFERENCE = {
+    8: 60,
+    16: 120,
+    32: 200,
+    64: 300,
+    128: 500,
+}
+
+
+# ============================================================
+# NORMALIZACJA
+# ============================================================
+
+def normalize_cpu(cpu):
+
+    if not cpu:
+        return None
+
+    value = (
+        str(cpu)
+        .upper()
+        .strip()
+    )
+
+    value = value.replace(
+        "AMD ",
+        ""
+    )
+
+    value = value.replace(
+        "INTEL ",
+        ""
+    )
+
+    value = value.replace(
+        "CORE ",
+        ""
+    )
+
+    value = re.sub(
+        r"\s+",
+        " ",
+        value
+    )
+
+    # i5 10400f -> I5-10400F
+
+    match = re.search(
+        r"\bI([3579])[\s-]?(\d{4,5})(KF|F|K)?\b",
+        value
+    )
+
+    if match:
+
+        family = match.group(1)
+        model = match.group(2)
+        suffix = (
+            match.group(3)
+            or ""
+        )
+
+        return (
+            f"I{family}-"
+            f"{model}"
+            f"{suffix}"
+        )
+
+    # Ryzen
+
+    match = re.search(
+        r"RYZEN\s+([3579])\s+"
+        r"(\d{4})(X3D|X|G|GE)?",
+        value
+    )
+
+    if match:
+
+        family = match.group(1)
+        model = match.group(2)
+        suffix = (
+            match.group(3)
+            or ""
+        )
+
+        return (
+            f"RYZEN {family} "
+            f"{model}{suffix}"
+        )
+
+    return value
+
+
+def normalize_gpu(gpu):
+
+    if not gpu:
+        return None
+
+    value = (
+        str(gpu)
+        .upper()
+        .strip()
+    )
+
+    value = value.replace(
+        "NVIDIA ",
+        ""
+    )
+
+    value = value.replace(
+        "GEFORCE ",
+        ""
+    )
+
+    value = value.replace(
+        "RADEON ",
+        ""
+    )
+
+    value = re.sub(
+        r"\s+",
+        " ",
+        value
+    )
+
+    # RTX3060TI -> RTX 3060 TI
+
+    match = re.search(
+        r"\b(RTX|GTX)\s*"
+        r"(\d{4})\s*"
+        r"(TI|SUPER)?",
+        value
+    )
+
+    if match:
+
+        family = match.group(1)
+        model = match.group(2)
+
+        suffix = (
+            match.group(3)
+            or ""
+        )
+
+        result = (
+            f"{family} {model}"
+        )
+
+        if suffix:
+            result += (
+                f" {suffix}"
+            )
+
+        return result
+
+    # RX6650XT -> RX 6650 XT
+
+    match = re.search(
+        r"\bRX\s*"
+        r"(\d{4})\s*"
+        r"(XT|XTX)?",
+        value
+    )
+
+    if match:
+
+        model = match.group(1)
+
+        suffix = (
+            match.group(2)
+            or ""
+        )
+
+        result = (
+            f"RX {model}"
+        )
+
+        if suffix:
+            result += (
+                f" {suffix}"
+            )
+
+        return result
+
+    return value
+
+
+# ============================================================
+# DB
+# ============================================================
+
+def connect():
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    conn.row_factory = (
+        sqlite3.Row
+    )
+
+    return conn
+
+
+# ============================================================
+# RAM
+# ============================================================
+
+def ram_reference(
+    ram
+):
+
+    if not ram:
+        return 0
+
+    try:
+        ram = int(ram)
+    except:
+        return 0
+
+    if ram >= 128:
+        return 500
+
+    if ram >= 64:
+        return 300
+
+    if ram >= 32:
+        return 200
+
+    if ram >= 16:
+        return 120
+
+    if ram >= 8:
+        return 60
+
+    return 0
+
+
+# ============================================================
+# CPU SIMILARITY
+# ============================================================
+
+def cpu_similarity(
+    target_cpu,
+    candidate_cpu
+):
+
+    target = normalize_cpu(
+        target_cpu
+    )
+
+    candidate = normalize_cpu(
+        candidate_cpu
+    )
+
+    if not target or not candidate:
+        return 0.0
+
+    if target == candidate:
+        return 1.0
+
+    target_value = (
+        CPU_REFERENCE.get(
+            target
+        )
+    )
+
+    candidate_value = (
+        CPU_REFERENCE.get(
+            candidate
+        )
+    )
+
+    if (
+        target_value is None
+        or
+        candidate_value is None
+    ):
+        return 0.0
+
+    ratio = (
+        min(
+            target_value,
+            candidate_value
+        )
+        /
+        max(
+            target_value,
+            candidate_value
+        )
+    )
+
+    # Za daleki CPU.
+    if ratio < 0.65:
+        return 0.0
+
+    return ratio
+
+
+# ============================================================
+# RAM SIMILARITY
+# ============================================================
+
+def ram_similarity(
+    target_ram,
+    candidate_ram
+):
+
+    if (
+        not target_ram
+        or
+        not candidate_ram
+    ):
+        return 0.60
+
+    if (
+        target_ram
+        ==
+        candidate_ram
+    ):
+        return 1.0
+
+    ratio = (
+        min(
+            target_ram,
+            candidate_ram
+        )
+        /
+        max(
+            target_ram,
+            candidate_ram
+        )
+    )
+
+    return max(
+        0.40,
+        ratio
+    )
+
+
+# ============================================================
+# SCORING
+# ============================================================
+
+def similarity_score(
+    target_cpu,
+    target_gpu,
+    target_ram,
+    candidate_cpu,
+    candidate_gpu,
+    candidate_ram
+):
+    """
+    Na tym etapie wymagamy dokładnie tej samej GPU.
+
+    To jest celowe:
+    różnice cen pomiędzy GPU są dużo większe
+    niż pomiędzy podobnymi CPU.
+
+    Sąsiednie GPU dołożymy później jako
+    drugi poziom fallbacku.
+    """
+
+    target_gpu = normalize_gpu(
+        target_gpu
+    )
+
+    candidate_gpu = normalize_gpu(
+        candidate_gpu
+    )
+
+    if (
+        not target_gpu
+        or
+        not candidate_gpu
+    ):
+        return 0.0
+
+    if (
+        target_gpu
+        !=
+        candidate_gpu
+    ):
+        return 0.0
+
+    cpu_score = (
+        cpu_similarity(
+            target_cpu,
+            candidate_cpu
+        )
+    )
+
+    if cpu_score <= 0:
+        return 0.0
+
+    ram_score = (
+        ram_similarity(
+            target_ram,
+            candidate_ram
+        )
+    )
+
+    # GPU = 60 pkt
+    # CPU = 30 pkt
+    # RAM = 10 pkt
+
+    score = (
+        60
+        +
+        30 * cpu_score
+        +
+        10 * ram_score
+    )
+
+    return round(
+        score,
+        2
+    )
+
+
+# ============================================================
+# NORMALIZACJA CENY PORÓWNYWALNEGO PC
+# ============================================================
+
+def normalize_comparable_price(
+    price,
+
+    target_cpu,
+    candidate_cpu,
+
+    target_ram,
+    candidate_ram
+):
+    """
+    Przykład:
+
+    target:
+    R5 5600 + RTX3060
+
+    comparable:
+    R5 5500 + RTX3060
+
+    R5 5600 jest orientacyjnie 80 zł droższy,
+    więc porównywalne 1900 zł normalizujemy
+    do ~1980 zł.
+
+    GPU jest identyczna, więc jej nie korygujemy.
+    """
+
+    target_cpu_n = (
+        normalize_cpu(
+            target_cpu
+        )
+    )
+
+    candidate_cpu_n = (
+        normalize_cpu(
+            candidate_cpu
+        )
+    )
+
+    target_cpu_value = (
+        CPU_REFERENCE.get(
+            target_cpu_n
+        )
+    )
+
+    candidate_cpu_value = (
+        CPU_REFERENCE.get(
+            candidate_cpu_n
+        )
+    )
+
+    cpu_delta = 0
+
+    if (
+        target_cpu_value is not None
+        and
+        candidate_cpu_value is not None
+    ):
+
+        cpu_delta = (
+            target_cpu_value
+            -
+            candidate_cpu_value
+        )
+
+    ram_delta = (
+        ram_reference(
+            target_ram
+        )
+        -
+        ram_reference(
+            candidate_ram
+        )
+    )
+
+    adjusted = (
+        price
+        +
+        cpu_delta
+        +
+        ram_delta
+    )
+
+    return max(
+        500,
+        round(adjusted)
+    )
+
+
+# ============================================================
+# ŚWIEŻOŚĆ / ŻYCIE
+# ============================================================
+
+def parse_date(value):
+
+    if not value:
+        return None
+
+    try:
+        return datetime.fromisoformat(
+            value
+        )
+
+    except:
+        return None
+
+
+def lifecycle_hours(row):
+
+    start = parse_date(
+        row["first_seen"]
+    )
+
+    if not start:
+        return None
+
+    if (
+        row["active"] == 0
+        and
+        row["inactive_since"]
+    ):
+
+        end = parse_date(
+            row["inactive_since"]
+        )
+
+    else:
+
+        end = datetime.now()
+
+    if not end:
+        return None
+
+    return max(
+        0,
+        (
+            end - start
+        ).total_seconds()
+        / 3600
+    )
+
+
+def market_weight(row):
+
+    last_seen = parse_date(
+        row["last_seen"]
+    )
+
+    freshness = 0.5
+
+    if last_seen:
+
+        age_days = (
+            datetime.now()
+            -
+            last_seen
+        ).total_seconds() / 86400
+
+        if age_days <= 3:
+            freshness = 1.0
+
+        elif age_days <= 7:
+            freshness = 0.9
+
+        elif age_days <= 14:
+            freshness = 0.75
+
+        elif age_days <= 30:
+            freshness = 0.55
+
+        else:
+            freshness = 0.30
+
+    hours = lifecycle_hours(
+        row
+    )
+
+    lifecycle = 0.8
+
+    if row["active"] == 0:
+
+        if hours is None:
+            lifecycle = 0.9
+
+        elif hours <= 24:
+            lifecycle = 1.3
+
+        elif hours <= 72:
+            lifecycle = 1.2
+
+        elif hours <= 168:
+            lifecycle = 1.05
+
+        else:
+            lifecycle = 0.8
+
+    else:
+
+        if hours is None:
+            lifecycle = 0.8
+
+        elif hours <= 72:
+            lifecycle = 1.0
+
+        elif hours <= 168:
+            lifecycle = 0.9
+
+        elif hours <= 336:
+            lifecycle = 0.75
+
+        else:
+            lifecycle = 0.55
+
+    return (
+        freshness
+        *
+        lifecycle
+    )
+
+
+# ============================================================
+# WEIGHTED PERCENTILE
+# ============================================================
+
+def weighted_percentile(
+    items,
+    percentile
+):
+
+    if not items:
+        return None
+
+    items = sorted(
+        items,
+        key=lambda item:
+            item[0]
+    )
+
+    total_weight = sum(
+        weight
+        for _, weight
+        in items
+    )
+
+    if total_weight <= 0:
+        return None
+
+    target = (
+        total_weight
+        *
+        percentile
+    )
+
+    cumulative = 0
+
+    for value, weight in items:
+
+        cumulative += weight
+
+        if cumulative >= target:
+            return value
+
+    return items[-1][0]
+
+
+# ============================================================
+# PODOBNE PC
+# ============================================================
+
+def find_similar_pcs(
+    cpu,
+    gpu,
+    ram,
+
+    max_age_days=30,
+
+    min_score=80,
+
+    limit=30
+):
+
+    cutoff = (
+        datetime.now()
+        -
+        timedelta(
+            days=max_age_days
+        )
+    ).isoformat(
+        timespec="seconds"
+    )
+
+    normalized_gpu = normalize_gpu(
+        gpu
+    )
+
+    with connect() as conn:
+
+        rows = conn.execute("""
+            SELECT
+                offer_id,
+                title,
+                url,
+                price,
+
+                cpu,
+                gpu,
+                ram,
+
+                first_seen,
+                last_seen,
+
+                active,
+                inactive_since,
+
+                first_price,
+                lowest_price,
+                highest_price,
+
+                seen_count,
+                price_changes
+
+            FROM market_offers
+
+            WHERE
+                price IS NOT NULL
+
+                AND
+                last_seen >= ?
+        """, (
+            cutoff,
+        )).fetchall()
+
+    results = []
+
+    for row in rows:
+
+        if (
+            normalize_gpu(
+                row["gpu"]
+            )
+            !=
+            normalized_gpu
+        ):
+            continue
+
+        score = (
+            similarity_score(
+                cpu,
+                gpu,
+                ram,
+
+                row["cpu"],
+                row["gpu"],
+                row["ram"]
+            )
+        )
+
+        if score < min_score:
+            continue
+
+        adjusted_price = (
+            normalize_comparable_price(
+                row["price"],
+
+                cpu,
+                row["cpu"],
+
+                ram,
+                row["ram"]
+            )
+        )
+
+        life = lifecycle_hours(
+            row
+        )
+
+        result = {
+            "offer_id":
+                row["offer_id"],
+
+            "cpu":
+                row["cpu"],
+
+            "gpu":
+                row["gpu"],
+
+            "ram":
+                row["ram"],
+
+            "original_price":
+                row["price"],
+
+            "adjusted_price":
+                adjusted_price,
+
+            "similarity":
+                score,
+
+            "active":
+                row["active"],
+
+            "life_hours":
+                (
+                    round(life, 1)
+                    if life is not None
+                    else None
+                ),
+
+            "market_weight":
+                round(
+                    market_weight(row),
+                    3
+                ),
+
+            "url":
+                row["url"]
+        }
+
+        results.append(
+            result
+        )
+
+    results.sort(
+        key=lambda x:
+            x["similarity"],
+        reverse=True
+    )
+
+    return results[:limit]
+
+
+# ============================================================
+# STATYSTYKI PODOBNYCH
+# ============================================================
+
+def similar_market_stats(
+    cpu,
+    gpu,
+    ram
+):
+
+    comparable = (
+        find_similar_pcs(
+            cpu,
+            gpu,
+            ram
+        )
+    )
+
+    if not comparable:
+
+        return {
+            "samples": 0,
+            "exact_samples": 0,
+            "similar_samples": 0,
+
+            "avg_similarity": None,
+
+            "p25": None,
+            "median": None,
+
+            "weighted_p25": None,
+
+            "quick_sale": None,
+
+            "confidence": "BRAK",
+
+            "comparables": []
+        }
+
+    prices = [
+        x["adjusted_price"]
+        for x in comparable
+    ]
+
+    prices.sort()
+
+    exact_samples = sum(
+        1
+        for x in comparable
+        if x["similarity"] >= 99.9
+    )
+
+    similar_samples = (
+        len(comparable)
+        -
+        exact_samples
+    )
+
+    p25_index = (
+        len(prices) - 1
+    ) * 0.25
+
+    lower = int(
+        p25_index
+    )
+
+    upper = min(
+        lower + 1,
+        len(prices) - 1
+    )
+
+    fraction = (
+        p25_index - lower
+    )
+
+    p25 = (
+        prices[lower]
+        +
+        (
+            prices[upper]
+            -
+            prices[lower]
+        )
+        * fraction
+    )
+
+    median = (
+        statistics.median(
+            prices
+        )
+    )
+
+    weighted_items = []
+
+    for item in comparable:
+
+        # Similarność też wpływa na wagę.
+        similarity_weight = (
+            item["similarity"]
+            / 100
+        )
+
+        weight = (
+            item["market_weight"]
+            *
+            similarity_weight
+        )
+
+        weighted_items.append(
+            (
+                item[
+                    "adjusted_price"
+                ],
+                weight
+            )
+        )
+
+    weighted_p25 = (
+        weighted_percentile(
+            weighted_items,
+            0.25
+        )
+    )
+
+    # Kolejny konserwatywny -10%.
+    quick_sale = round(
+        weighted_p25
+        * 0.90
+    )
+
+    avg_similarity = (
+        sum(
+            x["similarity"]
+            for x in comparable
+        )
+        /
+        len(comparable)
+    )
+
+    samples = len(
+        comparable
+    )
+
+    if (
+        samples >= 15
+        and
+        avg_similarity >= 90
+    ):
+
+        confidence = (
+            "BARDZO WYSOKI"
+        )
+
+    elif (
+        samples >= 10
+        and
+        avg_similarity >= 87
+    ):
+
+        confidence = (
+            "WYSOKI"
+        )
+
+    elif samples >= 6:
+
+        confidence = (
+            "ŚREDNI"
+        )
+
+    elif samples >= 3:
+
+        confidence = (
+            "NISKI"
+        )
+
+    else:
+
+        confidence = (
+            "BARDZO NISKI"
+        )
+
+    return {
+        "samples":
+            samples,
+
+        "exact_samples":
+            exact_samples,
+
+        "similar_samples":
+            similar_samples,
+
+        "avg_similarity":
+            round(
+                avg_similarity,
+                1
+            ),
+
+        "p25":
+            round(p25),
+
+        "median":
+            round(median),
+
+        "weighted_p25":
+            round(
+                weighted_p25
+            ),
+
+        "quick_sale":
+            quick_sale,
+
+        "confidence":
+            confidence,
+
+        "comparables":
+            comparable
+    }
+
+
+# ============================================================
+# DEBUG
+# ============================================================
+
+if __name__ == "__main__":
+
+    tests = [
+        (
+            "Ryzen 5 5600",
+            "RTX 3060",
+            16
+        ),
+
+        (
+            "Ryzen 5 3600",
+            "RTX 3060",
+            16
+        ),
+
+        (
+            "i5-12400F",
+            "RTX 3060",
+            16
+        ),
+    ]
+
+    for cpu, gpu, ram in tests:
+
+        print()
+        print("=" * 80)
+
+        print(
+            f"{cpu} + "
+            f"{gpu} + "
+            f"{ram} GB"
+        )
+
+        result = (
+            similar_market_stats(
+                cpu,
+                gpu,
+                ram
+            )
+        )
+
+        print(
+            f"Próbek: "
+            f"{result['samples']}"
+        )
+
+        print(
+            f"Identyczne: "
+            f"{result['exact_samples']}"
+        )
+
+        print(
+            f"Podobne: "
+            f"{result['similar_samples']}"
+        )
+
+        print(
+            f"Średnia podobność: "
+            f"{result['avg_similarity']}"
+        )
+
+        print(
+            f"P25: "
+            f"{result['p25']}"
+        )
+
+        print(
+            f"Mediana: "
+            f"{result['median']}"
+        )
+
+        print(
+            f"Weighted P25: "
+            f"{result['weighted_p25']}"
+        )
+
+        print(
+            f"Quick sale: "
+            f"{result['quick_sale']}"
+        )
+
+        print(
+            f"Confidence: "
+            f"{result['confidence']}"
+        )
+
+        print()
+
+        for item in (
+            result[
+                "comparables"
+            ][:10]
+        ):
+
+            print(
+                f"{item['similarity']:>5}% | "
+                f"{item['cpu']} | "
+                f"{item['gpu']} | "
+                f"{item['ram']} GB | "
+                f"{item['original_price']} -> "
+                f"{item['adjusted_price']} zł"
+            )

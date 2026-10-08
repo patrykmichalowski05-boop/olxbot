@@ -1,0 +1,515 @@
+import sqlite3
+from datetime import datetime
+
+from alert_dedupe import (
+    make_offer_key,
+)
+
+
+DB_FILE = "/opt/olx-bot/watchlist.db"
+
+
+def connect():
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    conn.row_factory = sqlite3.Row
+
+    return conn
+
+
+def init_db():
+
+    conn = connect()
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS watchlist (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            offer_key TEXT NOT NULL UNIQUE,
+
+            title TEXT,
+            url TEXT,
+
+            current_price REAL,
+
+            max_buy REAL,
+            opening REAL,
+
+            score INTEGER,
+
+            action TEXT,
+
+            status TEXT NOT NULL
+                DEFAULT 'WATCHING',
+
+            first_seen TEXT NOT NULL,
+            last_seen TEXT NOT NULL,
+
+            triggered_at TEXT
+        )
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS
+        idx_watchlist_status
+        ON watchlist(status)
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def number(value):
+
+    try:
+
+        if value is None:
+            return None
+
+        return float(value)
+
+    except Exception:
+
+        return None
+
+
+def upsert_watch(
+    details,
+    offer_url,
+    action,
+    score,
+):
+
+    init_db()
+
+    details = (
+        details
+        or {}
+    )
+
+    action = (
+        action
+        or {}
+    )
+
+    offer_key = make_offer_key(
+        details,
+        offer_url,
+    )
+
+    now = datetime.now().isoformat(
+        timespec="seconds"
+    )
+
+    price = number(
+        details.get(
+            "price"
+        )
+    )
+
+    max_buy = number(
+        action.get(
+            "max_buy"
+        )
+    )
+
+    opening = number(
+        action.get(
+            "opening"
+        )
+    )
+
+    conn = connect()
+
+    existing = conn.execute("""
+        SELECT *
+        FROM watchlist
+
+        WHERE offer_key = ?
+    """, (
+        offer_key,
+    )).fetchone()
+
+    if existing:
+
+        conn.execute("""
+            UPDATE watchlist
+
+            SET
+                title = ?,
+                url = ?,
+                current_price = ?,
+                max_buy = ?,
+                opening = ?,
+                score = ?,
+                action = ?,
+                status = 'WATCHING',
+                last_seen = ?
+
+            WHERE offer_key = ?
+        """, (
+            str(
+                details.get(
+                    "title"
+                )
+                or ""
+            ),
+
+            str(
+                offer_url
+                or ""
+            ),
+
+            price,
+            max_buy,
+            opening,
+            int(
+                score
+                or 0
+            ),
+
+            str(
+                action.get(
+                    "action"
+                )
+                or ""
+            ),
+
+            now,
+            offer_key,
+        ))
+
+    else:
+
+        conn.execute("""
+            INSERT INTO watchlist (
+
+                offer_key,
+
+                title,
+                url,
+
+                current_price,
+
+                max_buy,
+                opening,
+
+                score,
+
+                action,
+                status,
+
+                first_seen,
+                last_seen
+            )
+
+            VALUES (
+                ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, 'WATCHING',
+                ?, ?
+            )
+        """, (
+
+            offer_key,
+
+            str(
+                details.get(
+                    "title"
+                )
+                or ""
+            ),
+
+            str(
+                offer_url
+                or ""
+            ),
+
+            price,
+            max_buy,
+            opening,
+
+            int(
+                score
+                or 0
+            ),
+
+            str(
+                action.get(
+                    "action"
+                )
+                or ""
+            ),
+
+            now,
+            now,
+        ))
+
+    conn.commit()
+    conn.close()
+
+
+def promote_if_watched(
+    details,
+    offer_url,
+    action,
+    score,
+):
+
+    init_db()
+
+    details = (
+        details
+        or {}
+    )
+
+    action = (
+        action
+        or {}
+    )
+
+    offer_key = make_offer_key(
+        details,
+        offer_url,
+    )
+
+    conn = connect()
+
+    existing = conn.execute("""
+        SELECT *
+        FROM watchlist
+
+        WHERE
+            offer_key = ?
+            AND status = 'WATCHING'
+    """, (
+        offer_key,
+    )).fetchone()
+
+    if existing is None:
+
+        conn.close()
+
+        return False
+
+    now = datetime.now().isoformat(
+        timespec="seconds"
+    )
+
+    conn.execute("""
+        UPDATE watchlist
+
+        SET
+            current_price = ?,
+            max_buy = ?,
+            opening = ?,
+            score = ?,
+            action = ?,
+            status = 'TRIGGERED',
+            last_seen = ?,
+            triggered_at = ?
+
+        WHERE offer_key = ?
+    """, (
+
+        number(
+            details.get(
+                "price"
+            )
+        ),
+
+        number(
+            action.get(
+                "max_buy"
+            )
+        ),
+
+        number(
+            action.get(
+                "opening"
+            )
+        ),
+
+        int(
+            score
+            or 0
+        ),
+
+        str(
+            action.get(
+                "action"
+            )
+            or ""
+        ),
+
+        now,
+        now,
+
+        offer_key,
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return True
+
+
+def close_watch(
+    details,
+    offer_url,
+):
+
+    init_db()
+
+    offer_key = make_offer_key(
+        details,
+        offer_url,
+    )
+
+    conn = connect()
+
+    conn.execute("""
+        UPDATE watchlist
+
+        SET
+            status = 'CLOSED',
+            last_seen = ?
+
+        WHERE offer_key = ?
+    """, (
+        datetime.now().isoformat(
+            timespec="seconds"
+        ),
+        offer_key,
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def show():
+
+    init_db()
+
+    conn = connect()
+
+    rows = conn.execute("""
+        SELECT *
+        FROM watchlist
+
+        ORDER BY
+            CASE status
+
+                WHEN 'TRIGGERED'
+                THEN 1
+
+                WHEN 'WATCHING'
+                THEN 2
+
+                ELSE 3
+
+            END,
+
+            score DESC,
+            last_seen DESC
+    """).fetchall()
+
+    conn.close()
+
+    print()
+    print(
+        "=" * 110
+    )
+
+    print(
+        "OLX FLIP HUNTER — WATCHLIST"
+    )
+
+    print(
+        "=" * 110
+    )
+
+    if not rows:
+
+        print(
+            "Watchlista jest pusta."
+        )
+
+        return
+
+    for row in rows:
+
+        price = (
+            int(
+                row["current_price"]
+            )
+            if row["current_price"]
+            is not None
+            else "-"
+        )
+
+        max_buy = (
+            int(
+                row["max_buy"]
+            )
+            if row["max_buy"]
+            is not None
+            else "-"
+        )
+
+        print(
+            f"#{row['id']:3} | "
+            f"{row['status']:9} | "
+            f"{str(row['score'] or '-'):>3}/100 | "
+            f"Cena: {price} | "
+            f"MAX: {max_buy}"
+        )
+
+        print(
+            f"      {row['title']}"
+        )
+
+        print()
+
+
+def stats():
+
+    init_db()
+
+    conn = connect()
+
+    result = {}
+
+    for status in [
+        "WATCHING",
+        "TRIGGERED",
+        "CLOSED",
+    ]:
+
+        result[
+            status.lower()
+        ] = conn.execute("""
+            SELECT COUNT(*)
+            FROM watchlist
+            WHERE status = ?
+        """, (
+            status,
+        )).fetchone()[0]
+
+    conn.close()
+
+    return result
+
+
+if __name__ == "__main__":
+
+    show()
+
+    print(
+        "STATS:",
+        stats()
+    )

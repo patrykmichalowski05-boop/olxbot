@@ -1,0 +1,879 @@
+import json
+import sqlite3
+
+from flask import (
+    Blueprint,
+    abort,
+    render_template_string,
+)
+
+
+offer_bp = Blueprint(
+    "offer_dashboard",
+    __name__,
+)
+
+
+ALERT_DB = "/opt/olx-bot/alert_history.db"
+
+SNAPSHOT_DB = (
+    "/opt/olx-bot/"
+    "offer_snapshots.db"
+)
+
+
+def connect(path):
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def money(value):
+    if value is None:
+        return "-"
+
+    try:
+        value = int(
+            round(
+                float(value)
+            )
+        )
+
+        return (
+            f"{value:,}"
+            .replace(",", " ")
+            + " zł"
+        )
+
+    except Exception:
+        return "-"
+
+
+def load_json(value):
+    try:
+        return json.loads(
+            value or "{}"
+        )
+    except Exception:
+        return {}
+
+
+HTML = """
+<!doctype html>
+
+<html lang="pl">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>{{ alert.title }}</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0b0e12;
+    color: #edf1f5;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1250px;
+    margin: auto;
+    padding: 24px;
+}
+
+a {
+    color: #75baff;
+    text-decoration: none;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.card {
+    margin-top: 20px;
+    padding: 20px;
+    background: #171c22;
+    border: 1px solid #29313a;
+    border-radius: 15px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(175px, 1fr)
+        );
+    gap: 12px;
+}
+
+.metric {
+    background: #10151a;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.label {
+    color: #89949f;
+    font-size: 12px;
+}
+
+.value {
+    margin-top: 6px;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.good {
+    color: #68db91;
+}
+
+.warn {
+    color: #ffd166;
+}
+
+.bad {
+    color: #ff7272;
+}
+
+.action {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+ul {
+    line-height: 1.7;
+}
+
+.message {
+    white-space: pre-wrap;
+    background: #10151a;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+button {
+    border: 0;
+    background: #2563eb;
+    color: white;
+    border-radius: 8px;
+    padding: 9px 13px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td,
+th {
+    padding: 10px;
+    border-bottom: 1px solid #29313a;
+    text-align: left;
+}
+
+th {
+    color: #89949f;
+    font-size: 12px;
+}
+
+@media(max-width:700px) {
+
+    .container {
+        padding: 12px;
+    }
+
+    .top {
+        display: block;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+<div class="top">
+
+<div>
+
+<h1>
+{{ alert.title }}
+</h1>
+
+<div class="label">
+Alert #{{ alert.id }}
+</div>
+
+</div>
+
+
+<div>
+
+<a href="/control">
+← Control Center
+</a>
+
+&nbsp; | &nbsp;
+
+{% if alert.url %}
+
+<a
+    href="{{ alert.url }}"
+    target="_blank"
+>
+OLX
+</a>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+{% if action.label %}
+
+<div class="
+action
+{% if action.action == 'BUY_NOW' %}
+bad
+{% elif action.action == 'BUY' %}
+good
+{% elif action.action == 'NEGOTIATE' %}
+warn
+{% endif %}
+">
+
+{{ action.label }}
+
+</div>
+
+{% endif %}
+
+
+<div class="grid">
+
+
+<div class="metric">
+
+<div class="label">
+Deal Score
+</div>
+
+<div class="value">
+{{ alert.score or "-" }}/100
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Cena OLX
+</div>
+
+<div class="value">
+{{ money(alert.price) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Quick Sale
+</div>
+
+<div class="value">
+{{ money(valuation.quick_sale) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Zysk
+</div>
+
+<div class="value good">
+{{ money(valuation.profit) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+ROI
+</div>
+
+<div class="value">
+
+{% if action.roi is not none %}
+
+{{ "%.1f"|format(action.roi) }}%
+
+{% elif alert.roi is not none %}
+
+{{ "%.1f"|format(alert.roi) }}%
+
+{% else %}
+
+-
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+MAX BUY
+</div>
+
+<div class="value good">
+{{ money(action.max_buy) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Start negocjacji
+</div>
+
+<div class="value warn">
+{{ money(action.opening) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Cel zysku
+</div>
+
+<div class="value">
+{{ money(action.target_profit) }}
+</div>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+{% if details %}
+
+<div class="card">
+
+<h2>
+🖥 Specyfikacja
+</h2>
+
+<div class="grid">
+
+<div class="metric">
+<div class="label">CPU</div>
+<div class="value">
+{{ details.cpu or "-" }}
+</div>
+</div>
+
+<div class="metric">
+<div class="label">GPU</div>
+<div class="value">
+{{ details.gpu or "-" }}
+</div>
+</div>
+
+<div class="metric">
+<div class="label">RAM</div>
+<div class="value">
+
+{% if details.ram %}
+{{ details.ram }} GB
+{% else %}
+-
+{% endif %}
+
+</div>
+</div>
+
+<div class="metric">
+<div class="label">Dyski</div>
+<div class="value">
+
+{% if details.disks %}
+
+{% for disk in details.disks %}
+{{ disk }}
+{% if not loop.last %}
+<br>
+{% endif %}
+{% endfor %}
+
+{% else %}
+-
+{% endif %}
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+<div class="card">
+
+<h2>
+📊 Wiarygodność wyceny
+</h2>
+
+<table>
+
+<tr>
+<td>Źródło</td>
+<td>
+{{ valuation.valuation_source or "-" }}
+</td>
+</tr>
+
+<tr>
+<td>Pewność</td>
+<td>
+{{ valuation.confidence or "-" }}
+</td>
+</tr>
+
+<tr>
+<td>Identyczne oferty</td>
+<td>
+{{ valuation.exact_samples or "-" }}
+</td>
+</tr>
+
+<tr>
+<td>Podobne oferty</td>
+<td>
+{{ valuation.similar_samples or "-" }}
+</td>
+</tr>
+
+<tr>
+<td>Podobne GPU</td>
+<td>
+{{ valuation.neighbor_samples or "-" }}
+</td>
+</tr>
+
+<tr>
+<td>Próbki rynku</td>
+<td>
+{{ valuation.market_samples or "-" }}
+</td>
+</tr>
+
+</table>
+
+</div>
+
+
+<div class="card">
+
+<h2>
+🤖 AI — stan i ryzyko
+</h2>
+
+<div class="grid">
+
+<div class="metric">
+
+<div class="label">
+Stan
+</div>
+
+<div class="value">
+{{ valuation.ai_condition or "-" }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Korekta wyceny
+</div>
+
+<div class="value">
+
+{% if valuation.ai_adjustment_percent is not none %}
+
+{{ valuation.ai_adjustment_percent }}%
+
+{% else %}
+-
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+
+{% if valuation.ai_summary %}
+
+<h3>
+Podsumowanie
+</h3>
+
+<p>
+{{ valuation.ai_summary }}
+</p>
+
+{% endif %}
+
+
+{% if valuation.ai_issues %}
+
+<h3 class="bad">
+Ryzyka
+</h3>
+
+<ul>
+
+{% for item in valuation.ai_issues %}
+
+<li>
+{{ item }}
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endif %}
+
+
+{% if valuation.ai_missing_info %}
+
+<h3 class="warn">
+Do sprawdzenia u sprzedającego
+</h3>
+
+<ul>
+
+{% for item in valuation.ai_missing_info %}
+
+<li>
+{{ item }}
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endif %}
+
+</div>
+
+
+<div class="card">
+
+<h2>
+💬 Gotowa wiadomość
+</h2>
+
+<div
+    class="message"
+    id="message"
+>Dzień dobry, czy ogłoszenie jest nadal aktualne?
+
+Jeżeli komputer jest w pełni sprawny i zgodny z opisem, mogę zaproponować {{ money(action.opening) }}.
+
+Mogę sprawnie sfinalizować zakup. Jeśli ta kwota jest za niska, proszę dać znać jaka byłaby najniższa możliwa cena.</div>
+
+<button
+    onclick="copyMessage()"
+>
+KOPIUJ WIADOMOŚĆ
+</button>
+
+</div>
+
+
+<div class="card">
+
+<h2>
+📉 Historia ceny / analiz
+</h2>
+
+<table>
+
+<tr>
+<th>Data</th>
+<th>Cena</th>
+<th>Score</th>
+<th>Zysk</th>
+<th>Akcja</th>
+</tr>
+
+
+{% for row in snapshots %}
+
+<tr>
+
+<td>
+{{ row.created_at }}
+</td>
+
+<td>
+{{ money(row.price) }}
+</td>
+
+<td>
+{{ row.score }}
+</td>
+
+<td>
+{{ money(row.profit) }}
+</td>
+
+<td>
+{{ row.action }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+function copyMessage() {
+
+    navigator.clipboard.writeText(
+        document
+            .getElementById("message")
+            .innerText
+    );
+
+}
+
+</script>
+
+</body>
+
+</html>
+"""
+
+
+@offer_bp.route(
+    "/offer/<int:alert_id>"
+)
+def offer_details(alert_id):
+
+    conn = connect(
+        ALERT_DB
+    )
+
+    alert = conn.execute("""
+        SELECT *
+        FROM alerts
+        WHERE id = ?
+    """, (
+        alert_id,
+    )).fetchone()
+
+    conn.close()
+
+    if alert is None:
+        abort(404)
+
+
+    details = {}
+    valuation = {}
+    action = {}
+    snapshots = []
+
+
+    try:
+
+        conn = connect(
+            SNAPSHOT_DB
+        )
+
+        rows = conn.execute("""
+            SELECT *
+            FROM snapshots
+
+            WHERE offer_key = ?
+
+            ORDER BY id DESC
+        """, (
+            alert[
+                "offer_key"
+            ],
+        )).fetchall()
+
+        conn.close()
+
+
+        if rows:
+
+            latest = rows[0]
+
+            details = load_json(
+                latest[
+                    "details_json"
+                ]
+            )
+
+            valuation = load_json(
+                latest[
+                    "valuation_json"
+                ]
+            )
+
+            action = load_json(
+                latest[
+                    "action_json"
+                ]
+            )
+
+
+            for row in rows:
+
+                row_action = load_json(
+                    row[
+                        "action_json"
+                    ]
+                )
+
+                row_valuation = load_json(
+                    row[
+                        "valuation_json"
+                    ]
+                )
+
+                snapshots.append({
+                    "created_at":
+                        row[
+                            "created_at"
+                        ],
+
+                    "price":
+                        row[
+                            "price"
+                        ],
+
+                    "score":
+                        row[
+                            "score"
+                        ],
+
+                    "profit":
+                        row_valuation.get(
+                            "profit"
+                        ),
+
+                    "action":
+                        row_action.get(
+                            "label"
+                        )
+                        or
+                        row_action.get(
+                            "action"
+                        )
+                        or
+                        "-",
+                })
+
+
+    except Exception as e:
+
+        print(
+            "[OFFER SNAPSHOT ERROR]",
+            e,
+        )
+
+
+    # Fallback dla starych alertów
+    if not valuation:
+
+        valuation = {
+            "quick_sale":
+                alert["quick_sale"],
+
+            "profit":
+                alert["profit"],
+        }
+
+
+    return render_template_string(
+        HTML,
+
+        alert=alert,
+
+        details=details,
+
+        valuation=valuation,
+
+        action=action,
+
+        snapshots=snapshots,
+
+        money=money,
+    )

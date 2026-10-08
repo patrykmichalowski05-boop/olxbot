@@ -1,0 +1,114 @@
+import sqlite3
+
+from flask import (
+    Blueprint,
+    redirect,
+    request,
+)
+
+from sale_listing_tracker import (
+    mark_listed,
+)
+
+from deal_crm import (
+    ensure_deal,
+    set_status,
+)
+
+
+sale_listing_bp = Blueprint(
+    "sale_listing_dashboard",
+    __name__,
+)
+
+
+ALERT_DB = "/opt/olx-bot/alert_history.db"
+
+
+def get_alert(
+    alert_id,
+):
+    conn = sqlite3.connect(
+        ALERT_DB
+    )
+
+    conn.row_factory = sqlite3.Row
+
+    row = conn.execute("""
+        SELECT *
+        FROM alerts
+        WHERE id = ?
+    """, (
+        alert_id,
+    )).fetchone()
+
+    conn.close()
+
+    return row
+
+
+@sale_listing_bp.post(
+    "/offer/<int:alert_id>/listed"
+)
+def set_listed(
+    alert_id,
+):
+    alert = get_alert(
+        alert_id
+    )
+
+    if not alert:
+        return redirect(
+            "/control"
+        )
+
+    try:
+
+        mark_listed(
+            offer_key=
+                alert["offer_key"],
+
+            alert_id=
+                alert["id"],
+
+            listed_price=
+                request.form.get(
+                    "listed_price"
+                ),
+
+            platform=
+                request.form.get(
+                    "platform",
+                    "OLX",
+                ),
+        )
+
+        ensure_deal(
+            offer_key=
+                alert["offer_key"],
+
+            alert_id=
+                alert["id"],
+
+            title=
+                alert["title"],
+
+            url=
+                alert["url"],
+        )
+
+        set_status(
+            alert["offer_key"],
+            "LISTED",
+        )
+
+    except Exception as e:
+
+        print(
+            "[SALE LISTING ERROR]",
+            e,
+        )
+
+    return redirect(
+        f"/offer/{alert_id}"
+    )

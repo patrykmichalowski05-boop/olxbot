@@ -1,0 +1,742 @@
+import math
+import sqlite3
+
+from flask import (
+    Blueprint,
+    abort,
+    render_template_string,
+)
+
+
+offer_bp = Blueprint(
+    "offer_dashboard",
+    __name__,
+)
+
+
+ALERT_DB = "/opt/olx-bot/alert_history.db"
+WATCHLIST_DB = "/opt/olx-bot/watchlist.db"
+
+
+def connect(database):
+
+    conn = sqlite3.connect(database)
+    conn.row_factory = sqlite3.Row
+
+    return conn
+
+
+def money(value):
+
+    if value is None:
+        return "-"
+
+    try:
+        value = int(round(float(value)))
+
+        return (
+            f"{value:,}"
+            .replace(",", " ")
+            + " zł"
+        )
+
+    except Exception:
+        return "-"
+
+
+def floor_50(value):
+
+    try:
+        return (
+            math.floor(
+                float(value) / 50
+            )
+            * 50
+        )
+
+    except Exception:
+        return None
+
+
+def negotiation(alert):
+
+    price = float(
+        alert["price"]
+        or 0
+    )
+
+    quick_sale = float(
+        alert["quick_sale"]
+        or 0
+    )
+
+    total_cost = float(
+        alert["total_cost"]
+        or price
+    )
+
+    if (
+        price <= 0
+        or quick_sale <= 0
+    ):
+        return {
+            "max_buy": None,
+            "opening": None,
+            "target_profit": None,
+        }
+
+    extra_cost = max(
+        0,
+        total_cost - price,
+    )
+
+    if quick_sale >= 3500:
+        target_profit = 600
+
+    elif quick_sale >= 2200:
+        target_profit = 500
+
+    else:
+        target_profit = 400
+
+    max_buy = floor_50(
+        quick_sale
+        -
+        extra_cost
+        -
+        target_profit
+    )
+
+    opening = None
+
+    if max_buy is not None:
+
+        opening = floor_50(
+            min(
+                price * 0.90,
+                max_buy * 0.90,
+            )
+        )
+
+    return {
+        "max_buy": max_buy,
+        "opening": opening,
+        "target_profit": target_profit,
+    }
+
+
+HTML = """
+<!doctype html>
+
+<html lang="pl">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>
+Szczegóły oferty
+</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0b0e12;
+    color: #edf1f5;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 24px;
+}
+
+a {
+    color: #75baff;
+    text-decoration: none;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card {
+    margin-top: 20px;
+    background: #171c22;
+    border: 1px solid #29313a;
+    border-radius: 15px;
+    padding: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(180px, 1fr)
+        );
+    gap: 13px;
+}
+
+.metric {
+    background: #11161b;
+    border-radius: 11px;
+    padding: 15px;
+}
+
+.label {
+    color: #89949f;
+    font-size: 12px;
+}
+
+.value {
+    margin-top: 6px;
+    font-size: 25px;
+    font-weight: bold;
+}
+
+.good {
+    color: #68db91;
+}
+
+.warn {
+    color: #ffd166;
+}
+
+.bad {
+    color: #ff7272;
+}
+
+.score {
+    font-size: 44px;
+    font-weight: bold;
+}
+
+.message {
+    white-space: pre-wrap;
+    background: #101419;
+    border: 1px solid #303841;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 12px;
+}
+
+button {
+    margin-top: 10px;
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 13px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #29313a;
+}
+
+th {
+    color: #89949f;
+    font-size: 12px;
+}
+
+@media(max-width: 700px) {
+
+    .container {
+        padding: 12px;
+    }
+
+    .top {
+        display: block;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+<div class="top">
+
+<div>
+
+<h1>
+{{ alert.title }}
+</h1>
+
+<div class="label">
+Alert #{{ alert.id }}
+</div>
+
+</div>
+
+
+<div>
+
+<a href="/control">
+← Control Center
+</a>
+
+&nbsp; | &nbsp;
+
+{% if alert.url %}
+
+<a
+    href="{{ alert.url }}"
+    target="_blank"
+>
+OTWÓRZ OLX
+</a>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="grid">
+
+
+<div class="metric">
+
+<div class="label">
+Deal Score
+</div>
+
+<div class="
+score
+{% if alert.score and alert.score >= 85 %}
+bad
+{% elif alert.score and alert.score >= 70 %}
+warn
+{% else %}
+good
+{% endif %}
+">
+
+{{ alert.score or "-" }}/100
+
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Cena OLX
+</div>
+
+<div class="value">
+{{ money(alert.price) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Quick sale
+</div>
+
+<div class="value">
+{{ money(alert.quick_sale) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Prognozowany zysk
+</div>
+
+<div class="value good">
+{{ money(alert.profit) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+ROI
+</div>
+
+<div class="value">
+
+{% if alert.roi is not none %}
+
+{{ "%.1f"|format(alert.roi) }}%
+
+{% else %}
+
+-
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Łączny koszt
+</div>
+
+<div class="value">
+{{ money(alert.total_cost) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+MAX cena zakupu
+</div>
+
+<div class="value good">
+{{ money(negotiation.max_buy) }}
+</div>
+
+</div>
+
+
+<div class="metric">
+
+<div class="label">
+Start negocjacji
+</div>
+
+<div class="value warn">
+{{ money(negotiation.opening) }}
+</div>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>
+💬 Negocjacja
+</h2>
+
+<div class="message" id="negotiationText">Dzień dobry, czy oferta jest nadal aktualna?
+
+Jeżeli komputer jest w pełni sprawny i zgodny z opisem, mogę zaproponować {{ money(negotiation.opening) }} i sprawnie sfinalizować zakup.
+
+Jeśli taka kwota jest za niska, proszę dać znać jaka byłaby najniższa możliwa cena.</div>
+
+<button
+    onclick="copyNegotiation()"
+>
+KOPIUJ WIADOMOŚĆ
+</button>
+
+</div>
+
+
+{% if watch %}
+
+<div class="card">
+
+<h2>
+👀 Watchlista
+</h2>
+
+<div class="grid">
+
+<div class="metric">
+
+<div class="label">
+Status
+</div>
+
+<div class="value">
+{{ watch.status }}
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="label">
+Aktualna cena
+</div>
+
+<div class="value">
+{{ money(watch.current_price) }}
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="label">
+MAX BUY
+</div>
+
+<div class="value good">
+{{ money(watch.max_buy) }}
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+<div class="card">
+
+<h2>
+📉 Historia ceny
+</h2>
+
+{% if history %}
+
+<table>
+
+<tr>
+<th>Data</th>
+<th>Cena</th>
+<th>Score</th>
+<th>Zysk</th>
+<th>Trigger</th>
+</tr>
+
+{% for row in history %}
+
+<tr>
+
+<td>
+{{ row.created_at }}
+</td>
+
+<td>
+{{ money(row.price) }}
+</td>
+
+<td>
+{{ row.score or "-" }}
+</td>
+
+<td class="good">
+{{ money(row.profit) }}
+</td>
+
+<td>
+{{ row.trigger or "-" }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+Brak historii.
+
+{% endif %}
+
+</div>
+
+
+<div class="card">
+
+<h2>
+ℹ️ Dane alertu
+</h2>
+
+<table>
+
+<tr>
+<td>Tryb</td>
+<td>{{ alert.mode or "-" }}</td>
+</tr>
+
+<tr>
+<td>Trigger</td>
+<td>{{ alert.trigger or "-" }}</td>
+</tr>
+
+<tr>
+<td>Bundle</td>
+<td>{{ "TAK" if alert.bundle else "NIE" }}</td>
+</tr>
+
+<tr>
+<td>Data alertu</td>
+<td>{{ alert.created_at }}</td>
+</tr>
+
+</table>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+function copyNegotiation() {
+
+    const text =
+        document
+        .getElementById(
+            "negotiationText"
+        )
+        .innerText;
+
+    navigator
+        .clipboard
+        .writeText(text);
+
+}
+
+</script>
+
+</body>
+
+</html>
+"""
+
+
+@offer_bp.route(
+    "/offer/<int:alert_id>"
+)
+def offer_details(alert_id):
+
+    conn = connect(
+        ALERT_DB
+    )
+
+    alert = conn.execute(
+        """
+        SELECT *
+        FROM alerts
+        WHERE id = ?
+        """,
+        (
+            alert_id,
+        ),
+    ).fetchone()
+
+    if alert is None:
+
+        conn.close()
+
+        abort(404)
+
+    offer_key = (
+        alert["offer_key"]
+    )
+
+    history = conn.execute(
+        """
+        SELECT *
+        FROM alerts
+
+        WHERE offer_key = ?
+
+        ORDER BY created_at DESC
+        """,
+        (
+            offer_key,
+        ),
+    ).fetchall()
+
+    conn.close()
+
+
+    watch = None
+
+    try:
+
+        watch_conn = connect(
+            WATCHLIST_DB
+        )
+
+        watch = watch_conn.execute(
+            """
+            SELECT *
+            FROM watchlist
+
+            WHERE offer_key = ?
+
+            LIMIT 1
+            """,
+            (
+                offer_key,
+            ),
+        ).fetchone()
+
+        watch_conn.close()
+
+    except Exception:
+
+        pass
+
+
+    return render_template_string(
+        HTML,
+
+        alert=alert,
+
+        history=history,
+
+        watch=watch,
+
+        negotiation=negotiation(
+            alert
+        ),
+
+        money=money,
+    )

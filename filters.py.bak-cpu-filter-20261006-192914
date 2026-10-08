@@ -1,0 +1,76 @@
+import re
+
+
+def cpu_ok(cpu):
+    if not cpu:
+        return False
+
+    cpu = cpu.lower().strip()
+
+    # AMD Ryzen 5/7/9
+    match = re.search(
+        r"ryzen\s+([3579])\s+(\d{4})",
+        cpu,
+        re.I
+    )
+
+    if match:
+        tier = int(match.group(1))
+        model = int(match.group(2))
+
+        # minimum Ryzen 5
+        if tier < 5:
+            return False
+
+        # minimum R5 3600
+        if model < 3600:
+            return False
+
+        return True
+
+    # Intel i5/i7/i9
+    match = re.search(
+        r"i([3579])-(\d{4,5})",
+        cpu,
+        re.I
+    )
+
+    if match:
+        tier = int(match.group(1))
+        model = int(match.group(2))
+
+        if tier < 5:
+            return False
+
+        # 9 gen
+        if model < 10000:
+            return model >= 9400
+
+        # 10 gen i nowsze
+        return True
+
+    return False
+
+
+def ram_ok(ram):
+    if ram is None:
+        return False
+
+    return ram >= 16
+
+
+def hardware_ok(data):
+
+    reasons = []
+
+    if not cpu_ok(data.get("cpu")):
+        reasons.append(
+            f"CPU nie spełnia minimum: {data.get('cpu')}"
+        )
+
+    if not ram_ok(data.get("ram")):
+        reasons.append(
+            f"RAM poniżej 16 GB: {data.get('ram')}"
+        )
+
+    return len(reasons) == 0, reasons

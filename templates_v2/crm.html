@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}CRM — Flip Hunter{% endblock %}
+{% block heading %}CRM transakcji{% endblock %}
+{% block content %}
+<div class="kanban">
+{% for status in crm_statuses %}
+    <section class="kanban-column">
+        <div class="kanban-head"><strong>{{ crm_labels[status] }}</strong><span>{{ board.get(status, [])|length }}</span></div>
+        <div class="kanban-list">
+        {% for deal in board.get(status, []) %}
+            <article class="deal-card">
+                <a href="{{ url_for('main.offer', alert_id=deal.alert_id) if deal.alert_id else deal.url }}"><strong>{{ deal.title }}</strong></a>
+                <div class="subtle">{{ deal.updated_at }}</div>
+                {% if deal.alert_id %}
+                <form method="post" action="{{ url_for('main.action_crm', alert_id=deal.alert_id, status='CONTACTED') }}" class="inline-form crm-move-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select data-status-select>
+                        {% for target in crm_statuses %}<option value="{{ url_for('main.action_crm', alert_id=deal.alert_id, status=target) }}" {{ 'selected' if target == status else '' }}>{{ crm_labels[target] }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-ghost btn-small" type="submit">Przenieś</button>
+                </form>
+                {% endif %}
+            </article>
+        {% else %}<div class="kanban-empty">Brak</div>{% endfor %}
+        </div>
+    </section>
+{% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}<script>document.querySelectorAll('.crm-move-form').forEach(function(form){var select=form.querySelector('[data-status-select]');form.addEventListener('submit',function(){form.action=select.value;});});</script>{% endblock %}
