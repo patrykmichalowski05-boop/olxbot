@@ -36,3 +36,20 @@ jobs:
             valuation.py \
             valuation_v3.py \
             market_stats.py
+
+  publish-validated:
+    name: Publish validated revision
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout validated revision
+        uses: actions/checkout@v4
+
+      - name: Publish validated revision
+        run: |
+          git push origin HEAD:refs/heads/deploy-ready
