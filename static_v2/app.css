@@ -266,3 +266,4 @@ input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59
 .active-followup { margin: 12px 16px 16px; padding: 12px; border: 1px solid rgba(247,201,72,.25); border-radius: 11px; background: rgba(247,201,72,.06); display: grid; gap: 7px; }
 .check-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 @media (max-width: 900px) { .sale-action-grid { grid-template-columns: 1fr; } }
+/* Flip Hunter V2 - deployment test 141 */
