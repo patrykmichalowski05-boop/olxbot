@@ -369,3 +369,46 @@ def api_offers():
         "min_score": request.args.get("min_score", ""),
     }
     return jsonify(recent_alerts(request.args.get("limit", 100), filters))
+
+
+@bp.route("/settings", methods=["GET", "POST"])
+def scanner_settings_page():
+    import sqlite3
+    from flask import current_app
+    from scanner_settings import (
+        get_all, get_history, save_settings
+    )
+
+    fields = [
+        ("min_profit", "Minimalny zysk", "Prog rentownosci okazji"),
+        ("hot_profit", "Prog HOT", "Bardzo dobra okazja"),
+        ("ai_min_profit", "Prog przed AI", "Wstepna analiza OLX"),
+        ("final_min_profit", "Prog koncowy OLX", "Filtr po analizie AI"),
+        ("facebook_min_profit", "Prog Facebook", "Facebook Marketplace"),
+    ]
+
+    if request.method == "POST":
+        try:
+            changes = save_settings(
+                request.form,
+                actor=config.DASHBOARD_USERNAME
+            )
+            flash(
+                f"Zapisano {changes} zmian ustawien.",
+                "success"
+            )
+        except ValueError as exc:
+            flash(str(exc), "error")
+        except (sqlite3.Error, OSError):
+            current_app.logger.exception("Blad zapisu ustawien")
+            flash("Blad zapisu ustawien.", "error")
+
+        return redirect(url_for("main.scanner_settings_page"))
+
+    return render_template(
+        "settings.html",
+        page="settings",
+        fields=fields,
+        settings=get_all(),
+        history=get_history(30),
+    )

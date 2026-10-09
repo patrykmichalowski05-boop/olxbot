@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Ustawienia — Flip Hunter{% endblock %}
+{% block heading %}Ustawienia skanerów{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-head">
+        <div>
+            <h2>Progi opłacalności</h2>
+            <p>Zmiany obowiązują przy kolejnych analizach ofert.</p>
+        </div>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('main.scanner_settings_page') }}">
+        <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+
+        <div class="settings-grid">
+            {% for key, label, description in fields %}
+            <label class="settings-field">
+                <strong>{{ label }}</strong>
+                <span class="subtle">{{ description }}</span>
+                <span class="settings-input-wrap">
+                    <input class="settings-input"
+                           type="number"
+                           name="{{ key }}"
+                           value="{{ settings[key] }}"
+                           min="0"
+                           max="10000"
+                           step="1"
+                           required>
+                    <span>zł</span>
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <p class="subtle">
+            Próg HOT musi być nie mniejszy niż minimalny zysk.
+            Próg końcowy OLX musi być nie mniejszy niż próg AI.
+        </p>
+
+        <button class="btn btn-primary" type="submit">
+            Zapisz ustawienia
+        </button>
+    </form>
+</div>
+
+<div class="panel">
+    <div class="panel-head">
+        <div>
+            <h2>Historia zmian</h2>
+            <p>Ostatnie 30 modyfikacji konfiguracji.</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data UTC</th>
+                    <th>Użytkownik</th>
+                    <th>Parametr</th>
+                    <th>Było</th>
+                    <th>Jest</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in history %}
+                <tr>
+                    <td>{{ item.changed_at }}</td>
+                    <td>{{ item.actor }}</td>
+                    <td>{{ item.key }}</td>
+                    <td>{{ item.old_value }} zł</td>
+                    <td>{{ item.new_value }} zł</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="empty">
+                        Brak historii zmian.
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

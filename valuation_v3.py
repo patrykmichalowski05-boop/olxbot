@@ -13,6 +13,8 @@ from similarity_engine_v2 import (
 )
 
 
+from scanner_settings import get_int
+
 MIN_PROFIT = 400
 HOT_PROFIT = 700
 
@@ -817,10 +819,10 @@ def estimate_flip_v3(
             round(profit),
 
         "profitable":
-            profit >= MIN_PROFIT,
+            profit >= get_int('min_profit'),
 
         "hot":
-            profit >= HOT_PROFIT,
+            profit >= get_int('hot_profit'),
 
         # ----------------------------------------------------
         # SOURCE
