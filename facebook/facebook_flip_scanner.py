@@ -25,6 +25,8 @@ from telegram_notifier import (
 )
 
 
+from scanner_settings import get_int
+
 MIN_PROFIT = 400
 PRIORITY_PROFIT = 500
 
@@ -580,7 +582,7 @@ def analyze_offer(
     # NIEOPŁACALNE
     # --------------------------------------------------------
 
-    if profit < MIN_PROFIT:
+    if profit < get_int('facebook_min_profit'):
 
         print(
             "❌ NIEOPŁACALNE"
@@ -588,7 +590,7 @@ def analyze_offer(
 
         print(
             "Zysk poniżej",
-            MIN_PROFIT,
+            get_int('facebook_min_profit'),
             "zł"
         )
 

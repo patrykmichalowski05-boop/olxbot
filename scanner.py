@@ -124,6 +124,8 @@ POLSKA_URL = (
 
 MAX_CARDS = 60
 
+from scanner_settings import get_int
+
 AI_MIN_PROFIT = 300
 FINAL_MIN_PROFIT = 400
 
@@ -1116,14 +1118,14 @@ def analyze_candidate(
         return False
 
     if (
-        profit_before_ai < AI_MIN_PROFIT
+        profit_before_ai < get_int('ai_min_profit')
         and not negotiation_candidate(details, valuation)
     ):
 
         print(
             "[ODRZUT PRZED AI] "
             f"{profit_before_ai} zł "
-            f"< {AI_MIN_PROFIT} zł"
+            f"< {get_int('ai_min_profit')} zł"
         )
 
         safe_log_decision(
@@ -1133,7 +1135,7 @@ def analyze_candidate(
             mode=mode,
             offer_url=offer_url,
             decision="REJECT",
-            reason="PRE_AI_PROFIT_BELOW_300",
+            reason=f"PRE_AI_PROFIT_BELOW_{get_int('ai_min_profit')}",
             stage="PRE_AI",
         )
 
@@ -1284,7 +1286,7 @@ def analyze_candidate(
         final_profit is None
         or
         (
-            final_profit < FINAL_MIN_PROFIT
+            final_profit < get_int('final_min_profit')
             and not negotiation_candidate(details, valuation)
         )
     ):
@@ -1292,7 +1294,7 @@ def analyze_candidate(
         print(
             "[ODRZUT FINALNY] "
             f"{final_profit} zł "
-            f"< {FINAL_MIN_PROFIT} zł"
+            f"< {get_int('final_min_profit')} zł"
         )
 
         safe_log_decision(
@@ -1302,7 +1304,7 @@ def analyze_candidate(
             mode=mode,
             offer_url=offer_url,
             decision="REJECT",
-            reason="FINAL_PROFIT_BELOW_400",
+            reason=f"FINAL_PROFIT_BELOW_{get_int('final_min_profit')}",
             stage="FINAL",
         )
 

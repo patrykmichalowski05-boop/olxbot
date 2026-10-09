@@ -32,6 +32,7 @@
 
             <div class="nav-section">Techniczne</div>
             <a class="nav-link {{ 'active' if page == 'system' else '' }}" href="{{ url_for('main.system') }}">System</a>
+            <a class="nav-link {{ 'active' if page == 'settings' else '' }}" href="{{ url_for('main.scanner_settings_page') }}">Ustawienia</a>
         </nav>
 
         <form class="sidebar-logout" method="post" action="{{ url_for('main.logout') }}">

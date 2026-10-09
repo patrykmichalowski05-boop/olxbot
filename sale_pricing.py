@@ -1,6 +1,8 @@
 import math
 
 
+from scanner_settings import get_int
+
 MIN_PROFIT = 400
 TARGET_PROFIT = 550
 
@@ -47,7 +49,7 @@ def calculate_sale_prices(
     # z naszego celu zysku.
     profit_minimum = (
         total
-        + MIN_PROFIT
+        + get_int('min_profit')
     )
 
     target_by_profit = (
@@ -126,10 +128,10 @@ def calculate_sale_prices(
 
         warning = (
             "Rynek może nie pozwolić osiągnąć "
-            f"minimum {MIN_PROFIT} zł zysku."
+            f"minimum {get_int('min_profit')} zł zysku."
         )
 
-    elif minimum_profit >= MIN_PROFIT:
+    elif minimum_profit >= get_int('min_profit'):
 
         status = (
             "GOOD"
@@ -168,7 +170,7 @@ def calculate_sale_prices(
             minimum_profit,
 
         "required_profit":
-            MIN_PROFIT,
+            get_int('min_profit'),
 
         "status":
             status,
