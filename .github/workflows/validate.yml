@@ -37,6 +37,10 @@ jobs:
             valuation_v3.py \
             market_stats.py
 
+
+      - name: Check JavaScript syntax
+        run: node --check static_v2/app.js
+
   publish-validated:
     name: Publish validated revision
     needs: validate
