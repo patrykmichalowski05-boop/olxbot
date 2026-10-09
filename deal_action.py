@@ -289,6 +289,33 @@ def calculate_action(
             "stanu sprzętu."
         )
 
+    # HOT WATCH ALERT:
+    # Bardzo tanie, potencjalnie zyskowne zestawy
+    # wymagaja pilnej weryfikacji, nie ciszy Telegrama.
+    # Jawnie wysokie ryzyko jest obslugiwane wyzej.
+    elif (
+        profit >= 750
+        and valuation.get("hot") is True
+        and roi is not None
+        and roi >= 50
+        and price is not None
+        and max_buy is not None
+        and price <= max_buy
+        and details.get("cpu")
+        and details.get("gpu")
+        and isinstance(details.get("ram"), (int, float))
+        and details["ram"] >= 16
+        and ai_condition not in ("bad", "poor", "risky")
+    ):
+        action = "REVIEW"
+        label = "PILNA WERYFIKACJA - DUZA MARZA"
+        reason = (
+            "Potencjalnie bardzo wysoki zysk. "
+            "Wycena lub stan komputera wymaga potwierdzenia. "
+            "Sprawdz kompletnosc zestawu, sprawnosc, "
+            "podzespoly i sprzedawce przed zakupem."
+        )
+
     elif many_issues:
 
         action = "WATCH"
