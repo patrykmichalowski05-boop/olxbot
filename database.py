@@ -65,6 +65,8 @@ def init_db():
 
             "last_error":
                 "TEXT",
+            "last_analyzed_at":
+                "TEXT",
         }
 
         for column, definition in migrations.items():
@@ -77,6 +79,14 @@ def init_db():
                     ADD COLUMN {column} {definition}
                     """
                 )
+
+        # Migracja znacznika analizy dla istniejacych ofert.
+        conn.execute("""
+            UPDATE offers
+            SET last_analyzed_at = COALESCE(last_seen, first_seen)
+            WHERE last_analyzed_at IS NULL
+              AND last_analyzed_price IS NOT NULL
+        """)
 
         # Uzupełniamy stare rekordy.
         conn.execute("""
@@ -272,7 +282,7 @@ def observe_offer(
 
     # Nigdy nie była analizowana.
     if (
-        last_analyzed_price is None
+        old["last_analyzed_at"] is None
         and
         failures < 3
     ):
@@ -286,6 +296,24 @@ def observe_offer(
                 last_analyzed_price,
             "should_analyze": True,
             "reason": "PENDING"
+        }
+
+    # Poprzednia analiza nie miala ceny, ale teraz
+    # parser odnalazl cene - dajemy jedna nowa probe.
+    if (
+        old["last_analyzed_at"] is not None
+        and last_analyzed_price is None
+        and price is not None
+        and failures < 3
+    ):
+        return {
+            "is_new": False,
+            "price_drop": price_drop,
+            "previous_price": previous_price,
+            "current_price": price,
+            "last_analyzed_price": last_analyzed_price,
+            "should_analyze": True,
+            "reason": "PRICE_RESOLVED"
         }
 
     # Cena jest niższa niż podczas ostatniej
@@ -336,16 +364,18 @@ def mark_analyzed(
             conn.execute("""
                 UPDATE offers
                 SET
-                    last_analyzed_price = ?,
+                    last_analyzed_price = COALESCE(?, price),
                     alerted = 1,
                     last_alerted_price = ?,
                     analysis_failures = 0,
                     last_error = NULL,
+                    last_analyzed_at = ?,
                     last_seen = ?
                 WHERE id = ?
             """, (
                 analyzed_price,
                 analyzed_price,
+                timestamp,
                 timestamp,
                 offer_id
             ))
@@ -355,13 +385,15 @@ def mark_analyzed(
             conn.execute("""
                 UPDATE offers
                 SET
-                    last_analyzed_price = ?,
+                    last_analyzed_price = COALESCE(?, price),
                     analysis_failures = 0,
                     last_error = NULL,
+                    last_analyzed_at = ?,
                     last_seen = ?
                 WHERE id = ?
             """, (
                 analyzed_price,
+                timestamp,
                 timestamp,
                 offer_id
             ))
