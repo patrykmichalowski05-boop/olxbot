@@ -14,6 +14,8 @@ DEFAULTS = {
     "ai_min_profit": 300,
     "final_min_profit": 400,
     "facebook_min_profit": 400,
+    "min_ram_gb": 16,
+    "max_purchase_price": 0,
 }
 
 
@@ -81,9 +83,17 @@ def save_settings(values, actor="admin"):
         except (ValueError, TypeError):
             raise ValueError(f"Nieprawidlowa wartosc: {key}")
 
-        if not 0 <= number <= 10000:
+        if key == "min_ram_gb":
+            minimum, maximum, unit = 8, 256, "GB"
+        elif key == "max_purchase_price":
+            minimum, maximum, unit = 0, 100000, "zl"
+        else:
+            minimum, maximum, unit = 0, 10000, "zl"
+
+        if not minimum <= number <= maximum:
             raise ValueError(
-                f"{key}: dozwolony zakres 0-10000 zl"
+                f"{key}: dozwolony zakres "
+                f"{minimum}-{maximum} {unit}"
             )
 
         cleaned[key] = number

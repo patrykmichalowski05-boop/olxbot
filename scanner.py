@@ -22,7 +22,7 @@ from database import (
 
 from offer_parser import extract_offer
 
-from filters import hardware_ok
+from filters import hardware_ok, purchase_price_ok
 
 
 # ============================================================
@@ -561,6 +561,41 @@ def analyze_candidate(
             "source"
         )
     )
+
+    # Maksymalna cena zakupu z panelu Flip Hunter V2.
+    # Kontrola po ustaleniu ceny, przed dalsza wycena.
+    from scanner_settings import get_int
+
+    budget_limit = get_int("max_purchase_price")
+
+    if budget_limit > 0:
+        if resolved_price is None:
+            print(
+                "[BUDZET OLX] Nieznana cena - "
+                "pomijam analize do ponownej obserwacji."
+            )
+            return False
+
+        if not purchase_price_ok(resolved_price):
+            print(
+                f"[BUDZET OLX] {resolved_price} zl "
+                f"przekracza limit {budget_limit} zl."
+            )
+
+            details["price"] = resolved_price
+
+            safe_log_decision(
+                offer_id=offer_id,
+                details=details,
+                valuation={},
+                mode=mode,
+                offer_url=offer_url,
+                decision="REJECT",
+                reason="PRICE_OVER_BUDGET",
+                stage="PRICE",
+            )
+
+            return False
 
     if resolved_price is not None:
 

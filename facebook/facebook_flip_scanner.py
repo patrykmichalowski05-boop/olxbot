@@ -441,6 +441,32 @@ def analyze_offer(
         clear_incomplete(listing_id)
 
 
+    # Budzet zakupu ustawiany z panelu Flip Hunter V2.
+    # Brak limitu (0) zachowuje dotychczasowe dzialanie.
+    from scanner_settings import get_int
+    from filters import purchase_price_ok
+    from price_resolver import normalize_price
+
+    max_buy_price = get_int("max_purchase_price")
+
+    if max_buy_price > 0:
+        listing_price = normalize_price(offer.get("price"))
+
+        if listing_price is None:
+            print(
+                "[BUDZET] Nieznana cena - odkladam bez "
+                "oznaczania jako przeanalizowane."
+            )
+            return
+
+        if not purchase_price_ok(listing_price):
+            print(
+                f"[BUDZET] {listing_price} zl przekracza "
+                f"limit {max_buy_price} zl."
+            )
+            # Nie wywolujemy mark_analyzed - cena moze spasc.
+            return
+
     ok, reasons = hardware_ok({
         "cpu":
             specs.get("cpu"),

@@ -26,11 +26,11 @@
                            type="number"
                            name="{{ key }}"
                            value="{{ settings[key] }}"
-                           min="0"
-                           max="10000"
+                           min="{{ 8 if key == 'min_ram_gb' else 0 }}"
+                           max="{{ 256 if key == 'min_ram_gb' else (100000 if key == 'max_purchase_price' else 10000) }}"
                            step="1"
                            required>
-                    <span>zł</span>
+                    <span>{{ 'GB' if key == 'min_ram_gb' else 'zł' }}</span>
                 </span>
             </label>
             {% endfor %}
@@ -72,8 +72,8 @@
                     <td>{{ item.changed_at }}</td>
                     <td>{{ item.actor }}</td>
                     <td>{{ item.key }}</td>
-                    <td>{{ item.old_value }} zł</td>
-                    <td>{{ item.new_value }} zł</td>
+                    <td>{{ item.old_value }} {{ 'GB' if item.key == 'min_ram_gb' else 'zł' }}</td>
+                    <td>{{ item.new_value }} {{ 'GB' if item.key == 'min_ram_gb' else 'zł' }}</td>
                 </tr>
             {% else %}
                 <tr>

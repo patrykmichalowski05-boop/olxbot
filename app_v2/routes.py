@@ -1,4 +1,5 @@
 from flask import (
+    abort,
     Blueprint,
     flash,
     jsonify,
@@ -93,6 +94,7 @@ def offers():
         "decision": request.args.get("decision", "ALL"),
         "min_score": request.args.get("min_score", ""),
     }
+    filters["archived"] = request.args.get("archived", "0")
     return render_template(
         "offers.html",
         page="offers",
@@ -103,12 +105,14 @@ def offers():
 
 @bp.get("/offer/<int:alert_id>")
 def offer(alert_id):
+    from app_v2.alert_archive import archived_ids
     item = alert_detail(alert_id)
     if item is None:
         flash("Nie znaleziono oferty.", "error")
         return redirect(url_for("main.offers"))
     return render_template(
         "offer.html",
+        archived=(alert_id in archived_ids()),
         page="offers",
         item=item,
     )
@@ -181,6 +185,27 @@ def logs(job_key):
         job_key=job_key,
         data=data,
     )
+
+
+
+@bp.post("/actions/offer/<int:alert_id>/archive")
+def action_alert_archive(alert_id):
+    from app_v2.alert_archive import set_archived
+    if alert_detail(alert_id) is None:
+        abort(404)
+    set_archived(alert_id, True)
+    flash("Oferta przeniesiona do archiwum.", "success")
+    return redirect(url_for("main.offers"))
+
+
+@bp.post("/actions/offer/<int:alert_id>/restore")
+def action_alert_restore(alert_id):
+    from app_v2.alert_archive import set_archived
+    if alert_detail(alert_id) is None:
+        abort(404)
+    set_archived(alert_id, False)
+    flash("Oferta przywrocona.", "success")
+    return redirect(url_for("main.offers", archived=1))
 
 
 @bp.post("/actions/offer/<int:alert_id>/crm/<status>")
@@ -385,6 +410,8 @@ def scanner_settings_page():
         ("ai_min_profit", "Prog przed AI", "Wstepna analiza OLX"),
         ("final_min_profit", "Prog koncowy OLX", "Filtr po analizie AI"),
         ("facebook_min_profit", "Prog Facebook", "Facebook Marketplace"),
+        ("min_ram_gb", "Minimalny RAM", "Minimum pamieci komputera"),
+        ("max_purchase_price", "Maks. cena zakupu", "0 = bez limitu; filtr ceny podlaczymy do skanerow"),
     ]
 
     if request.method == "POST":
