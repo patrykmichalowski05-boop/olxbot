@@ -91,7 +91,10 @@ def _decision(alert, snapshot=None):
 
 
 def recent_alerts(limit=100, filters=None):
+    from app_v2.alert_archive import archived_ids
     filters = filters or {}
+    hidden = archived_ids()
+    show_archived = str(filters.get("archived", "0")) == "1"
     limit = max(1, min(_int(limit, 100), 500))
     rows = query(
         config.DATABASES["alerts"],
@@ -108,6 +111,8 @@ def recent_alerts(limit=100, filters=None):
 
     result = []
     for alert in alerts:
+        if (alert.get("id") in hidden) != show_archived:
+            continue
         snapshot = snapshots.get(alert.get("offer_key"), {})
         source = _source(alert, snapshot)
         decision = _decision(alert, snapshot)
@@ -407,7 +412,7 @@ def dashboard_data():
 def watchlist_data():
     rows = query(
         config.DATABASES["watchlist"],
-        "SELECT * FROM watchlist ORDER BY CASE WHEN status='WATCHING' THEN 0 ELSE 1 END, id DESC LIMIT 300",
+        "SELECT * FROM watchlist WHERE status='WATCHING' ORDER BY id DESC LIMIT 300",
     )
     return [dict(row) for row in rows]
 

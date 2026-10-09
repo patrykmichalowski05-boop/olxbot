@@ -1,5 +1,7 @@
 import re
 
+from scanner_settings import get_int
+
 
 def cpu_ok(cpu):
     if not cpu:
@@ -64,7 +66,28 @@ def ram_ok(ram):
     if ram is None:
         return False
 
-    return ram >= 16
+    try:
+        return float(ram) >= get_int("min_ram_gb")
+    except (TypeError, ValueError):
+        return False
+
+
+def purchase_price_ok(price):
+    limit = get_int("max_purchase_price")
+
+    # Zero oznacza brak limitu.
+    if limit == 0:
+        return True
+
+    if price is None or isinstance(price, bool):
+        return False
+
+    try:
+        amount = float(price)
+    except (TypeError, ValueError):
+        return False
+
+    return 0 < amount <= limit
 
 
 def hardware_ok(data):
@@ -99,7 +122,7 @@ def hardware_ok(data):
 
     elif not ram_ok(ram):
         reasons.append(
-            f"RAM poniżej 16 GB: {ram}"
+            f"RAM poniżej {get_int('min_ram_gb')} GB: {ram}"
         )
 
     return len(reasons) == 0, reasons

@@ -3,6 +3,34 @@
 {% block heading %}Szczegóły oferty{% endblock %}
 {% block topbar_actions %}<a class="btn btn-primary" href="{{ item.url }}" target="_blank" rel="noopener">Otwórz ogłoszenie</a>{% endblock %}
 {% block content %}
+
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Zarządzanie ofertą</h2>
+      <p>Archiwizacja zachowuje historię i wycenę.</p>
+    </div>
+    {% if archived %}
+    <form method="post"
+          action="{{ url_for('main.action_alert_restore', alert_id=item.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-primary" type="submit">Przywróć</button>
+    </form>
+    {% else %}
+    <form method="post"
+          action="{{ url_for('main.action_alert_archive', alert_id=item.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-danger" type="submit"
+              data-confirm="Archiwizować ofertę?">Archiwizuj</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if item.url and item.url.startswith('http') %}
+  <a class="btn btn-ghost" href="{{ item.url }}"
+     target="_blank" rel="noopener noreferrer">Otwórz ogłoszenie</a>
+  {% endif %}
+</div>
+
 <div class="offer-hero panel">
     <div>
         <div class="offer-tags"><span class="source source-{{ item.source|lower }}">{{ item.source }}</span><span class="decision decision-{{ item.decision|lower }}">{{ item.decision }}</span>{% if item.bundle %}<span class="tag">BUNDLE</span>{% endif %}</div>
