@@ -202,7 +202,7 @@ def get_candidates():
             valuation_source,
             confidence,
 
-            offer_url
+              url AS offer_url
 
         FROM decisions
 
