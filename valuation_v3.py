@@ -204,6 +204,21 @@ def choose_value(
     neighbor
 ):
 
+    # SAFETY GUARD V4:
+    # Bez niezaleznej wyceny statycznej nie ufamy
+    # jednej ani dwom ofertom rynkowym.
+    # SAME_GPU i NEIGHBOR moga korzystac z tych
+    # samych ogloszen co EXACT.
+    sample_count = int((exact or {}).get("samples") or 0)
+
+    if static_quick is None and sample_count < 3:
+        return {
+            "ok": False,
+            "reason": "Za malo niezaleznych danych do wyceny",
+            "valuation_source": "REJECT_NO_STATIC_LOW_SAMPLE",
+            "confidence": "BRAK",
+        }
+
     exact_samples = exact.get(
         "samples",
         0

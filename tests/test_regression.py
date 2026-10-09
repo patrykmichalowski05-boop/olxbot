@@ -8,7 +8,8 @@ import unittest
 # IMPORT PROJEKTU
 # ============================================================
 
-PROJECT_DIR = "/opt/olx-bot"
+from pathlib import Path
+PROJECT_DIR = str(Path(__file__).resolve().parents[1])
 
 if PROJECT_DIR not in sys.path:
     sys.path.insert(
