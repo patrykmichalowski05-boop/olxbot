@@ -73,5 +73,34 @@ class RamParserV2Tests(unittest.TestCase):
         )
 
 
+    def test_gpu_and_ram_without_separator(self):
+        examples = {
+            "RTX 4080 16GB Ryzen 7 7800X3D 32GB DDR5": 32,
+            "RTX 4080 16GB Ryzen 7 7800X3D 32GB RAM": 32,
+            "RTX 4080 16GB DDR5 32GB": 32,
+            "RTX 4080 SUPER 16GB, DDR5 32GB": 32,
+            "RTX 4080 16GB; RAM 32GB": 32,
+            "RTX 4070 12GB, DDR4 16GB": 16,
+            "16GB RAM, RTX 4070 Ti 12GB": 16,
+        }
+
+        for title, expected in examples.items():
+            with self.subTest(title=title):
+                self.assertEqual(parse_ram(title), expected)
+
+    def test_gpu_vram_not_system_ram_v3(self):
+        examples = (
+            "RTX 4080 SUPER 16GB DDR5",
+            "RTX 4070 Ti 12GB DDR4",
+            "RTX 3090 24GB GDDR6X",
+            "RTX 4080 SUPER 16GB",
+            "Radeon RX 7800XT 16GB",
+        )
+
+        for title in examples:
+            with self.subTest(title=title):
+                self.assertIsNone(parse_ram(title))
+
+
 if __name__ == "__main__":
     unittest.main()

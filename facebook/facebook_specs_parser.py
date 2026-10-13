@@ -154,15 +154,25 @@ def parse_ram(text):
 
             prefix = text[last_sep + 1:start]
 
-            gpu = re.search(
+            gpu_matches = list(re.finditer(
                 r'\b(?:RTX|GTX|Radeon|VRAM|'
                 r'GDDR[456]\w*|RX\s*\d{4})\b',
                 prefix,
                 re.I,
-            )
+            ))
 
-            if gpu and kind != 'ram_before':
-                continue
+            if gpu_matches and kind != 'ram_before':
+                # Rozdzielamy VRAM GPU od RAM komputera.
+                suffix = prefix[gpu_matches[-1].end():]
+
+                previous_capacity = re.search(
+                    r'\b\d{1,3}\s*GB\b',
+                    suffix,
+                    re.I,
+                )
+
+                if not previous_capacity:
+                    continue
 
             near = text[
                 max(0, match.start() - 15):
