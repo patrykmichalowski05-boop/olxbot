@@ -202,8 +202,16 @@ class Stage4Tests(unittest.TestCase):
             api,
         )
         self.assertIn(
-            "getRadar()",
+            "getRadarPage(",
             app,
+        )
+        self.assertIn(
+            "getRadarPage(",
+            api,
+        )
+        self.assertIn(
+            "encodeURIComponent(q)",
+            api,
         )
         self.assertIn(
             "item.snapshot_id",

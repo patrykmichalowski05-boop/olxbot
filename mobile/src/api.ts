@@ -92,10 +92,13 @@ export type RadarPage = {
 
 export async function getRadarPage(
   beforeId: number | null = null,
+  query: string = '',
 ): Promise<RadarPage> {
+  const q = query.trim().slice(0, 120);
   const path = '/api/v1/radar?limit=50'
     + (beforeId !== null
-      ? `&before_id=${beforeId}` : '');
+      ? `&before_id=${beforeId}` : '')
+    + (q ? `&q=${encodeURIComponent(q)}` : '');
 
   const access = await SecureStore.getItemAsync(ACCESS);
 

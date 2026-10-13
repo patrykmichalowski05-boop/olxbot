@@ -1,8 +1,6 @@
-import FlipCalculator from './src/FlipCalculator';
-import OfferDetails from './src/OfferDetails';
-
 import React, {
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -12,6 +10,7 @@ import {
   FlatList,
   Linking,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -19,60 +18,149 @@ import {
   View,
 } from 'react-native';
 
+import FlipCalculator from './src/FlipCalculator';
+import OfferDetails from './src/OfferDetails';
+
+import RadarPanel, {
+  DecisionFilter,
+  PlatformFilter,
+  matchRadar,
+  priceLimit,
+} from './src/RadarPanel';
+
 import {
   clearSession,
-  getRadar,
   getRadarPage,
   hasSession,
-  RadarItem,
   login,
+  RadarItem,
 } from './src/api';
+
+type Screen =
+  'radar' | 'calculator' | 'details';
 
 export default function App() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [authorized, setAuthorized] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<RadarItem[]>([]);
+
+  const [authorized, setAuthorized] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [items, setItems] =
+    useState<RadarItem[]>([]);
+
   const [nextCursor, setNextCursor] =
     useState<number | null>(null);
-  const [filter, setFilter] = useState('ALL');
-  const [screen, setScreen] = useState<'radar' | 'calculator' | 'details'>('radar');
-  const [selected, setSelected] = useState<RadarItem | null>(null);
+
+  const [decision, setDecision] =
+    useState<DecisionFilter>('ALL');
+
+  const [platform, setPlatform] =
+    useState<PlatformFilter>('ALL');
+
+  const [query, setQuery] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+
+  const [screen, setScreen] =
+    useState<Screen>('radar');
+
+  const [selected, setSelected] =
+    useState<RadarItem | null>(null);
+
   const [error, setError] = useState('');
 
-  async function refresh() {
+  const version = useRef(0);
+  const loadedQuery = useRef('');
+
+  async function loadFirst(
+    search: string,
+    requestId: number,
+  ) {
+    if (version.current !== requestId) {
+      return;
+    }
+
     setLoading(true);
     setError('');
 
+    loadedQuery.current = search;
+
     try {
-      const first = await getRadar();
-      setItems(first);
-      setNextCursor(
-        first.length === 50
-          ? first[first.length - 1].snapshot_id
-          : null
+      const page = await getRadarPage(
+        null,
+        search,
       );
+
+      if (version.current !== requestId) {
+        return;
+      }
+
+      setItems(page.items);
+      setNextCursor(page.next_before_id);
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : String(e)
-      );
+      if (version.current === requestId) {
+        setError(
+          e instanceof Error
+            ? e.message
+            : String(e),
+        );
+      }
     } finally {
-      setLoading(false);
+      if (version.current === requestId) {
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
-    hasSession().then(async (yes) => {
-      setAuthorized(yes);
+    let alive = true;
 
-      if (yes) {
-        await refresh();
-      } else {
-        setLoading(false);
-      }
-    }).catch(() => setLoading(false));
+    hasSession()
+      .then(yes => {
+        if (alive) {
+          setAuthorized(yes);
+        }
+      })
+      .catch(e => {
+        if (alive) {
+          setError(String(e));
+        }
+      })
+      .finally(() => {
+        if (alive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      alive = false;
+      version.current += 1;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!authorized) {
+      return;
+    }
+
+    const requestId = ++version.current;
+
+    setItems([]);
+    setNextCursor(null);
+    setLoading(true);
+
+    const handle = setTimeout(() => {
+      void loadFirst(
+        query.trim(),
+        requestId,
+      );
+    }, 350);
+
+    return () => clearTimeout(handle);
+  }, [authorized, query]);
 
   async function submit() {
     setLoading(true);
@@ -81,60 +169,89 @@ export default function App() {
     try {
       await login(username, password);
       setAuthorized(true);
-      await refresh();
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : String(e)
-      );
-      setLoading(false);
-    }
-  }
-
-  async function loadMore() {
-    if (loading || nextCursor === null) return;
-
-    setLoading(true);
-
-    try {
-      const page = await getRadarPage(nextCursor);
-
-      setItems((current) => {
-        const known = new Set(
-          current.map((item) => item.snapshot_id)
-        );
-
-        return [
-          ...current,
-          ...page.items.filter(
-            (item) => !known.has(item.snapshot_id)
-          ),
-        ];
-      });
-
-      setNextCursor(page.next_before_id);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : String(e)
+        e instanceof Error
+          ? e.message
+          : String(e),
       );
     } finally {
       setLoading(false);
     }
   }
 
-  async function logout() {
-    await clearSession();
-    setAuthorized(false);
-    setItems([]);
-    setSelected(null);
-    setScreen('radar');
-    setPassword('');
+  async function loadMore() {
+    if (loading || nextCursor === null) {
+      return;
+    }
+
+    const requestId = version.current;
+
+    setLoading(true);
+
+    try {
+      const page = await getRadarPage(
+        nextCursor,
+        loadedQuery.current,
+      );
+
+      if (requestId !== version.current) {
+        return;
+      }
+
+      setItems(old => {
+        const known = new Set(
+          old.map(item => item.snapshot_id),
+        );
+
+        return [
+          ...old,
+          ...page.items.filter(
+            item => !known.has(item.snapshot_id),
+          ),
+        ];
+      });
+
+      setNextCursor(page.next_before_id);
+    } catch (e) {
+      if (requestId === version.current) {
+        setError(
+          e instanceof Error
+            ? e.message
+            : String(e),
+        );
+      }
+    } finally {
+      if (requestId === version.current) {
+        setLoading(false);
+      }
+    }
   }
 
-  function openOriginal(url: string | null) {
+  async function logout() {
+    version.current += 1;
+    setLoading(true);
+
+    try {
+      await clearSession();
+    } finally {
+      setAuthorized(false);
+      setItems([]);
+      setNextCursor(null);
+      setSelected(null);
+      setScreen('radar');
+      setPassword('');
+      setLoading(false);
+    }
+  }
+
+  function openOriginal(
+    url: string | null,
+  ) {
     if (!url) return;
 
     const valid =
-      /^https:\/\/([a-z0-9-]+\.)*(olx\.pl|facebook\.com)\//i
+      /^https:\/\/(?:[a-z0-9-]+\.)*(?:olx\.pl|facebook\.com)\//i
         .test(url);
 
     if (!valid) {
@@ -143,24 +260,52 @@ export default function App() {
     }
 
     Linking.openURL(url).catch(() => {
-      Alert.alert('Nie mozna otworzyc linku');
+      Alert.alert(
+        'Nie można otworzyć linku',
+      );
     });
   }
 
-  const visibleItems = items.filter(
-    (item) =>
-      filter === 'ALL' || item.decision === filter
-  );
+  const limit = priceLimit(maxPrice);
+
+  const invalidPrice =
+    maxPrice.trim() !== '' &&
+    limit === null;
+
+  const visible = invalidPrice
+    ? []
+    : items.filter(
+        item => matchRadar(
+          item,
+          decision,
+          platform,
+          limit,
+        ),
+      );
+
+  const estimatedSaleMinor =
+    typeof selected?.valuation?.quick_sale ===
+      'number' &&
+    Number.isFinite(
+      selected.valuation.quick_sale,
+    ) &&
+    selected.valuation.quick_sale > 0
+      ? Math.round(
+          selected.valuation.quick_sale * 100,
+        )
+      : null;
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <Text style={styles.heading}>Flip Hunter</Text>
+    <SafeAreaView style={s.screen}>
+      <Text style={s.heading}>
+        Flip Hunter
+      </Text>
 
       {!authorized ? (
-        <View style={styles.form}>
+        <View style={s.form}>
           <TextInput
-            style={styles.input}
-            placeholder="Uzytkownik"
+            style={s.input}
+            placeholder="Użytkownik"
             placeholderTextColor="#888"
             value={username}
             onChangeText={setUsername}
@@ -168,8 +313,8 @@ export default function App() {
           />
 
           <TextInput
-            style={styles.input}
-            placeholder="Haslo"
+            style={s.input}
+            placeholder="Hasło"
             placeholderTextColor="#888"
             value={password}
             onChangeText={setPassword}
@@ -177,69 +322,81 @@ export default function App() {
           />
 
           <Pressable
-            style={styles.button}
+            style={s.button}
             onPress={submit}
             disabled={loading}
           >
-            <Text style={styles.action}>
+            <Text style={s.action}>
               Zaloguj
             </Text>
           </Pressable>
         </View>
       ) : (
         <>
-          <View style={styles.toolbar}>
-            <Pressable onPress={refresh}>
-              <Text style={styles.link}>
-                Odswiez radar
+          <View style={s.toolbar}>
+            <Pressable
+              onPress={() =>
+                void loadFirst(
+                  query.trim(),
+                  ++version.current,
+                )
+              }
+            >
+              <Text style={s.link}>
+                Odśwież radar
               </Text>
             </Pressable>
 
-            <Pressable onPress={logout}>
-              <Text style={styles.link}>
+            <Pressable
+              onPress={() => void logout()}
+            >
+              <Text style={s.link}>
                 Wyloguj
               </Text>
             </Pressable>
           </View>
 
-          <View style={styles.navigation}>
+          <View style={s.navigation}>
             <Pressable
+              style={s.navButton}
               onPress={() => {
-                setScreen('radar');
                 setSelected(null);
+                setScreen('radar');
               }}
-              style={styles.navButton}
             >
-              <Text style={styles.link}>Radar</Text>
+              <Text style={s.link}>
+                Radar
+              </Text>
             </Pressable>
 
             <Pressable
+              style={s.navButton}
               onPress={() => {
                 setSelected(null);
                 setScreen('calculator');
               }}
-              style={styles.navButton}
             >
-              <Text style={styles.link}>Kalkulator</Text>
+              <Text style={s.link}>
+                Kalkulator
+              </Text>
             </Pressable>
           </View>
 
           {screen === 'calculator' ? (
             <FlipCalculator
-              initialPurchaseMinor={selected?.price_minor}
+              initialPurchaseMinor={
+                selected?.price_minor
+              }
               initialSaleMinor={
-                typeof selected?.valuation?.quick_sale === 'number'
-                  && Number.isFinite(selected.valuation.quick_sale)
-                  && selected.valuation.quick_sale > 0
-                  ? Math.round(selected.valuation.quick_sale * 100)
-                  : null
+                estimatedSaleMinor
               }
               onBack={() => {
                 setSelected(null);
                 setScreen('radar');
               }}
             />
-          ) : screen === 'details' && selected ? (
+          ) : screen === 'details' &&
+            selected ? (
             <OfferDetails
               item={selected}
               onBack={() => {
@@ -247,75 +404,98 @@ export default function App() {
                 setScreen('radar');
               }}
               onOpen={openOriginal}
-              onCalculate={() => setScreen('calculator')}
+              onCalculate={() =>
+                setScreen('calculator')
+              }
             />
           ) : (
-            <>
-          <View style={styles.filters}>
-            {['ALL', 'HOT', 'BUY', 'WATCH', 'SKIP'].map(
-              (value) => (
+            <FlatList
+              keyboardShouldPersistTaps="handled"
+              data={visible}
+              keyExtractor={
+                item => String(item.snapshot_id)
+              }
+              ListHeaderComponent={
+                <RadarPanel
+                  items={items}
+                  visibleCount={visible.length}
+                  query={query}
+                  onQuery={setQuery}
+                  decision={decision}
+                  onDecision={setDecision}
+                  platform={platform}
+                  onPlatform={setPlatform}
+                  maxPrice={maxPrice}
+                  onMaxPrice={setMaxPrice}
+                />
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={
+                    loading && items.length > 0
+                  }
+                  onRefresh={() =>
+                    void loadFirst(
+                      query.trim(),
+                      ++version.current,
+                    )
+                  }
+                />
+              }
+              renderItem={({ item }) => (
                 <Pressable
-                  key={value}
-                  onPress={() => setFilter(value)}
-                  style={[
-                    styles.filterButton,
-                    filter === value && styles.filterActive,
-                  ]}
+                  style={s.card}
+                  onPress={() => {
+                    setSelected(item);
+                    setScreen('details');
+                  }}
                 >
-                  <Text style={styles.filterText}>
-                    {value}
+                  <Text style={s.platform}>
+                    {item.platform} · {
+                      item.decision
+                    }
+                  </Text>
+
+                  <Text style={s.title}>
+                    {item.title ||
+                      'Oferta bez tytułu'}
+                  </Text>
+
+                  <Text style={s.price}>
+                    {item.price_minor === null
+                      ? 'Cena nieznana'
+                      : `${
+                          (
+                            item.price_minor / 100
+                          ).toFixed(2)
+                        } zł`}
                   </Text>
                 </Pressable>
-              )
-            )}
-          </View>
-
-          <FlatList
-            data={visibleItems}
-            keyExtractor={(item) => String(item.snapshot_id)}
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.card}
-                onPress={() => {
-                  setSelected(item);
-                  setScreen('details');
-                }}
-              >
-                <Text style={styles.platform}>
-                  {item.platform} · {item.decision}
-                </Text>
-
-                <Text style={styles.title}>
-                  {item.title || 'Oferta bez tytulu'}
-                </Text>
-
-                <Text style={styles.price}>
-                  {item.price_minor === null
-                    ? 'Cena nieznana'
-                    : `${(item.price_minor / 100).toFixed(2)} zl`}
-                </Text>
-              </Pressable>
-            )}
-            ListFooterComponent={
-              nextCursor !== null ? (
-                <Pressable
-                  onPress={loadMore}
-                  disabled={loading}
-                  style={styles.button}
-                >
-                  <Text style={styles.action}>
-                    Wczytaj kolejne oferty
+              )}
+              ListFooterComponent={
+                nextCursor !== null ? (
+                  <Pressable
+                    style={s.button}
+                    disabled={loading}
+                    onPress={() =>
+                      void loadMore()
+                    }
+                  >
+                    <Text style={s.action}>
+                      Wczytaj kolejne 50 ofert
+                    </Text>
+                  </Pressable>
+                ) : null
+              }
+              ListEmptyComponent={
+                !loading ? (
+                  <Text style={s.muted}>
+                    Brak ofert dla wybranych
+                    filtrów.
                   </Text>
-                </Pressable>
-              ) : null
-            }
-            ListEmptyComponent={
-              !loading
-                ? <Text style={styles.muted}>Brak ofert</Text>
-                : null
-            }
-          />
-            </>
+                ) : null
+              }
+            />
           )}
         </>
       )}
@@ -323,13 +503,15 @@ export default function App() {
       {loading && <ActivityIndicator />}
 
       {!!error && (
-        <Text style={styles.error}>{error}</Text>
+        <Text style={s.error}>
+          {error}
+        </Text>
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#10141c',
@@ -339,7 +521,7 @@ const styles = StyleSheet.create({
     color: '#f2f4fa',
     fontSize: 27,
     fontWeight: '700',
-    marginBottom: 22,
+    marginBottom: 15,
   },
   form: {
     gap: 12,
@@ -355,6 +537,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4169e1',
     padding: 14,
     borderRadius: 10,
+    marginTop: 10,
   },
   action: {
     color: 'white',
@@ -364,10 +547,20 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   link: {
     color: '#99b6ff',
+  },
+  navigation: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  navButton: {
+    backgroundColor: '#1d2430',
+    padding: 12,
+    borderRadius: 10,
   },
   card: {
     backgroundColor: '#1d2430',
@@ -389,36 +582,6 @@ const styles = StyleSheet.create({
     color: '#7bd9b1',
     fontSize: 18,
     fontWeight: '700',
-  },
-  navigation: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  navButton: {
-    backgroundColor: '#1d2430',
-    padding: 12,
-    borderRadius: 10,
-  },
-  filters: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-  },
-  filterButton: {
-    borderWidth: 1,
-    borderColor: '#454c5e',
-    borderRadius: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-  },
-  filterActive: {
-    backgroundColor: '#4169e1',
-  },
-  filterText: {
-    color: '#ffffff',
-    fontSize: 12,
   },
   muted: {
     color: '#a5acb8',
