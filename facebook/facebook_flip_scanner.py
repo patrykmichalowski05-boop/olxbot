@@ -103,13 +103,61 @@ def send_facebook_flip_alert(
     }
 
     try:
-        status = send_flip_alert(
+        from telegram_notifier import (
+            calculate_deal_score,
+            send_message,
+        )
+        from deal_action import calculate_action
+        from alert_dedupe import (
+            already_sent,
+            record_alert,
+        )
+        from facebook.facebook_review_notifier import (
+            send_watch_review_alert,
+        )
+
+        score_data = calculate_deal_score(
             details,
             valuation,
             "LOCAL",
-            url,
-            return_status=True,
         )
+
+        score = score_data["score"]
+
+        decision = calculate_action(
+            details,
+            valuation,
+            score=score,
+        )
+
+        review_status = "NOT_ELIGIBLE"
+
+        if decision["action"] == "WATCH":
+            review_status = send_watch_review_alert(
+                details,
+                metadata,
+                specs,
+                valuation,
+                url,
+                decision["action"],
+                score,
+                get_int("facebook_min_profit"),
+                send_fn=send_message,
+                already_sent_fn=already_sent,
+                record_fn=record_alert,
+            )
+
+        if review_status != "NOT_ELIGIBLE":
+            status = review_status
+
+        else:
+            status = send_flip_alert(
+                details,
+                valuation,
+                "LOCAL",
+                url,
+                return_status=True,
+            )
 
     except Exception as e:
         print("[TELEGRAM EXCEPTION]", repr(e))
