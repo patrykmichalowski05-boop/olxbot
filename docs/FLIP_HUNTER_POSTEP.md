@@ -23,3 +23,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 16 | ewidencja porownan | PASS |
 | 17 | wersjonowanie wycen | PASS |
 | 18 | trwale profile | PASS |
+| 19 | bezpieczna kolejka | PASS |
