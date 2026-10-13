@@ -20,3 +20,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 13 | walidowany import reczny | PASS |
 | 14 | uczciwy status integracji | PASS |
 | 15 | kontrola cen | PASS |
+| 16 | ewidencja porownan | PASS |
