@@ -14,3 +14,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 07 | moda i rejestr kategorii | PASS |
 | 08 | porównywalne oferty | PASS |
 | 09 | zysk i ROI | PASS |
+| 10 | profile użytkowników | PASS |
