@@ -19,6 +19,7 @@ import {
 import {
   clearSession,
   getRadar,
+  getRadarPage,
   hasSession,
   RadarItem,
   login,
@@ -30,6 +31,9 @@ export default function App() {
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<RadarItem[]>([]);
+  const [nextCursor, setNextCursor] =
+    useState<number | null>(null);
+  const [filter, setFilter] = useState('ALL');
   const [error, setError] = useState('');
 
   async function refresh() {
@@ -37,7 +41,13 @@ export default function App() {
     setError('');
 
     try {
-      setItems(await getRadar());
+      const first = await getRadar();
+      setItems(first);
+      setNextCursor(
+        first.length === 50
+          ? first[first.length - 1].snapshot_id
+          : null
+      );
     } catch (e) {
       setError(
         e instanceof Error ? e.message : String(e)
@@ -75,6 +85,37 @@ export default function App() {
     }
   }
 
+  async function loadMore() {
+    if (loading || nextCursor === null) return;
+
+    setLoading(true);
+
+    try {
+      const page = await getRadarPage(nextCursor);
+
+      setItems((current) => {
+        const known = new Set(
+          current.map((item) => item.snapshot_id)
+        );
+
+        return [
+          ...current,
+          ...page.items.filter(
+            (item) => !known.has(item.snapshot_id)
+          ),
+        ];
+      });
+
+      setNextCursor(page.next_before_id);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : String(e)
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function logout() {
     await clearSession();
     setAuthorized(false);
@@ -98,6 +139,11 @@ export default function App() {
       Alert.alert('Nie mozna otworzyc linku');
     });
   }
+
+  const visibleItems = items.filter(
+    (item) =>
+      filter === 'ALL' || item.decision === filter
+  );
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -149,8 +195,27 @@ export default function App() {
             </Pressable>
           </View>
 
+          <View style={styles.filters}>
+            {['ALL', 'HOT', 'BUY', 'WATCH', 'SKIP'].map(
+              (value) => (
+                <Pressable
+                  key={value}
+                  onPress={() => setFilter(value)}
+                  style={[
+                    styles.filterButton,
+                    filter === value && styles.filterActive,
+                  ]}
+                >
+                  <Text style={styles.filterText}>
+                    {value}
+                  </Text>
+                </Pressable>
+              )
+            )}
+          </View>
+
           <FlatList
-            data={items}
+            data={visibleItems}
             keyExtractor={(item) => String(item.snapshot_id)}
             renderItem={({ item }) => (
               <Pressable
@@ -172,6 +237,19 @@ export default function App() {
                 </Text>
               </Pressable>
             )}
+            ListFooterComponent={
+              nextCursor !== null ? (
+                <Pressable
+                  onPress={loadMore}
+                  disabled={loading}
+                  style={styles.button}
+                >
+                  <Text style={styles.action}>
+                    Wczytaj kolejne oferty
+                  </Text>
+                </Pressable>
+              ) : null
+            }
             ListEmptyComponent={
               !loading
                 ? <Text style={styles.muted}>Brak ofert</Text>
@@ -250,6 +328,26 @@ const styles = StyleSheet.create({
     color: '#7bd9b1',
     fontSize: 18,
     fontWeight: '700',
+  },
+  filters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  filterButton: {
+    borderWidth: 1,
+    borderColor: '#454c5e',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  filterActive: {
+    backgroundColor: '#4169e1',
+  },
+  filterText: {
+    color: '#ffffff',
+    fontSize: 12,
   },
   muted: {
     color: '#a5acb8',

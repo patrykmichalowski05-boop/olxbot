@@ -85,22 +85,26 @@ export async function login(
   await save(tokens);
 }
 
-export async function getRadar(): Promise<RadarItem[]> {
-  let access = await SecureStore.getItemAsync(ACCESS);
+export type RadarPage = {
+  items: RadarItem[];
+  next_before_id: number | null;
+};
+
+export async function getRadarPage(
+  beforeId: number | null = null,
+): Promise<RadarPage> {
+  const path = '/api/v1/radar?limit=50'
+    + (beforeId !== null
+      ? `&before_id=${beforeId}` : '');
+
+  const access = await SecureStore.getItemAsync(ACCESS);
 
   if (!access) {
     throw new Error('Brak sesji');
   }
 
   try {
-    const response = await request(
-      '/api/v1/radar?limit=50',
-      {},
-      access,
-    );
-
-    return response.items;
-
+    return await request(path, {}, access) as RadarPage;
   } catch (error) {
     if (
       !(error instanceof Error)
@@ -109,11 +113,11 @@ export async function getRadar(): Promise<RadarItem[]> {
       throw error;
     }
 
-    const refresh = await SecureStore.getItemAsync(
-      REFRESH
-    );
+    const refreshToken =
+      await SecureStore.getItemAsync(REFRESH);
 
-    if (!refresh) {
+    if (!refreshToken) {
+      await clearSession();
       throw error;
     }
 
@@ -123,26 +127,25 @@ export async function getRadar(): Promise<RadarItem[]> {
         {
           method: 'POST',
           body: JSON.stringify({
-            refresh_token: refresh,
+            refresh_token: refreshToken,
           }),
         },
       ) as Tokens;
 
       await save(tokens);
 
-      const response = await request(
-        '/api/v1/radar?limit=50',
-        {},
-        tokens.access_token,
-      );
-
-      return response.items;
-
+      return await request(
+        path, {}, tokens.access_token
+      ) as RadarPage;
     } catch (refreshError) {
       await clearSession();
       throw refreshError;
     }
   }
+}
+
+export async function getRadar(): Promise<RadarItem[]> {
+  return (await getRadarPage()).items;
 }
 
 export async function clearSession() {
