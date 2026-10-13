@@ -7,3 +7,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | Etap | Zmiana | Test |
 |---|---|---|
 | 02 | modele i pieniądze | PASS |
+| 03 | kontrola źródeł | PASS |
