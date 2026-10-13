@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+MODE="${1:---check}"
+
+if [[ "$MODE" != "--check" && "$MODE" != "--apply" ]]; then
+    echo "Uzycie: olx-deploy-v2 --check|--apply"
+    exit 2
+fi
+
+cd /opt/olx-bot
+
+exec 9>/run/lock/olx-deploy-v2.lock
+flock -n 9 || {
+    echo "Inna aktualizacja juz trwa."
+    exit 0
+}
+
+export GIT_TERMINAL_PROMPT=0
+export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10"
+
+echo "=== FLIP HUNTER V2 DEPLOY ==="
+
+if [[ "$(git branch --show-current)" != "main" ]]; then
+    echo "STOP: aktywna galaz nie jest main"
+    exit 1
+fi
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "STOP: niezapisane zmiany w sledzonym kodzie"
+    exit 1
+fi
+
+timeout 60 git fetch --no-tags origin \
+    refs/heads/main:refs/remotes/origin/main \
+    refs/heads/deploy-ready:refs/remotes/origin/deploy-ready
+
+CURRENT=$(git rev-parse HEAD)
+NEXT=$(git rev-parse refs/remotes/origin/deploy-ready)
+
+echo "Aktualna:    $CURRENT"
+echo "Zatwierdzona: $NEXT"
+
+if [[ "$CURRENT" == "$NEXT" ]]; then
+    echo "OK: brak aktualizacji"
+    exit 0
+fi
+
+if ! git merge-base --is-ancestor "$CURRENT" "$NEXT"; then
+    echo "STOP: aktualizacja nie jest fast-forward"
+    exit 1
+fi
+
+echo "=== ZMIENIONE PLIKI ==="
+
+mapfile -d '' -t CHANGED < <(
+    git diff --name-only -z "$CURRENT" "$NEXT"
+)
+
+GUI_CHANGED=0
+
+for FILE in "${CHANGED[@]}"; do
+    echo " - $FILE"
+
+    case "$FILE" in
+        templates_v2/*|static_v2/*)
+            GUI_CHANGED=1
+            ;;
+        .github/workflows/*|README*.md)
+            ;;
+        *)
+            echo "STOP: plik wymaga kontrolowanego wdrozenia backendu"
+            exit 1
+            ;;
+    esac
+done
+
+if git ls-tree -r --name-only "$NEXT" | grep -Eq \
+  '(^|/)[^/]*\.(db|sqlite|sqlite3)$|(^|/)watchdog_state\.json$|(^|/)\.env$'; then
+    echo "STOP: pliki runtime w nowej wersji"
+    exit 1
+fi
+
+if [[ "$MODE" == "--check" ]]; then
+    echo "OK: aktualizacja kwalifikuje sie do wdrozenia"
+    echo "TRYB KONTROLNY - BEZ ZMIAN"
+    exit 0
+fi
+
+echo "=== WDRAZANIE ==="
+
+umask 077
+mkdir -p /var/lib/olx-deploy-v2
+
+HISTORY=/var/lib/olx-deploy-v2/history.log
+BACKUP_TAG="deploy-backup-$(date +%Y%m%d-%H%M%S)"
+
+git tag "$BACKUP_TAG" "$CURRENT"
+
+rollback() {
+    echo "BLAD: wdrozenie nie przeszlo kontroli"
+    echo "Przywracanie: $CURRENT"
+
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "STOP: wykryto rownoczesne zmiany kodu"
+        echo "Wymagana reczna interwencja"
+        exit 1
+    fi
+
+    git reset --hard "$CURRENT"
+    systemctl restart olx-dashboard-v2.service
+
+    printf '%s | ROLLBACK | %s | %s\n' \
+        "$(date -Is)" "$NEXT" "$CURRENT" >> "$HISTORY"
+
+    exit 1
+}
+
+if ! git merge --ff-only "$NEXT"; then
+    echo "STOP: Git nie zaktualizowal kodu"
+    exit 1
+fi
+
+if [[ "$GUI_CHANGED" -eq 1 ]]; then
+
+    if ! ./venv/bin/python -m compileall -q \
+        app_v2 webapp_v2.py; then
+        rollback
+    fi
+
+    if ! systemctl restart olx-dashboard-v2.service; then
+        rollback
+    fi
+
+    HEALTHY=0
+
+    for ATTEMPT in 1 2 3 4 5; do
+        HTTP=$(curl -sS --max-time 5 \
+            -o /dev/null \
+            -w '%{http_code}' \
+            http://127.0.0.1:8089/login 2>/dev/null || true)
+
+        if systemctl is-active --quiet olx-dashboard-v2.service \
+           && [[ "$HTTP" == "200" ]]; then
+            HEALTHY=1
+            break
+        fi
+
+        sleep 2
+    done
+
+    if [[ "$HEALTHY" -ne 1 ]]; then
+        rollback
+    fi
+fi
+
+printf '%s | DEPLOY_OK | %s | %s\n' \
+    "$(date -Is)" "$CURRENT" "$NEXT" >> "$HISTORY"
+
+echo "=== SUKCES ==="
+echo "Nowa wersja: $(git rev-parse --short HEAD)"
+echo "Historia: $HISTORY"

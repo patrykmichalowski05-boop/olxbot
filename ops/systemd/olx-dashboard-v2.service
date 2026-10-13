@@ -1,0 +1,22 @@
+[Unit]
+Description=OLX Flip Hunter Control Center V2
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+ExecStart=/opt/olx-bot/venv/bin/gunicorn \
+    --bind 0.0.0.0:8089 \
+    --workers 2 \
+    --timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    webapp_v2:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

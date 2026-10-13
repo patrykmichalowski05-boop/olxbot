@@ -1,0 +1,11 @@
+[Unit]
+Description=Flip Hunter DEV - Telegram every 5 minutes
+
+[Timer]
+OnActiveSec=2min
+OnUnitInactiveSec=5min
+AccuracySec=1min
+Unit=flip-telegram-dev.service
+
+[Install]
+WantedBy=timers.target

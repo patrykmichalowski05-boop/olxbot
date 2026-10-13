@@ -1,0 +1,11 @@
+[Unit]
+Description=OLX Flip Hunter DEEP Worker Timer
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=5s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

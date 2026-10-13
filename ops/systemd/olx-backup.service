@@ -1,0 +1,10 @@
+[Unit]
+Description=OLX Flip Hunter Backup
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot
+UMask=0077
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/backup_bot.py

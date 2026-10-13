@@ -1,0 +1,19 @@
+[Unit]
+Description=OLX Flip Hunter - Prawie okazje
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+Environment=NEAR_MISS_MIN_PROFIT=250
+Environment=NEAR_MISS_MAX_PROFIT=399
+Environment=NEAR_MISS_LOOKBACK_HOURS=3
+Environment=NEAR_MISS_MAX_RESULTS=10
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/near_miss_report.py
+
+TimeoutStartSec=120
+Nice=15

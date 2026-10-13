@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+<title>Flip Hunter — Brakujące wyceny</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{
+ margin:0;background:#0c111b;color:#e8edf7;
+ font:15px system-ui,Segoe UI,sans-serif
+}
+main{max-width:1180px;margin:auto;padding:25px 16px}
+a{color:#a6c6ff}
+h1{font-size:27px}
+.muted{color:#afbdd0}
+.stats{
+ display:grid;grid-template-columns:repeat(3,1fr);
+ gap:12px;margin:22px 0
+}
+.stat,.card{
+ background:#151d29;border:1px solid #354259;
+ border-radius:12px;padding:17px
+}
+.stat strong{display:block;font-size:25px;margin-top:6px}
+.card{margin:12px 0}
+.head{
+ display:flex;justify-content:space-between;
+ align-items:flex-start;gap:15px
+}
+.name{font-size:19px;font-weight:700}
+.tag{
+ display:inline-block;padding:5px 8px;
+ background:#28384c;border-radius:6px;font-size:12px
+}
+.warning{color:#f7cc89}
+.notice{
+ padding:15px;border:1px solid #52627c;
+ border-radius:10px;background:#233043;line-height:1.7
+}
+input,button{
+ background:#1c293b;color:white;
+ border:1px solid #52627c;border-radius:8px;
+ padding:11px 14px;font:inherit
+}
+input{width:100%;margin:18px 0 9px}
+button{cursor:pointer}
+button.active{background:#315caa}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.examples{margin-top:12px;line-height:1.9}
+.examples a{display:block}
+[hidden]{display:none!important}
+@media(max-width:650px){
+ .stats{grid-template-columns:1fr}
+ .head{display:block}
+}
+</style>
+</head>
+<body>
+<main id="catalog-coverage">
+<nav>
+<a href="/flip-radar/">← Radar</a>
+&nbsp; | &nbsp;
+<a href="/flip-radar/valuation-preview">Ranking PC</a>
+</nav>
+
+<h1>Brakujące wyceny podzespołów</h1>
+<p class="muted">
+Dane z rankingu: {{ report.generated }}
+</p>
+
+<div class="stats">
+<div class="stat">
+<span class="muted">Komputery bez wyceny</span>
+<strong>{{ report.unknown_total }}</strong>
+</div>
+<div class="stat">
+<span class="muted">Modele CPU do uzupełnienia</span>
+<strong>{{ report.cpu_models }}</strong>
+</div>
+<div class="stat">
+<span class="muted">Modele GPU do uzupełnienia</span>
+<strong>{{ report.gpu_models }}</strong>
+</div>
+</div>
+
+<div class="notice">
+<strong>Priorytet uzupełniania katalogu.</strong>
+Liczba „Możliwe do odblokowania” oznacza komputery,
+dla których brakuje ceny tylko tego jednego podzespołu.
+
+Nie jest to gwarancja uzyskania wiarygodnej wyceny.
+Przykładowe linki prowadzą do całych komputerów,
+a nie do osobnych części. Żadna cena nie jest
+automatycznie zatwierdzana.
+</div>
+
+<p class="muted">
+Brak tylko CPU: {{ report.categories.cpu_only }} |
+Brak tylko GPU: {{ report.categories.gpu_only }} |
+Brak CPU i GPU: {{ report.categories.both }} |
+Inne: {{ report.categories.unclassified }}
+</p>
+
+<input id="search" type="search"
+ placeholder="Szukaj modelu procesora lub karty..."
+ aria-label="Szukaj modelu">
+
+<div class="filters">
+<button data-type="ALL" class="active">Wszystkie</button>
+<button data-type="CPU">Procesory</button>
+<button data-type="GPU">Karty graficzne</button>
+</div>
+
+<p id="counter" class="muted"></p>
+
+{% for m in report.models %}
+<article class="card"
+ data-kind="{{ m.kind }}"
+ data-model="{{ m.model|lower }}">
+<div class="head">
+<div>
+<span class="tag">{{ m.kind }}</span>
+<div class="name">{{ m.model }}</div>
+</div>
+<div>
+<strong>Możliwe do odblokowania: {{ m.unlock_alone }}</strong>
+<div class="muted">Wszystkie zależne oferty: {{ m.affected }}</div>
+</div>
+</div>
+
+{% if m.variant_review %}
+<p class="warning">
+Wymagane potwierdzenie wariantu lub nazwy modelu.
+</p>
+{% endif %}
+
+<details class="examples">
+<summary>Przykładowe ogłoszenia</summary>
+{% for e in m.examples %}
+<div>
+{% if e.url %}
+<a href="{{ e.url }}" target="_blank"
+ rel="noopener noreferrer">
+{{ e.price }} zł — {{ e.title }}
+</a>
+{% else %}
+{{ e.price }} zł — {{ e.title }}
+{% endif %}
+</div>
+{% endfor %}
+</details>
+</article>
+{% endfor %}
+
+</main>
+<script>
+(() => {
+ const cards = [...document.querySelectorAll('.card')];
+ const buttons = [...document.querySelectorAll('[data-type]')];
+ const search = document.getElementById('search');
+ const counter = document.getElementById('counter');
+ let type = 'ALL';
+
+ function update() {
+  const text = search.value.trim().toLocaleLowerCase('pl-PL');
+  let visible = 0;
+  for(const card of cards) {
+   const show = (type === 'ALL' || card.dataset.kind === type)
+     && card.dataset.model.toLocaleLowerCase('pl-PL').includes(text);
+   card.hidden = !show;
+   if(show) visible++;
+  }
+  counter.textContent = `Widoczne modele: ${visible} z ${cards.length}`;
+ }
+ search.addEventListener('input', update);
+ for(const btn of buttons) {
+  btn.addEventListener('click', () => {
+   type = btn.dataset.type;
+   buttons.forEach(b => b.classList.toggle('active', b === btn));
+   update();
+  });
+ }
+ update();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[Unit]
+Description=OLX Flip Hunter Bundle Radar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+Environment=BUNDLE_QUERY_LIMIT=16
+Environment=BUNDLE_MAX_CARDS_PER_QUERY=40
+Environment=BUNDLE_MAX_QUEUE_PER_RUN=15
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/bundle_fast_scanner.py
+
+TimeoutStartSec=300
+Nice=10

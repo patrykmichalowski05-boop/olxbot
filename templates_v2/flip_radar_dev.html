@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flip Radar — Komputery</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='flip_radar.css') }}">
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <h1>Flip Radar</h1>
+    <p class="muted">Wszystkie zaobserwowane komputery OLX i Facebook</p>
+  </div>
+  <a href="/">Wróć do dashboardu</a>
+</header>
+
+<div class="stats">
+  <div class="stat">Wszystkie oferty<strong id="total">—</strong></div>
+  <div class="stat">OLX<strong id="olx">—</strong></div>
+  <div class="stat">Facebook<strong id="facebook">—</strong></div>
+  <div class="stat">Powyżej 1500 zł<strong id="expensive">—</strong></div>
+</div>
+
+<p class="muted" id="updated"></p>
+
+<form class="filters" id="filters">
+  <input id="query" placeholder="Procesor, karta graficzna, nazwa lub ID">
+  <select id="source">
+    <option value="">OLX i Facebook</option>
+    <option value="olx">Tylko OLX</option>
+    <option value="facebook">Tylko Facebook</option>
+  </select>
+  <select id="sort">
+    <option value="recent">Ostatnio zaobserwowane</option>
+    <option value="cheap">Najtańsze</option>
+    <option value="expensive">Najdroższe</option>
+  </select>
+  <button type="submit">Szukaj</button>
+</form>
+
+<p id="info" class="muted">Wczytywanie ofert...</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Komputer</th>
+<th>Cena</th>
+<th>CPU / GPU</th>
+<th>RAM</th>
+<th>Minimalna odsprzedaż</th>
+<th>Weryfikacja</th>
+</tr>
+</thead>
+<tbody id="offers"></tbody>
+</table>
+</div>
+
+<footer>
+  <button id="previous" type="button">Poprzednia</button>
+  <span id="paging" class="muted"></span>
+  <button id="next" type="button">Następna</button>
+</footer>
+
+<p class="muted">
+  Kwota minimalnej odsprzedaży wynika z celu 400 zł zysku,
+  30% ROI i rezerwy 150 zł. Nie jest prognozą sprzedaży.
+  Ogłoszenia i ceny nie są niezależnie potwierdzone.
+</p>
+
+<!-- SELLER_PREVIEW_NAV_V2 -->
+<a href="/flip-radar/seller-questions-preview"
+   style="display:inline-block;padding:10px 15px;
+          margin:8px;border:1px solid #52627c;
+          border-radius:8px;text-decoration:none">
+Wymagają informacji
+</a>
+<p>
+<a href="/flip-radar/valuation-preview">
+Podgląd wycen PC
+</a>
+</p>
+<!-- CATALOG_COVERAGE_NAV_V1 -->
+<p>
+<a href="/flip-radar/catalog-coverage">
+Brakujące wyceny CPU i GPU
+</a>
+</p>
+</main>
+
+<script defer src="{{ url_for('static', filename='flip_radar.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[Unit]
+Description=Flip Radar - synchronizacja danych co okolo 5 minut
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=5min
+AccuracySec=30s
+Unit=flip-radar-import-dev.service
+
+[Install]
+WantedBy=timers.target

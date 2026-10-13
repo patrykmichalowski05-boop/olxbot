@@ -1,0 +1,18 @@
+[Unit]
+Description=Flip Radar - bezpieczny import danych DEV do panelu WWW
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot-budget-dev/trade-radar-dev
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHON_DOTENV_DISABLED=1
+Environment=OPENAI_API_KEY=sk-disabled-offline
+Environment=GPU_ALERT_SEND=NO
+Environment=GPU_AUTO_SEND=NO
+ExecStart=/opt/olx-bot/venv/bin/python /opt/olx-bot-budget-dev/trade-radar-dev/flip_radar_sync_v1_dev.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/olx-bot-ui-dev/data
+TimeoutStartSec=120

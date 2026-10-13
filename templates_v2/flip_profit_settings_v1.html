@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet"
+ href="{{ url_for('static', filename='flip_profit_settings_v1.css') }}">
+
+<div class="flip-policy-wrap">
+  <div class="flip-policy-head">
+    <a href="{{ url_for('main.scanner_settings_page') }}">
+      ← Wróć do ustawień skanerów
+    </a>
+    <h1>Opłacalność komputerów</h1>
+    <p>
+      Ustal wymagany zysk, ROI i rezerwę kosztów.
+      Nie musisz zmieniać kodu ani restartować skanera.
+    </p>
+  </div>
+
+  <form method="post"
+    action="{{ url_for('flip_radar.flip_policy_settings') }}">
+
+    <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+
+    <div class="flip-policy-grid">
+
+      <div class="flip-policy-card">
+        <label for="min-profit">
+          Minimalny zysk netto (zł)
+        </label>
+        <p class="flip-policy-description">
+          Ile chcesz zarobić po uwzględnieniu
+          ceny zakupu i dodatkowych kosztów.
+        </p>
+        <input id="min-profit" type="number"
+          name="min_profit_zl"
+          min="0" max="1000000" step="1"
+          value="{{ policy.min_profit_zl }}" required>
+      </div>
+
+      <div class="flip-policy-card">
+        <label for="roi">
+          Minimalne ROI (%)
+        </label>
+        <p class="flip-policy-description">
+          Minimalny procent zysku względem
+          całkowitego kosztu inwestycji.
+        </p>
+        <input id="roi" type="number"
+          name="min_roi_pct"
+          min="0" max="300" step="0.1"
+          value="{{ policy.min_roi_pct }}" required>
+      </div>
+
+      <div class="flip-policy-card">
+        <label for="reserve">
+          Rezerwa na koszty (zł)
+        </label>
+        <p class="flip-policy-description">
+          Szacowany koszt transportu, czyszczenia,
+          części lub przygotowania sprzętu.
+        </p>
+        <input id="reserve" type="number"
+          name="reserve_zl"
+          min="0" max="1000000" step="1"
+          value="{{ policy.reserve_zl }}" required>
+      </div>
+
+      <div class="flip-policy-card">
+        <label for="hot">
+          Próg okazji HOT (zł)
+        </label>
+        <p class="flip-policy-description">
+          Zysk, od którego komputer może dostać
+          oznaczenie HOT, jeśli wycena jest wiarygodna.
+        </p>
+        <input id="hot" type="number"
+          name="hot_profit_zl"
+          min="0" max="1000000" step="1"
+          value="{{ policy.hot_profit_zl }}" required>
+      </div>
+
+    </div>
+
+    <div class="flip-policy-actions">
+      <button class="btn btn-primary" type="submit">
+        Zapisz ustawienia
+      </button>
+      <a class="btn btn-ghost"
+        href="{{ url_for('flip_radar.flip_page') }}">
+        Przejdź do Flip Radar
+      </a>
+    </div>
+  </form>
+
+  <div class="flip-policy-example">
+    <p>Przykładowy komputer kupiony za 1500 zł</p>
+    <strong>{{ example_required }} zł</strong>
+    <p class="flip-policy-help">
+      Wymagana cena odsprzedaży według
+      aktualnych ustawień. To nie jest
+      wycena rynkowa komputera.
+    </p>
+  </div>
+</div>
+{% endblock %}

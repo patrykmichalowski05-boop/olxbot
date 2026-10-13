@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Flip Hunter PC Ranking Every 30 Minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=30min
+AccuracySec=1min
+RandomizedDelaySec=30s
+Unit=flip-ranking-refresh.service
+
+[Install]
+WantedBy=timers.target
