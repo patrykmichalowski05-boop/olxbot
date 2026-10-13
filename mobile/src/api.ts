@@ -262,3 +262,62 @@ export async function previewFlip(
     throw error;
   }
 }
+
+
+/**
+ * Publiczny test dostepnosci API.
+ * Nie wysyla hasel ani tokenow.
+ *
+ * Endpoint /me powinien zwrocic 401
+ * bez naglowka Authorization.
+ */
+export async function checkApiConnection():
+  Promise<string> {
+  const url = baseUrl() + '/api/v1/me';
+  const controller = new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    10000,
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    if (response.status !== 401) {
+      throw new Error(
+        'Nieprawidlowa odpowiedz API: HTTP '
+        + response.status,
+      );
+    }
+
+    const body = await response.json();
+
+    if (body?.detail !== 'Unauthorized') {
+      throw new Error(
+        'Serwer nie wyglada na Flip Hunter API',
+      );
+    }
+
+    return 'Polaczenie HTTPS z API dziala.';
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.name === 'AbortError'
+    ) {
+      throw new Error(
+        'API nie odpowiedzialo w ciagu 10 sekund.',
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}

@@ -29,6 +29,7 @@ import RadarPanel, {
 } from './src/RadarPanel';
 
 import {
+  checkApiConnection,
   clearSession,
   getRadarPage,
   hasSession,
@@ -71,6 +72,12 @@ export default function App() {
     useState<RadarItem | null>(null);
 
   const [error, setError] = useState('');
+
+  const [connectionStatus, setConnectionStatus] =
+    useState('');
+
+  const [checkingConnection, setCheckingConnection] =
+    useState(false);
 
   const version = useRef(0);
   const loadedQuery = useRef('');
@@ -161,6 +168,26 @@ export default function App() {
 
     return () => clearTimeout(handle);
   }, [authorized, query]);
+
+  async function diagnoseConnection() {
+    if (checkingConnection) return;
+
+    setCheckingConnection(true);
+    setConnectionStatus('Sprawdzanie API...');
+
+    try {
+      const result = await checkApiConnection();
+      setConnectionStatus(result);
+    } catch (e) {
+      setConnectionStatus(
+        e instanceof Error
+          ? e.message
+          : String(e),
+      );
+    } finally {
+      setCheckingConnection(false);
+    }
+  }
 
   async function submit() {
     setLoading(true);
@@ -330,6 +357,22 @@ export default function App() {
               Zaloguj
             </Text>
           </Pressable>
+
+          <Pressable
+            style={s.navButton}
+            onPress={() => void diagnoseConnection()}
+            disabled={checkingConnection}
+          >
+            <Text style={s.link}>
+              Sprawdź połączenie z API
+            </Text>
+          </Pressable>
+
+          {!!connectionStatus && (
+            <Text style={s.muted}>
+              {connectionStatus}
+            </Text>
+          )}
         </View>
       ) : (
         <>
