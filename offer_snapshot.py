@@ -86,26 +86,44 @@ def save_snapshot(
 
     conn = connect()
 
-    # Deduplikacja tego samego snapshotu
+
+    # STAGE1_SNAPSHOT_DEDUPE_V2
+    # Porownujemy cala analize, a nie tylko cene.
+
+    conn.execute("BEGIN IMMEDIATE")
+
     existing = conn.execute("""
-        SELECT id
+        SELECT details_json, valuation_json,
+               action_json, score, mode, trigger
         FROM snapshots
-
-        WHERE
-            offer_key = ?
-            AND price = ?
-
+        WHERE offer_key=?
         ORDER BY id DESC
-
         LIMIT 1
-    """, (
-        offer_key,
-        details.get("price"),
-    )).fetchone()
+    """, (offer_key,)).fetchone()
 
     if existing:
-        conn.close()
-        return False
+        try:
+            same = (
+                json.loads(existing["details_json"] or "{}")
+                == json.loads(safe_json(details))
+                and json.loads(existing["valuation_json"] or "{}")
+                == json.loads(safe_json(valuation))
+                and json.loads(existing["action_json"] or "{}")
+                == json.loads(safe_json(action))
+                and int(existing["score"] or 0)
+                == int(score or 0)
+                and str(existing["mode"] or "")
+                == str(mode or "")
+                and str(existing["trigger"] or "")
+                == str(details.get("_trigger") or "")
+            )
+        except (ValueError, TypeError):
+            same = False
+
+        if same:
+            conn.rollback()
+            conn.close()
+            return False
 
     conn.execute("""
         INSERT INTO snapshots (

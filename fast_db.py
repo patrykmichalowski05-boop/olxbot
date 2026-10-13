@@ -284,97 +284,90 @@ def observe_offer(
 # ============================================================
 
 def enqueue(
-    offer_id,
-    title,
-    url,
-    price,
-    mode,
-    trigger,
+    offer_id, title, url, price, mode, trigger
 ):
+    """STAGE1_ENQUEUE_LOCKED_V2"""
 
     init_db()
-
     timestamp = now()
+    conn = connect()
 
-    with connect() as conn:
+    try:
+        conn.execute("BEGIN IMMEDIATE")
 
-        # Jeżeli oferta już czeka albo jest przetwarzana,
-        # nie dokładamy duplikatu.
+        pending = conn.execute("""
+            SELECT * FROM queue
+            WHERE offer_id=? AND status='PENDING'
+            ORDER BY id DESC LIMIT 1
+        """, (offer_id,)).fetchone()
 
-        existing = conn.execute("""
-            SELECT id
-            FROM queue
+        if pending:
+            changed = any((
+                pending["title"] != title,
+                pending["url"] != url,
+                pending["price"] != price,
+                pending["mode"] != mode,
+                pending["trigger"] != trigger,
+            ))
 
-            WHERE
-                offer_id = ?
+            if changed:
+                conn.execute("""
+                    UPDATE queue
+                    SET title=?, url=?, price=?,
+                        mode=?, trigger=?, updated_at=?
+                    WHERE id=?
+                """, (
+                    title, url, price, mode,
+                    trigger, timestamp, pending["id"]
+                ))
 
-                AND status IN (
-                    'PENDING',
-                    'PROCESSING'
-                )
-
-            ORDER BY id DESC
-
-            LIMIT 1
-        """, (
-            offer_id,
-        )).fetchone()
-
-        if existing:
-
+            conn.commit()
             return False
+
+        processing = conn.execute("""
+            SELECT * FROM queue
+            WHERE offer_id=? AND status='PROCESSING'
+            ORDER BY id DESC LIMIT 1
+        """, (offer_id,)).fetchone()
+
+        if processing:
+            identical = all((
+                processing["title"] == title,
+                processing["url"] == url,
+                processing["price"] == price,
+                processing["mode"] == mode,
+                processing["trigger"] == trigger,
+            ))
+
+            if identical:
+                conn.commit()
+                return False
 
         conn.execute("""
             INSERT INTO queue (
-
-                offer_id,
-
-                title,
-                url,
-
-                price,
-
-                mode,
-                trigger,
-
-                status,
-
-                queued_at,
-                updated_at,
-
-                attempts,
-
-                last_error
+                offer_id, title, url, price,
+                mode, trigger, status,
+                queued_at, updated_at,
+                attempts, last_error
             )
             VALUES (
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                'PENDING',
-                ?,
-                ?,
-                0,
-                NULL
+                ?, ?, ?, ?, ?, ?,
+                'PENDING', ?, ?, 0, NULL
             )
         """, (
-            offer_id,
-
-            title,
-            url,
-
-            price,
-
-            mode,
-            trigger,
-
-            timestamp,
-            timestamp,
+            offer_id, title, url, price,
+            mode, trigger, timestamp, timestamp
         ))
 
-    return True
+        conn.commit()
+        return True
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
 
 # ============================================================

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: flip_hunter_test
+      POSTGRES_USER: flip_test
+      POSTGRES_PASSWORD: ${FLIP_TEST_PG_PASSWORD:?Set_FLIP_TEST_PG_PASSWORD}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - flip_pg_test:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U flip_test -d flip_hunter_test
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  flip_pg_test:

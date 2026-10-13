@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Flip Hunter",
+    "slug": "flip-hunter",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "plugins": ["expo-secure-store"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    }
+  }
+}

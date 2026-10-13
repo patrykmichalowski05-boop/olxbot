@@ -1,4 +1,5 @@
 import json
+import math
 import sqlite3
 import subprocess
 from collections import defaultdict
@@ -28,7 +29,8 @@ def _number(value, default=None):
     try:
         if value is None or value == "":
             return default
-        return float(str(value).replace(",", "."))
+        result = float(str(value).replace(",", "."))
+        return result if math.isfinite(result) else default
     except (TypeError, ValueError):
         return default
 
@@ -631,7 +633,9 @@ def _ensure_flips_table():
 
 def buy_offer(alert_id, purchase_price, extra_cost=0):
     purchase_price = _number(purchase_price)
-    extra_cost = _number(extra_cost, 0) or 0
+    extra_cost = _number(0 if extra_cost is None or extra_cost == "" else extra_cost)
+    if extra_cost is None or extra_cost < 0:
+        raise ValueError("Nieprawidlowy koszt")
     if purchase_price is None or purchase_price <= 0:
         raise ValueError("Cena zakupu musi być większa od zera")
 
@@ -667,7 +671,9 @@ def buy_offer(alert_id, purchase_price, extra_cost=0):
 
 def sell_flip(flip_id, sale_price, extra_cost=0):
     sale_price = _number(sale_price)
-    extra_cost = _number(extra_cost, 0) or 0
+    extra_cost = _number(0 if extra_cost is None or extra_cost == "" else extra_cost)
+    if extra_cost is None or extra_cost < 0:
+        raise ValueError("Nieprawidlowy koszt")
     if sale_price is None or sale_price <= 0:
         raise ValueError("Cena sprzedaży musi być większa od zera")
 
@@ -680,11 +686,16 @@ def sell_flip(flip_id, sale_price, extra_cost=0):
 
     conn = connect(config.DATABASES["flips"], readonly=False)
     try:
-        conn.execute("""
-            UPDATE flips SET sale_price=?, extra_cost=?, sold_at=?, status='SOLD' WHERE id=?
+        updated = conn.execute("""
+            UPDATE flips SET sale_price=?,
+            extra_cost=COALESCE(extra_cost,0)+?,
+            sold_at=?, status='SOLD'
+            WHERE id=? AND status!='SOLD'
         """, (
             sale_price, extra_cost, datetime.now().isoformat(timespec="seconds"), flip_id,
         ))
+        if updated.rowcount != 1:
+            raise ValueError('Sprzedaz juz zapisana')
         conn.commit()
     finally:
         conn.close()
