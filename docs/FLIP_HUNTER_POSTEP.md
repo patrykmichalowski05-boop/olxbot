@@ -12,3 +12,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 05 | warianty elektroniki | PASS |
 | 06 | identyfikacja samochodów | PASS |
 | 07 | moda i rejestr kategorii | PASS |
+| 08 | porównywalne oferty | PASS |
