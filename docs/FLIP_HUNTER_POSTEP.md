@@ -15,3 +15,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 08 | porównywalne oferty | PASS |
 | 09 | zysk i ROI | PASS |
 | 10 | profile użytkowników | PASS |
+| 11 | offline pipeline i alerty | PASS |
