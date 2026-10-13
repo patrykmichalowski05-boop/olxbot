@@ -21,3 +21,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 14 | uczciwy status integracji | PASS |
 | 15 | kontrola cen | PASS |
 | 16 | ewidencja porownan | PASS |
+| 17 | wersjonowanie wycen | PASS |
