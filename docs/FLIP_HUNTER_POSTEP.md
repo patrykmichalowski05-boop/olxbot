@@ -8,3 +8,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 |---|---|---|
 | 02 | modele i pieniądze | PASS |
 | 03 | kontrola źródeł | PASS |
+| 04 | historia obserwacji i wycen | PASS |
