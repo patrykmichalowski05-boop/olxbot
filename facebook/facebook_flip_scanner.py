@@ -498,10 +498,7 @@ def analyze_offer(
     max_buy_price = get_int("max_purchase_price")
 
     if max_buy_price > 0:
-        listing_price = normalize_price(price)
-        card_price = normalize_price(offer.get("price"))
-        if card_price != listing_price:
-            print("[FACEBOOK] Roznica ceny:", card_price, listing_price)
+        listing_price = normalize_price(offer.get("price"))
 
         if listing_price is None:
             print(
