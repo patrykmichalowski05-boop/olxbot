@@ -174,3 +174,88 @@ export async function hasSession() {
     await SecureStore.getItemAsync(ACCESS)
   );
 }
+
+
+export type FlipPreviewInput = {
+  purchase_minor: number;
+  sale_minor: number;
+  costs: Record<string, number>;
+  confidence: string;
+  condition: string;
+};
+
+export type FlipPreviewResult = {
+  purchase_minor: number;
+  sale_minor: number;
+  total_cost_minor: number;
+  total_investment_minor: number;
+  operating_profit_minor: number;
+  roi_bps: number;
+  max_purchase_minor: number;
+  decision: string;
+  policy_version: string;
+  profit_after_tax: boolean;
+};
+
+export async function previewFlip(
+  payload: FlipPreviewInput,
+): Promise<FlipPreviewResult> {
+  const path = '/api/v1/valuations/preview';
+
+  const options: RequestInit = {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  };
+
+  const access = await SecureStore.getItemAsync(ACCESS);
+
+  if (!access) {
+    throw new Error('Brak sesji. Zaloguj się ponownie.');
+  }
+
+  try {
+    return await request(
+      path,
+      options,
+      access,
+    ) as FlipPreviewResult;
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      error.message !== 'API HTTP 401'
+    ) {
+      throw error;
+    }
+  }
+
+  const refreshToken =
+    await SecureStore.getItemAsync(REFRESH);
+
+  if (!refreshToken) {
+    await clearSession();
+    throw new Error('Sesja wygasła.');
+  }
+
+  try {
+    const tokens = await request(
+      '/api/v1/auth/refresh',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+        }),
+      },
+    ) as Tokens;
+
+    await save(tokens);
+
+    return await request(
+      path,
+      options,
+      tokens.access_token,
+    ) as FlipPreviewResult;
+  } catch (error) {
+    await clearSession();
+    throw error;
+  }
+}

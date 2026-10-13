@@ -1,3 +1,6 @@
+import FlipCalculator from './src/FlipCalculator';
+import OfferDetails from './src/OfferDetails';
+
 import React, {
   useEffect,
   useState,
@@ -34,6 +37,8 @@ export default function App() {
   const [nextCursor, setNextCursor] =
     useState<number | null>(null);
   const [filter, setFilter] = useState('ALL');
+  const [screen, setScreen] = useState<'radar' | 'calculator' | 'details'>('radar');
+  const [selected, setSelected] = useState<RadarItem | null>(null);
   const [error, setError] = useState('');
 
   async function refresh() {
@@ -120,6 +125,8 @@ export default function App() {
     await clearSession();
     setAuthorized(false);
     setItems([]);
+    setSelected(null);
+    setScreen('radar');
     setPassword('');
   }
 
@@ -195,6 +202,55 @@ export default function App() {
             </Pressable>
           </View>
 
+          <View style={styles.navigation}>
+            <Pressable
+              onPress={() => {
+                setScreen('radar');
+                setSelected(null);
+              }}
+              style={styles.navButton}
+            >
+              <Text style={styles.link}>Radar</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setSelected(null);
+                setScreen('calculator');
+              }}
+              style={styles.navButton}
+            >
+              <Text style={styles.link}>Kalkulator</Text>
+            </Pressable>
+          </View>
+
+          {screen === 'calculator' ? (
+            <FlipCalculator
+              initialPurchaseMinor={selected?.price_minor}
+              initialSaleMinor={
+                typeof selected?.valuation?.quick_sale === 'number'
+                  && Number.isFinite(selected.valuation.quick_sale)
+                  && selected.valuation.quick_sale > 0
+                  ? Math.round(selected.valuation.quick_sale * 100)
+                  : null
+              }
+              onBack={() => {
+                setSelected(null);
+                setScreen('radar');
+              }}
+            />
+          ) : screen === 'details' && selected ? (
+            <OfferDetails
+              item={selected}
+              onBack={() => {
+                setSelected(null);
+                setScreen('radar');
+              }}
+              onOpen={openOriginal}
+              onCalculate={() => setScreen('calculator')}
+            />
+          ) : (
+            <>
           <View style={styles.filters}>
             {['ALL', 'HOT', 'BUY', 'WATCH', 'SKIP'].map(
               (value) => (
@@ -220,7 +276,10 @@ export default function App() {
             renderItem={({ item }) => (
               <Pressable
                 style={styles.card}
-                onPress={() => openOriginal(item.url)}
+                onPress={() => {
+                  setSelected(item);
+                  setScreen('details');
+                }}
               >
                 <Text style={styles.platform}>
                   {item.platform} · {item.decision}
@@ -256,6 +315,8 @@ export default function App() {
                 : null
             }
           />
+            </>
+          )}
         </>
       )}
 
@@ -328,6 +389,16 @@ const styles = StyleSheet.create({
     color: '#7bd9b1',
     fontSize: 18,
     fontWeight: '700',
+  },
+  navigation: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  navButton: {
+    backgroundColor: '#1d2430',
+    padding: 12,
+    borderRadius: 10,
   },
   filters: {
     flexDirection: 'row',
