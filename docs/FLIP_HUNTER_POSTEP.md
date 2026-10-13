@@ -17,3 +17,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 10 | profile użytkowników | PASS |
 | 11 | offline pipeline i alerty | PASS |
 | 12 | odczyt legacy bez zmian | PASS |
+| 13 | walidowany import reczny | PASS |
