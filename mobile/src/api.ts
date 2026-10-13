@@ -7,13 +7,15 @@ const BASE = (
 const ACCESS = 'flip_access';
 const REFRESH = 'flip_refresh';
 
-export type Listing = {
-  id: number;
+export type RadarItem = {
+  snapshot_id: number;
+  decision: string;
+  valuation: Record<string, unknown>;
+  observed_at: string | null;
   title: string | null;
   platform: string;
   price_minor: number | null;
   url: string | null;
-  created_at: string | null;
 };
 
 type Tokens = {
@@ -83,7 +85,7 @@ export async function login(
   await save(tokens);
 }
 
-export async function getListings(): Promise<Listing[]> {
+export async function getRadar(): Promise<RadarItem[]> {
   let access = await SecureStore.getItemAsync(ACCESS);
 
   if (!access) {
@@ -92,7 +94,7 @@ export async function getListings(): Promise<Listing[]> {
 
   try {
     const response = await request(
-      '/api/v1/listings?limit=50',
+      '/api/v1/radar?limit=50',
       {},
       access,
     );
@@ -129,7 +131,7 @@ export async function getListings(): Promise<Listing[]> {
       await save(tokens);
 
       const response = await request(
-        '/api/v1/listings?limit=50',
+        '/api/v1/radar?limit=50',
         {},
         tokens.access_token,
       );

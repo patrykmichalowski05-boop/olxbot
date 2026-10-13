@@ -21,6 +21,12 @@ def token_hash(value):
     ).hexdigest()
 
 
+class LoginRateLimited(ValueError):
+    def __init__(self, retry_after):
+        self.retry_after = max(1, int(retry_after))
+        super().__init__("Too many login attempts")
+
+
 class AuthStore:
 
     def __init__(self, path):
@@ -78,6 +84,13 @@ class AuthStore:
                     kind TEXT NOT NULL
                         CHECK(kind IN ('access','refresh')),
                     expires INTEGER NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS login_attempts (
+                    username TEXT PRIMARY KEY,
+                    attempts INTEGER NOT NULL,
+                    locked_until INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
                 );
 
                 CREATE INDEX IF NOT EXISTS
@@ -166,33 +179,98 @@ class AuthStore:
         }
 
     def login(self, username, password):
+        if not isinstance(username, str) or not isinstance(password, str):
+            raise ValueError("Invalid credentials")
+
+        username = username.strip()
+        now = int(time.time())
+        failure = None
+        tokens = None
+
         with self.transaction() as db:
-            row = db.execute("""
-                SELECT * FROM users
+            db.execute("""
+                DELETE FROM login_attempts
+                WHERE updated_at < ?
+            """, (now - 86400,))
+
+            attempt = db.execute("""
+                SELECT attempts, locked_until, updated_at
+                FROM login_attempts
                 WHERE username=?
             """, (username,)).fetchone()
 
-            salt = row["salt"] if row else b"\x00" * 16
-            expected = (
-                row["digest"] if row
-                else b"\x00" * 32
-            )
+            if attempt and attempt["locked_until"] > now:
+                failure = LoginRateLimited(
+                    attempt["locked_until"] - now
+                )
+            else:
+                row = db.execute("""
+                    SELECT * FROM users
+                    WHERE username=?
+                """, (username,)).fetchone()
 
-            actual = hashlib.pbkdf2_hmac(
-                "sha256",
-                password.encode(),
-                salt,
-                ITERATIONS,
-            )
+                salt = row["salt"] if row else b"\\x00" * 16
+                expected = row["digest"] if row else b"\\x00" * 32
 
-            if not row or not hmac.compare_digest(
-                actual, expected
-            ):
-                raise ValueError(
-                    "Nieprawidlowe dane logowania"
+                actual = hashlib.pbkdf2_hmac(
+                    "sha256",
+                    password.encode(),
+                    salt,
+                    ITERATIONS,
                 )
 
-            return self._issue(db, row["id"])
+                valid = bool(row) and hmac.compare_digest(
+                    actual, expected
+                )
+
+                if valid:
+                    db.execute("""
+                        DELETE FROM login_attempts
+                        WHERE username=?
+                    """, (username,))
+                    tokens = self._issue(db, row["id"])
+                else:
+                    recent = (
+                        attempt is not None
+                        and now - attempt["updated_at"] < 900
+                    )
+
+                    count = (
+                        attempt["attempts"] + 1
+                        if recent else 1
+                    )
+
+                    lock_until = now + 900 if count >= 5 else 0
+
+                    db.execute("""
+                        INSERT INTO login_attempts (
+                            username, attempts,
+                            locked_until, updated_at
+                        ) VALUES (?, ?, ?, ?)
+                        ON CONFLICT(username) DO UPDATE SET
+                            attempts=excluded.attempts,
+                            locked_until=excluded.locked_until,
+                            updated_at=excluded.updated_at
+                    """, (
+                        username,
+                        count,
+                        lock_until,
+                        now,
+                    ))
+
+                    failure = (
+                        LoginRateLimited(900)
+                        if count >= 5
+                        else ValueError("Invalid credentials")
+                    )
+
+        # Wyjatek rzucamy dopiero po COMMIT.
+        # W przeciwnym wypadku SQLite cofnalby
+        # licznik nieudanych prob.
+        if failure is not None:
+            raise failure
+
+        return tokens
 
     def _lookup(self, db, token, kind):
         if (

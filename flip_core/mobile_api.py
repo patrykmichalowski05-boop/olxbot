@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-from .auth_store import AuthStore
+from .auth_store import AuthStore, LoginRateLimited
 from .listing_repository import LegacyListingReader
 from .policy import FlipPolicy
 from .profit_engine import quote
@@ -41,6 +41,14 @@ def create_app():
         redoc_url=None,
         openapi_url=None,
     )
+
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
 
     class Credentials(BaseModel):
         username: str = Field(
@@ -99,6 +107,12 @@ def create_app():
                 data.username,
                 data.password,
             )
+        except LoginRateLimited as exc:
+            raise HTTPException(
+                429,
+                "Too many login attempts",
+                headers={"Retry-After": str(exc.retry_after)},
+            ) from None
         except ValueError:
             raise HTTPException(
                 401, "Invalid credentials"

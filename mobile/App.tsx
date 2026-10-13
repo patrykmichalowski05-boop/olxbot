@@ -18,9 +18,9 @@ import {
 
 import {
   clearSession,
-  getListings,
+  getRadar,
   hasSession,
-  Listing,
+  RadarItem,
   login,
 } from './src/api';
 
@@ -29,7 +29,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<Listing[]>([]);
+  const [items, setItems] = useState<RadarItem[]>([]);
   const [error, setError] = useState('');
 
   async function refresh() {
@@ -37,7 +37,7 @@ export default function App() {
     setError('');
 
     try {
-      setItems(await getListings());
+      setItems(await getRadar());
     } catch (e) {
       setError(
         e instanceof Error ? e.message : String(e)
@@ -151,14 +151,14 @@ export default function App() {
 
           <FlatList
             data={items}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => String(item.snapshot_id)}
             renderItem={({ item }) => (
               <Pressable
                 style={styles.card}
                 onPress={() => openOriginal(item.url)}
               >
                 <Text style={styles.platform}>
-                  {item.platform}
+                  {item.platform} · {item.decision}
                 </Text>
 
                 <Text style={styles.title}>
