@@ -95,7 +95,11 @@ export async function getRadarPage(
   query: string = '',
 ): Promise<RadarPage> {
   const q = query.trim().slice(0, 120);
-  const path = '/api/v1/radar?limit=50'
+  const source =
+    process.env.EXPO_PUBLIC_FLIP_RADAR_SOURCE === 'universal'
+      ? '/api/v1/universal/mobile-radar'
+      : '/api/v1/radar';
+  const path = source + '?limit=50'
     + (beforeId !== null
       ? `&before_id=${beforeId}` : '')
     + (q ? `&q=${encodeURIComponent(q)}` : '');

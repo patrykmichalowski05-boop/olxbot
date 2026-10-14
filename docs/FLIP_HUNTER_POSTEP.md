@@ -42,3 +42,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 35 | watchlista pod istniejacym loginem | PASS - testy offline |
 | 36 | test end-to-end kontraktu API | PASS - testy offline |
 | 37 | mobilny kontrakt radaru | PASS - offline |
+| 38 | przelacznik radaru Expo | PASS - offline |
