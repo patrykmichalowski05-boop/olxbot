@@ -37,3 +37,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 30 | lokalne API demonstracyjne | PASS: testy offline |
 | 31 | raport gotowosci | PASS: testy offline |
 | 32 | konfiguracja jednego API mobilnego | PASS - testy offline |
+| 33 | mobilne logowanie i bezpieczny radar | PASS - testy offline |
