@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -16,10 +16,14 @@ import { Header } from '@/components/Header';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { MoneyValue } from '@/components/MoneyValue';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { DemoBanner } from '@/components/DemoBanner';
+import { Panel } from '@/components/Panel';
+import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 import { useTheme } from '@/theme/ThemeProvider';
 import { createIdempotencyKey } from '@/utils/idempotency';
 import { formatMoneyMinor, parseMoneyInput } from '@/utils/money';
 import { workspaceId } from '@/utils/config';
+import { isPostgresUuid } from '@/utils/identifiers';
 
 const costSchema = z.object({ kind: z.string().min(1), amount: z.string().min(1) });
 const saleSchema = z.object({ amount: z.string().min(1) });
@@ -36,6 +40,7 @@ export default function DealDetailScreen() {
   const dealQuery = useQuery({
     queryKey: ['deal', dealId, api.mode],
     queryFn: () => api.deals.get(String(dealId)),
+    enabled: api.mode === 'demo' || isPostgresUuid(dealId),
   });
 
   const costForm = useForm<z.infer<typeof costSchema>>({
@@ -47,8 +52,13 @@ export default function DealDetailScreen() {
     resolver: zodResolver(saleSchema),
     defaultValues: { amount: '' },
   });
+  const saleAmount = useWatch({ control: saleForm.control, name: 'amount' });
 
-  if (dealQuery.isLoading) {
+  if (api.mode === 'live' && !isPostgresUuid(dealId)) {
+    return <AppScreen><Header title="Flip" showBack /><ErrorState message="Nieprawidłowe powiązanie z rejestrem flipów." /></AppScreen>;
+  }
+
+  if (dealQuery.isPending) {
     return (
       <AppScreen>
         <LoadingSkeleton rows={2} />
@@ -113,23 +123,26 @@ export default function DealDetailScreen() {
   };
 
   return (
-    <AppScreen scroll>
+    <AppScreen scroll maxWidth={1100}>
       <Header title={deal.title ?? 'Flip'} showBack showNotifications={false} />
+      <DemoBanner />
 
-      <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+      <Panel title="Podsumowanie transakcji" style={{ marginBottom: spacing.lg }}>
         <Text style={[typography.caption, { color: colors.textMuted }]}>
           Status: {deal.status ?? '—'}
         </Text>
-        <MoneyValue label="Zakup" amountMinor={deal.purchase_minor ?? null} emphasize />
-        <MoneyValue label="Koszty łącznie" amountMinor={deal.cost_minor ?? null} />
-        <MoneyValue label="Sprzedaż" amountMinor={deal.sale_minor ?? null} />
-        <MoneyValue label="Wynik" amountMinor={deal.realized_profit_minor ?? null} />
-      </View>
+        <ResponsiveGrid columns={2}>
+          <MoneyValue label="Zakup" amountMinor={deal.purchase_minor} emptyLabel="Brak danych" />
+          <MoneyValue label="Koszty łącznie" amountMinor={deal.cost_minor} emptyLabel="Brak danych" />
+          <MoneyValue label="Sprzedaż" amountMinor={deal.sale_minor} emptyLabel={deal.status === 'SOLD' ? 'Brak danych' : 'Jeszcze nie sprzedano'} />
+          <MoneyValue label="Wynik" amountMinor={deal.realized_profit_minor} tone="profit" emptyLabel={deal.status === 'SOLD' ? 'Brak danych' : 'Po sprzedaży'} />
+        </ResponsiveGrid>
+      </Panel>
 
-      <PrimaryButton label="Dodaj koszt" variant="secondary" onPress={() => setSheet('cost')} />
+      <PrimaryButton label="Dodaj koszt" variant="secondary" onPress={() => { setError(''); setSheet('cost'); }} />
       <View style={{ height: spacing.sm }} />
       {deal.status !== 'SOLD' ? (
-        <PrimaryButton label="Zapisz sprzedaż" onPress={() => setSheet('sale')} />
+        <PrimaryButton label="Zapisz sprzedaż" onPress={() => { setError(''); setSheet('sale'); }} />
       ) : null}
 
       {error ? (
@@ -146,15 +159,13 @@ export default function DealDetailScreen() {
         loading={loading}
         onConfirm={() => void costForm.handleSubmit((v) => submitFinancial('cost', v))()}
         onCancel={() => setSheet(null)}
-      />
-
-      {sheet === 'cost' ? (
+      >
         <View>
           <Controller
             control={costForm.control}
             name="kind"
             render={({ field: { onChange, value } }) => (
-              <FormField label="Rodzaj kosztu" value={value} onChangeText={onChange} />
+              <FormField label="Rodzaj kosztu" value={value} onChangeText={onChange} error={costForm.formState.errors.kind?.message} />
             )}
           />
           <Controller
@@ -166,23 +177,24 @@ export default function DealDetailScreen() {
                 keyboardType="decimal-pad"
                 value={value}
                 onChangeText={onChange}
+                error={costForm.formState.errors.amount?.message}
               />
             )}
           />
+          {error ? <Text style={[typography.caption, { color: colors.loss }]}>{error}</Text> : null}
+          {api.mode === 'demo' ? <Text style={[typography.caption, { color: colors.textMuted }]}>DEMO: zapis kosztów i sprzedaży nie zmienia danych demonstracyjnych.</Text> : null}
         </View>
-      ) : null}
+      </ConfirmationSheet>
 
       <ConfirmationSheet
         visible={sheet === 'sale'}
         title="Zapis sprzedaży"
-        description={`Potwierdź kwotę sprzedaży (${formatMoneyMinor(parseMoneyInput(saleForm.getValues('amount')) ?? null)}).`}
+        description={`Potwierdź kwotę sprzedaży (${formatMoneyMinor(parseMoneyInput(saleAmount ?? ''), 'PLN', { emptyLabel: 'nie podano' })}).`}
         confirmLabel="Zapisz sprzedaż"
         loading={loading}
         onConfirm={() => void saleForm.handleSubmit((v) => submitFinancial('sale', v))()}
         onCancel={() => setSheet(null)}
-      />
-
-      {sheet === 'sale' ? (
+      >
         <Controller
           control={saleForm.control}
           name="amount"
@@ -192,10 +204,13 @@ export default function DealDetailScreen() {
               keyboardType="decimal-pad"
               value={value}
               onChangeText={onChange}
+              error={saleForm.formState.errors.amount?.message}
             />
           )}
         />
-      ) : null}
+        {error ? <Text style={[typography.caption, { color: colors.loss }]}>{error}</Text> : null}
+        {api.mode === 'demo' ? <Text style={[typography.caption, { color: colors.textMuted }]}>DEMO: zapis kosztów i sprzedaży nie zmienia danych demonstracyjnych.</Text> : null}
+      </ConfirmationSheet>
     </AppScreen>
   );
 }

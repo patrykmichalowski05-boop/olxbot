@@ -34,7 +34,7 @@ export function Header({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Wróć"
-          onPress={onBack ?? (() => router.back())}
+          onPress={onBack ?? (() => router.canGoBack() ? router.back() : router.replace('/dashboard'))}
           style={[styles.iconBtn, { minHeight: touchTarget, minWidth: touchTarget }]}
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />

@@ -78,7 +78,7 @@ export const radii = {
   pill: 999,
 } as const;
 
-const fontFamily = Platform.OS === 'web' ? 'system-ui' : 'System';
+const fontFamily = Platform.OS === 'web' ? 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' : Platform.OS === 'android' ? 'sans-serif' : 'System';
 
 export const typography = {
   title: { fontFamily, fontSize: 28, fontWeight: '700' as const, lineHeight: 36 },

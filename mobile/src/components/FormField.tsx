@@ -16,6 +16,7 @@ export function FormField({ label, error, hint, style, ...rest }: Props) {
     <View style={{ gap: spacing.xs, marginBottom: spacing.md }}>
       <Text style={[typography.bodyStrong, { color: colors.text }]}>{label}</Text>
       <TextInput
+        accessibilityLabel={label}
         placeholderTextColor={colors.textMuted}
         style={[
           styles.input,

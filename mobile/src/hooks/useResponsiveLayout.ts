@@ -1,7 +1,16 @@
 import { useWindowDimensions } from 'react-native';
+import { useSyncExternalStore } from 'react';
+
+const subscribe = () => () => undefined;
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 export function useResponsiveLayout() {
-  const { width } = useWindowDimensions();
+  const dimensions = useWindowDimensions();
+  // The first web hydration uses the same layout as static rendering.
+  // Native renders immediately with its measured dimensions.
+  const hydrated = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
+  const width = hydrated ? dimensions.width : 0;
   const isMobile = width < 768;
   const isDesktop = width >= 1024;
   const sidebarWidth = isMobile ? 0 : isDesktop ? 250 : 80;

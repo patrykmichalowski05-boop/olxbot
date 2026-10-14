@@ -21,10 +21,10 @@ export default function TabsLayout() {
           borderTopColor: colors.border,
           display: isMobile ? 'flex' : 'none',
         },
-        tabBarLabelStyle: { fontSize: 11 },
+        tabBarLabelStyle: { fontSize: 10 },
       }}
     >
-      <Tabs.Screen name="dashboard/index" options={{ title: 'Dashboard', href: null }} />
+      <Tabs.Screen name="dashboard/index" options={{ title: 'Dashboard', tabBarLabel: 'Start', href: '/dashboard', tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }} />
       <Tabs.Screen
         name="radar/index"
         options={{
@@ -39,6 +39,7 @@ export default function TabsLayout() {
         name="watched/index"
         options={{
           title: 'Obserwowane',
+          tabBarLabel: 'Zapisane',
           href: '/watched',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bookmark-outline" size={size} color={color} />
@@ -59,6 +60,7 @@ export default function TabsLayout() {
         name="flips/index"
         options={{
           title: 'Moje flipy',
+          tabBarLabel: 'Flipy',
           href: '/flips',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="briefcase-outline" size={size} color={color} />
@@ -69,6 +71,7 @@ export default function TabsLayout() {
         name="settings/index"
         options={{
           title: 'Ustawienia',
+          tabBarLabel: 'Konto',
           href: '/settings',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />

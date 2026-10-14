@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RadarFilters } from '@/features/radar/filterStore';
 import { defaultFilters } from '@/features/radar/filterStore';
@@ -37,7 +37,7 @@ function FilterSheetContent({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.root, { backgroundColor: colors.overlay, paddingHorizontal: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.overlay, paddingHorizontal: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, padding: spacing.lg, borderRadius: radii.lg, borderColor: colors.border }]}>
         <Text style={[typography.title, { color: colors.text }]}>Filtry</Text>
         <ScrollView contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}>
@@ -157,7 +157,7 @@ function FilterSheetContent({
           <PrimaryButton label="Zamknij" variant="ghost" onPress={onClose} />
         </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

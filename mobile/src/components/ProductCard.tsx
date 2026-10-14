@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import type { OpportunityCard } from '@/features/opportunity/types';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { formatRelativeSync } from '@/utils/datetime';
 import { formatRoiBps } from '@/utils/money';
 import { DecisionBadge } from './DecisionBadge';
@@ -20,6 +21,7 @@ type Props = {
 
 export function ProductCard({ item, onPress, onWatch, watched, watchPending }: Props) {
   const { colors, radii, typography } = useTheme();
+  const { isMobile } = useResponsiveLayout();
   const profit = item.hasValuation ? item.operatingProfitMinor : null;
   const roi = item.hasValuation ? item.roiBps : null;
   const profitColor = profit === null ? colors.textMuted : profit < 0 ? colors.loss : profit > 0 ? colors.success : colors.text;
@@ -27,14 +29,14 @@ export function ProductCard({ item, onPress, onWatch, watched, watchPending }: P
   return (
     <View testID={`product-card-${item.id}`} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg }]}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Szczegóły: ${item.title}`} onPress={onPress}>
-        <ListingImage item={item} style={styles.hero} />
+        <ListingImage item={item} style={[styles.hero, isMobile && { height: 88 }]} />
         <View style={[styles.platform, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[typography.caption, { color: colors.text, fontWeight: '600' }]}>{item.platform}</Text>
         </View>
       </Pressable>
-      <View style={styles.body}>
+      <View style={[styles.body, isMobile && { gap: 10 }]}>
         <Pressable accessibilityRole="button" onPress={onPress}>
-          <Text style={[typography.bodyStrong, styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
+          <Text style={[typography.bodyStrong, !isMobile && styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
         </Pressable>
         <View style={styles.location}>
           <Ionicons name="location-outline" size={13} color={colors.textMuted} />

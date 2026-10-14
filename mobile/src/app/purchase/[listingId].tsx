@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -16,6 +16,10 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { createIdempotencyKey } from '@/utils/idempotency';
 import { formatMoneyMinor, parseMoneyInput } from '@/utils/money';
 import { workspaceId } from '@/utils/config';
+import { isPostgresUuid } from '@/utils/identifiers';
+import { Panel } from '@/components/Panel';
+import { DemoBanner } from '@/components/DemoBanner';
+import { useQueryClient } from '@tanstack/react-query';
 
 const schema = z.object({
   amount: z.string().min(1, 'Podaj kwotę zakupu'),
@@ -27,6 +31,7 @@ type FormValues = z.infer<typeof schema>;
 export default function PurchaseScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { colors, spacing, typography } = useTheme();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingMinor, setPendingMinor] = useState<number | null>(null);
@@ -37,14 +42,14 @@ export default function PurchaseScreen() {
   const {
     control,
     handleSubmit,
-    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { amount: '', note: '' },
   });
+  const amount = useWatch({ control, name: 'amount' });
 
-  const canUseLiveDeals = api.mode === 'live' && Boolean(workspaceId());
+  const canUseLiveDeals = api.mode === 'live' && Boolean(workspaceId()) && isPostgresUuid(listingId);
 
   const onReview = handleSubmit((values) => {
     const minor = parseMoneyInput(values.amount);
@@ -68,6 +73,7 @@ export default function PurchaseScreen() {
       if (api.mode === 'demo') {
         const demo = await import('@/api/demo/demoClient');
         demo.demoClient.recordPurchase(String(listingId), pendingMinor);
+        await queryClient.invalidateQueries({ queryKey: ['deals'] });
         router.replace('/flips');
         return;
       }
@@ -79,6 +85,7 @@ export default function PurchaseScreen() {
         amountMinor: pendingMinor,
         idempotencyKey: idempotencyRef.current,
       });
+      await queryClient.invalidateQueries({ queryKey: ['deals'] });
       router.replace('/flips');
     } catch (e) {
       setError(apiErrorMessage(e));
@@ -88,18 +95,18 @@ export default function PurchaseScreen() {
     }
   };
 
-  const summary = useMemo(() => {
-    const minor = pendingMinor ?? parseMoneyInput(getValues('amount') || '');
-    return minor;
-  }, [pendingMinor, getValues]);
+  const summary = pendingMinor ?? parseMoneyInput(amount || '');
 
   return (
-    <AppScreen scroll>
+    <AppScreen scroll maxWidth={800}>
       <Header title="Zapis zakupu" showBack />
+      <DemoBanner />
       <Text style={[typography.body, { color: colors.textMuted, marginBottom: spacing.lg }]}>
         Zapis finansowy wymaga potwierdzenia. Otwarcie ogłoszenia nie oznacza zakupu.
       </Text>
 
+      <Panel title="Dane zakupu">
+      {api.mode === 'live' && !canUseLiveDeals ? <Text style={[typography.caption, { color: colors.risk }]}>Brak powiązania oferty z rejestrem flipów lub przestrzeni transakcji. Zapis zakupu jest niedostępny.</Text> : null}
       <Controller
         control={control}
         name="amount"
@@ -118,7 +125,7 @@ export default function PurchaseScreen() {
         control={control}
         name="note"
         render={({ field: { onChange, value } }) => (
-          <FormField label="Notatka (lokalnie)" value={value} onChangeText={onChange} />
+          <FormField label="Notatka robocza" hint="Nie jest wysyłana z zakupem." value={value} onChangeText={onChange} />
         )}
       />
 
@@ -134,7 +141,8 @@ export default function PurchaseScreen() {
         </Text>
       ) : null}
 
-      <PrimaryButton label="Podsumuj i zapisz" onPress={onReview} />
+      <PrimaryButton label="Podsumuj i zapisz" onPress={onReview} disabled={api.mode === 'live' && !canUseLiveDeals} />
+      </Panel>
 
       <ConfirmationSheet
         visible={confirmOpen}

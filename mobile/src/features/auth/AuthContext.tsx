@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, getAppMode } from '@/api';
 import { checkApiReachable } from '@/api/client';
 import { hasSession, saveTokens, clearTokens , saveReturnPath, consumeReturnPath } from '@/api/session';
-import { useRouter, useSegments } from 'expo-router';
+import { usePathname, useRouter, useSegments } from 'expo-router';
 
 type AuthState = {
   ready: boolean;
@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
   const mode = getAppMode();
 
   const [ready, setReady] = useState(false);
@@ -70,20 +71,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!ready) return;
     const inAuth = segments[0] === '(auth)';
     if (!signedIn && !inAuth) {
-      const path = `/${segments.join('/')}`;
-      if (path !== '/login') {
-        void saveReturnPath(path);
+      if (pathname !== '/login') {
+        void saveReturnPath(pathname);
       }
       router.replace('/login');
       return;
     }
     if (signedIn && inAuth) {
       void (async () => {
-        const dest = (await consumeReturnPath()) ?? '/radar';
+        const dest = (await consumeReturnPath()) ?? '/dashboard';
         router.replace(dest as never);
       })();
     }
-  }, [ready, signedIn, segments, router]);
+  }, [ready, signedIn, segments, pathname, router]);
 
   const login = useCallback(
     async (username: string, password: string) => {

@@ -4,6 +4,7 @@ Uniwersalny klient mobilny do oceny okazji flipowych — **FlipRadar**.
 
 Szczegóły implementacji: [GUI_IMPLEMENTATION.md](./GUI_IMPLEMENTATION.md)
 Luki API: [FRONTEND_BACKEND_GAPS.md](./FRONTEND_BACKEND_GAPS.md)
+Układ desktop/mobile i walidacja: [UI_REDESIGN.md](./UI_REDESIGN.md)
 
 ## Szybki start
 

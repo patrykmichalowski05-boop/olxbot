@@ -27,8 +27,9 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [search, setSearch] = useState('');
   const visible = !isMobile && signedIn && pathname !== '/login';
-  const active = destinations.find((item) => pathname.startsWith(item.prefix));
-  const title = active?.label ?? (pathname.startsWith('/offer') ? 'Szczegóły oferty' : 'Zapis zakupu');
+  const section = pathname.startsWith('/offer') ? '/radar' : pathname.startsWith('/purchase') ? '/flips' : pathname;
+  const active = destinations.find((item) => section.startsWith(item.prefix));
+  const title = pathname.startsWith('/offer') ? 'Szczegóły oferty' : pathname.startsWith('/purchase') ? 'Zapis zakupu' : active?.label ?? 'Dashboard';
 
   const submitSearch = () => {
     router.push({ pathname: '/radar', params: { search: search.trim() } });
