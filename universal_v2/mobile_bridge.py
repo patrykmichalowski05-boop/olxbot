@@ -108,4 +108,7 @@ def create_app():
     from .watch_routes import attach_watch
     attach_watch(app, cfg, current_user)
 
+    from .mobile_radar_routes import attach
+    attach(app, cfg, current_user)
+
     return app
