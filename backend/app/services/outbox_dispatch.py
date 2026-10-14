@@ -149,3 +149,113 @@ def materialize(
         event.last_error = None
 
     return True
+
+
+def backoff_seconds(attempts: int) -> int:
+    if type(attempts) is not int or attempts < 1:
+        raise ValueError(
+            "Invalid attempt count"
+        )
+
+    return min(
+        3600,
+        10 * 2 ** min(attempts - 1, 9),
+    )
+
+
+def fail(
+    session: Session,
+    event_id: str,
+    lease_token: str,
+    *,
+    reason="PROCESSING_FAILED",
+):
+    allowed = {
+        "PROCESSING_FAILED",
+        "INVALID_PAYLOAD",
+        "UNSUPPORTED_EVENT",
+    }
+
+    if reason not in allowed:
+        reason = "PROCESSING_FAILED"
+
+    with session.begin():
+        event = session.scalar(
+            select(OutboxEvent).where(
+                OutboxEvent.id == event_id,
+                OutboxEvent.lease_token == lease_token,
+                OutboxEvent.status == "CLAIMED",
+            ).with_for_update()
+        )
+
+        if event is None:
+            return False
+
+        event.last_error = reason
+        event.lease_until = None
+        event.lease_token = None
+
+        if (
+            event.attempts >= MAX_ATTEMPTS
+            or reason in (
+                "INVALID_PAYLOAD",
+                "UNSUPPORTED_EVENT",
+            )
+        ):
+            event.status = "DEAD"
+
+        else:
+            event.status = "PENDING"
+
+            event.available_at = (
+                datetime.now(timezone.utc)
+                + timedelta(
+                    seconds=backoff_seconds(
+                        event.attempts
+                    )
+                )
+            )
+
+    return True
+
+
+def process_batch(factory, *, limit=10):
+    with factory() as db:
+        claimed = claim(db, limit=limit)
+
+    counts = {
+        "claimed": len(claimed),
+        "delivered": 0,
+        "failed": 0,
+    }
+
+    for event_id, token in claimed:
+        try:
+            with factory() as db:
+                delivered = materialize(
+                    db,
+                    event_id,
+                    token,
+                )
+
+            if delivered:
+                counts["delivered"] += 1
+
+        except Exception as exc:
+            reason = (
+                "INVALID_PAYLOAD"
+                if isinstance(exc, ValueError)
+                else "PROCESSING_FAILED"
+            )
+
+            with factory() as db:
+                fail(
+                    db,
+                    event_id,
+                    token,
+                    reason=reason,
+                )
+
+            counts["failed"] += 1
+
+    return counts
