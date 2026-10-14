@@ -45,3 +45,18 @@ describe('applyClientFilters', () => {
     expect(result[0]?.id).toBe('1');
   });
 });
+
+describe('Budget safety', () => {
+  it('rejects unknown and excessive prices', () => {
+    const unknown = {
+      ...sample[0],
+      id: 'unknown',
+      purchaseMinor: null,
+    };
+    const result = applyClientFilters(
+      [...sample, unknown],
+      { ...defaultFilters, maxBudgetMinor: 150000 },
+    );
+    expect(result.map((item) => item.id)).toEqual(['1']);
+  });
+});

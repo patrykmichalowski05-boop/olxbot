@@ -87,7 +87,7 @@ export function applyClientFilters<T extends {
   if (filters.maxBudgetMinor !== null) {
     result = result.filter(
       (item) =>
-        item.purchaseMinor === null ||
+        item.purchaseMinor !== null &&
         item.purchaseMinor <= filters.maxBudgetMinor!,
     );
   }
