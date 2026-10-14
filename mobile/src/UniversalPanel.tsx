@@ -19,7 +19,7 @@ import {
   closeUniversalWatch,
   getUniversalWatchlist,
   UniversalWatchItem,
-} from './api';
+} from './legacyApiClient';
 
 type Category = 'ELECTRONICS' | 'CAR' | 'FASHION';
 

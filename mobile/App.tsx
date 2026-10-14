@@ -36,7 +36,7 @@ import {
   hasSession,
   login,
   RadarItem,
-} from './src/api';
+} from './src/legacyApiClient';
 
 type Screen =
   'radar' | 'calculator' | 'details' | 'universal';

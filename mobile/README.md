@@ -1,26 +1,32 @@
-Flip Hunter Mobile
+# FlipRadar (Expo)
 
-Requirements:
-- Node.js >=22.13
-- Expo SDK 57
-- HTTPS mobile API
+Uniwersalny klient mobilny do oceny okazji flipowych — **FlipRadar**.
 
-Install on a development workstation:
+Szczegóły implementacji: [GUI_IMPLEMENTATION.md](./GUI_IMPLEMENTATION.md)
+Luki API: [FRONTEND_BACKEND_GAPS.md](./FRONTEND_BACKEND_GAPS.md)
 
+## Szybki start
+
+```bash
 cd mobile
-npm install
-npx expo install --fix
-npx expo-doctor
-
 cp .env.example .env
-
-Set EXPO_PUBLIC_FLIP_API_URL to your HTTPS API URL.
-
-npm run typecheck
+npm install
 npx expo start
+```
 
-Never put passwords, AI keys or backend secrets
-inside EXPO_PUBLIC_ variables.
+Bez konfiguracji API aplikacja startuje w **trybie DEMO** (web i symulator).
 
-Mobile builds and push notifications
-still require separate testing.
+## Konfiguracja live
+
+1. `EXPO_PUBLIC_FLIP_API_URL=https://twoj-host` (HTTPS)
+2. Opcjonalnie `EXPO_PUBLIC_FLIP_RADAR_SOURCE=universal`
+3. Dla flipów PostgreSQL: `EXPO_PUBLIC_FLIP_WORKSPACE_ID=...`
+4. Na urządzeniu: logowanie jak w dev API (`flip_core` AuthStore)
+
+Diagnostyka TLS: `python scripts/check_https_api.py`
+
+## Skrypty
+
+- `npm run typecheck`
+- `npm test`
+- `npm run web` / `npm run android` / `npm run ios`
