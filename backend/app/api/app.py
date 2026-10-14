@@ -23,6 +23,7 @@ from backend.app.db.session import make_session_factory
 from backend.app.api.security import WorkspaceSecurity
 from backend.app.services.listing_ingest import ingest
 from backend.app.services.listing_radar import page as listing_page
+from backend.app.services.listing_history import history as listing_history
 from backend.app.services.notification_inbox import page as inbox_page
 from backend.app.services.deals import (
     DealConflict,
@@ -380,5 +381,32 @@ def create_app():
             before_id=before_id,
             q=q,
         ))
+
+    @app.get(
+        "/api/v2/workspaces/{workspace_id}/listings/{listing_id}/history"
+    )
+    def listing_price_history(
+        workspace_id: str,
+        listing_id: str,
+        limit: int = Query(default=30, ge=1, le=100),
+        before_revision: int | None = Query(default=None, ge=1),
+        user_id: str = Depends(reader),
+        db: Session = Depends(db_session),
+    ):
+        result = listing_history(
+            db,
+            workspace_id,
+            listing_id,
+            limit=limit,
+            before_revision=before_revision,
+        )
+
+        if result is None:
+            raise HTTPException(
+                404,
+                "Listing not found",
+            )
+
+        return result
 
     return app
