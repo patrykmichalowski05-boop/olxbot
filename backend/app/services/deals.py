@@ -367,12 +367,12 @@ def cost_items(session: Session, workspace_id: str, deal_id: str):
         return None
     rows = session.scalars(
         select(DealCost).where(DealCost.deal_id == deal_id)
-        .order_by(DealCost.id)
+        .order_by(DealCost.created_at, DealCost.id)
     ).all()
     return {
         "currency": deal.currency,
         "items": [
-            {"id": c.id, "kind": c.kind, "amount_minor": c.amount_minor}
+            {"id": c.id, "kind": c.kind, "amount_minor": c.amount_minor, "created_at": c.created_at.isoformat()}
             for c in rows
         ],
     }

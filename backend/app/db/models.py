@@ -1,6 +1,10 @@
 """SQLAlchemy 2. Schema managed by Alembic."""
 
+from datetime import datetime
+
 from sqlalchemy import (
+    DateTime,
+    func,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -175,6 +179,11 @@ class Deal(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
     workspace_id: Mapped[str] = mapped_column(
         ForeignKey("workspaces.id"),
         nullable=False,
@@ -198,6 +207,7 @@ class Deal(Base):
     )
 
     __table_args__ = (
+        Index("ix_deals_workspace_created_id", "workspace_id", "created_at", "id"),
         UniqueConstraint(
             "workspace_id",
             "listing_id",
@@ -223,6 +233,11 @@ class DealCost(Base):
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )
     deal_id: Mapped[str] = mapped_column(
         ForeignKey("deals.id"),
