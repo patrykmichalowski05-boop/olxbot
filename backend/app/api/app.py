@@ -21,6 +21,7 @@ from universal_v2.bridge_config import BridgeConfig
 from backend.app.core.settings import Settings
 from backend.app.db.session import make_session_factory
 from backend.app.api.security import WorkspaceSecurity
+from backend.app.services.notification_inbox import page as inbox_page
 from backend.app.services.deals import (
     DealConflict,
     purchase,
@@ -284,5 +285,28 @@ def create_app():
             ) from None
 
         return {"status": "ok"}
+
+    @app.get(
+        "/api/v2/workspaces/{workspace_id}/notifications"
+    )
+    def list_notifications(
+        workspace_id: str,
+        limit: int = Query(
+            default=20, ge=1, le=100
+        ),
+        before_id: str | None = Query(
+            default=None, max_length=36
+        ),
+        _: str = Depends(reader),
+        db: Session = Depends(db_session),
+    ):
+        return execute(
+            lambda: inbox_page(
+                db,
+                workspace_id,
+                limit=limit,
+                before_id=before_id,
+            )
+        )
 
     return app
