@@ -18,6 +18,7 @@ SUPPORTED = frozenset({
     "DEAL_PURCHASED",
     "DEAL_COST_ADDED",
     "DEAL_SOLD",
+    "LISTING_PRICE_DROP",
 })
 
 
@@ -119,12 +120,15 @@ def materialize(
                 "Unsupported event type"
             )
 
+        required_id = (
+            "listing_id"
+            if event.event_type == "LISTING_PRICE_DROP"
+            else "deal_id"
+        )
         if (
             not isinstance(event.payload, dict)
-            or not isinstance(
-                event.payload.get("deal_id"),
-                str,
-            )
+            or not isinstance(event.payload.get(required_id), str)
+            or not event.payload[required_id]
         ):
             raise ValueError(
                 "Invalid event payload"

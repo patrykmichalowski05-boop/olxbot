@@ -11,6 +11,7 @@ from backend.app.db.models import (
     Workspace,
     Listing,
     ListingObservation,
+    OutboxEvent,
 )
 
 from backend.app.services.deals import (
@@ -153,6 +154,24 @@ def ingest(
         )
 
         session.add(observation)
+
+        if (
+            previous is not None
+            and previous.price_minor is not None
+            and price_minor is not None
+            and price_minor < previous.price_minor
+        ):
+            session.add(OutboxEvent(
+                id=str(uuid.uuid4()),
+                workspace_id=workspace_id,
+                event_type="LISTING_PRICE_DROP",
+                payload={
+                    "listing_id": item.id,
+                    "from_minor": previous.price_minor,
+                    "to_minor": price_minor,
+                    "revision": revision,
+                },
+            ))
 
         return {
             "listing_id": item.id,
