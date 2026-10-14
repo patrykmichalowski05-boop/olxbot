@@ -29,3 +29,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 22 | kontrola nieprawidlowych wycen | PASS (offline) |
 | 23 | dowody i pochodzenie sprzedazy | PASS (offline) |
 | 24 | audyt porownan rynkowych | PASS (offline) |
+| 25 | magazyn i historia kosztow | PASS (offline) |
