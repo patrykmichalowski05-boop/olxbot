@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { RadarItem } from './api';
+import { RadarItem } from './legacyApiClient';
 
 export type PlatformFilter =
   'ALL' | 'OLX' | 'FACEBOOK';

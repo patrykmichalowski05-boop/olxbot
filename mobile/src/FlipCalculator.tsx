@@ -13,7 +13,7 @@ import {
 import {
   FlipPreviewResult,
   previewFlip,
-} from './api';
+} from './legacyApiClient';
 
 function parsePLN(value: string): number | null {
   const normalized = value
