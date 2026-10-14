@@ -323,6 +323,24 @@ class OutboxEvent(Base):
         nullable=False,
         server_default=text("0"),
     )
+    status: Mapped[str] = mapped_column(
+        String(12), nullable=False, server_default=text("'PENDING'"),
+    )
+    attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0"),
+    )
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+    lease_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    lease_token: Mapped[str | None] = mapped_column(
+        String(36), nullable=True,
+    )
+    last_error: Mapped[str | None] = mapped_column(
+        String(120), nullable=True,
+    )
 
     __table_args__ = (
         Index(
@@ -331,8 +349,64 @@ class OutboxEvent(Base):
             "created_at",
             "id",
         ),
+        Index(
+            "ix_outbox_status_available",
+            "status",
+            "available_at",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING','CLAIMED','DELIVERED','DEAD')",
+            name="outbox_status_valid",
+        ),
+        CheckConstraint(
+            "attempts >= 0",
+            name="outbox_attempts_nonnegative",
+        ),
         CheckConstraint(
             "delivered IN (0,1)",
             name="outbox_delivered_bool",
+        ),
+    )
+
+
+class NotificationInbox(Base):
+    __tablename__ = "notification_inbox"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True
+    )
+
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"),
+        nullable=False,
+        index=True,
+    )
+
+    source_event_id: Mapped[str] = mapped_column(
+        ForeignKey("outbox_events.id"),
+        nullable=False,
+        unique=True,
+    )
+
+    event_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )
+
+    payload: Mapped[dict] = mapped_column(
+        JSON, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_inbox_ws_created_id",
+            "workspace_id",
+            "created_at",
+            "id",
         ),
     )
