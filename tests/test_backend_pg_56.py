@@ -261,6 +261,37 @@ class Test56(unittest.TestCase):
                         65000,
                     )
 
+                    events = api.get(
+                        base + "/events",
+                        headers=headers,
+                    )
+
+                    self.assertEqual(
+                        events.status_code,
+                        200,
+                        events.text,
+                    )
+
+                    types = [
+                        e["event_type"]
+                        for e in events.json()["items"]
+                    ]
+
+                    self.assertCountEqual(
+                        types,
+                        [
+                            "DEAL_PURCHASED",
+                            "DEAL_COST_ADDED",
+                            "DEAL_SOLD",
+                        ],
+                    )
+
+                    for event in events.json()["items"]:
+                        self.assertEqual(
+                            event["actor_user_id"],
+                            user_id,
+                        )
+
                     after_sale = api.get(path, headers=headers,
                                          params={"status": "SOLD", "limit": 1})
                     self.assertEqual(after_sale.status_code, 200)

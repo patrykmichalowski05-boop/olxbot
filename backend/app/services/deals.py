@@ -425,3 +425,50 @@ def deal_page(session: Session, workspace_id: str, *, status=None,
         } for x in items],
         "next_before_id": items[-1].id if has_more else None,
     }
+
+
+def deal_events(
+    session: Session,
+    workspace_id: str,
+    deal_id: str,
+):
+    """Financial events isolated by workspace."""
+
+    deal = session.scalar(
+        select(Deal.id).where(
+            Deal.id == deal_id,
+            Deal.workspace_id == workspace_id,
+        )
+    )
+
+    if deal is None:
+        return None
+
+    events = session.scalars(
+        select(OutboxEvent).where(
+            OutboxEvent.workspace_id == workspace_id,
+            OutboxEvent.payload["deal_id"].as_string()
+            == deal_id,
+            OutboxEvent.event_type.in_((
+                "DEAL_PURCHASED",
+                "DEAL_COST_ADDED",
+                "DEAL_SOLD",
+            )),
+        ).order_by(
+            OutboxEvent.created_at,
+            OutboxEvent.id,
+        )
+    ).all()
+
+    return {
+        "items": [
+            {
+                "id": event.id,
+                "event_type": event.event_type,
+                "actor_user_id": event.actor_user_id,
+                "created_at": event.created_at.isoformat(),
+                "payload": event.payload,
+            }
+            for event in events
+        ]
+    }
