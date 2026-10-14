@@ -20,6 +20,7 @@ import {
 
 import FlipCalculator from './src/FlipCalculator';
 import OfferDetails from './src/OfferDetails';
+import UniversalPanel from './src/UniversalPanel';
 
 import RadarPanel, {
   DecisionFilter,
@@ -38,7 +39,7 @@ import {
 } from './src/api';
 
 type Screen =
-  'radar' | 'calculator' | 'details';
+  'radar' | 'calculator' | 'details' | 'universal';
 
 export default function App() {
   const [username, setUsername] = useState('');
@@ -425,7 +426,25 @@ export default function App() {
             </Pressable>
           </View>
 
-          {screen === 'calculator' ? (
+
+          {process.env.EXPO_PUBLIC_FLIP_RADAR_SOURCE ===
+            'universal' && (
+            <Pressable
+              style={s.navButton}
+              onPress={() => {
+                setSelected(null);
+                setScreen('universal');
+              }}
+            >
+              <Text style={s.link}>
+                Universal
+              </Text>
+            </Pressable>
+          )}
+
+          {screen === 'universal' ? (
+            <UniversalPanel />
+          ) : screen === 'calculator' ? (
             <FlipCalculator
               initialPurchaseMinor={
                 selected?.price_minor

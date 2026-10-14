@@ -44,3 +44,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 37 | mobilny kontrakt radaru | PASS - offline |
 | 38 | przelacznik radaru Expo | PASS - offline |
 | 39 | klient Expo watchlisty i analizy | PASS - offline |
+| 40 | panel Universal Expo | PASS - offline |
