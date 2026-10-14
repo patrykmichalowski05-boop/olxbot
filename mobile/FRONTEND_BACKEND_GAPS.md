@@ -7,7 +7,7 @@ Dokument uzupełnia brak formalnego OpenAPI w repo. Frontend implementuje wyłą
 | Obszar | Wymagane przez GUI | Stan backendu | Działanie frontendu |
 |--------|-------------------|---------------|---------------------|
 | OpenAPI `/api/v1` | Pełny kontrakt | Brak pliku OpenAPI | Typy wyprowadzone z kodu i testów |
-| `GET /api/v1/notifications` | Skrzynka powiadomień | Brak | Demo fixtures; live: pusty stan + komunikat |
+| `GET /api/v2/workspaces/{workspace_id}/notifications` | Skrzynka powiadomień | Dostępne z paginacją | Live pobiera zdarzenia PostgreSQL; brak stanu odczytu i push |
 | `POST /api/v1/imports/jobs` + polling | Analiza linku/pliku z `job_id` | Manual analyze synchroniczne | Demo symuluje `job_id`; live pokazuje odpowiedź synchroniczną |
 | Profile wyszukiwania (serwer) | Zapis profili filtrów | Brak | Profile w `AsyncStorage` |
 | Filtry radaru (serwer) | sort, ROI, kategoria, źródła | Radar: `q`, `limit`, `before_id` | Filtry sort/kategoria/platforma po stronie klienta |

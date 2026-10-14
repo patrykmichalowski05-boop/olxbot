@@ -5,6 +5,8 @@ import * as liveRadar from '@/api/endpoints/radar';
 import * as liveListings from '@/api/endpoints/listings';
 import * as liveUniversal from '@/api/endpoints/universal';
 import * as liveDeals from '@/api/endpoints/deals';
+import { fetchNotificationsPage } from '@/api/endpoints/notifications';
+import { workspaceId } from '@/utils/config';
 import { mapListingDetail, mapRadarItem } from '@/api/mappers/opportunity';
 import type { OpportunityDetail } from '@/features/opportunity/types';
 
@@ -126,6 +128,12 @@ export const api = {
     sell: liveDeals.recordSale,
   },
 
-  notifications: () =>
-    getAppMode() === 'demo' ? demoClient.notifications() : [],
+  async notificationsPage(beforeId: string | null = null) {
+    if (getAppMode() === 'demo') {
+      return { items: demoClient.notifications(), nextBeforeId: null };
+    }
+    const ws = workspaceId();
+    if (!ws) throw new Error('Brak EXPO_PUBLIC_FLIP_WORKSPACE_ID');
+    return fetchNotificationsPage(ws, beforeId);
+  },
 };
