@@ -35,3 +35,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 28 | izolacja testowych baz | PASS: testy offline |
 | 29 | radar z izolacja profilu | PASS: testy offline |
 | 30 | lokalne API demonstracyjne | PASS: testy offline |
+| 31 | raport gotowosci | PASS: testy offline |
