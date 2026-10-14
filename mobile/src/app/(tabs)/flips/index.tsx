@@ -95,9 +95,9 @@ export default function FlipsScreen() {
                 Status: {item.status ?? '—'}
               </Text>
               <View style={styles.row}>
-                <MoneyValue label="Zakup" amountMinor={item.purchase_amount_minor ?? null} />
-                <MoneyValue label="Koszty" amountMinor={item.total_costs_minor ?? null} />
-                <MoneyValue label="Wynik" amountMinor={item.profit_minor ?? null} />
+                <MoneyValue label="Zakup" amountMinor={item.purchase_minor ?? null} />
+                <MoneyValue label="Koszty" amountMinor={item.cost_minor ?? null} />
+                <MoneyValue label="Wynik" amountMinor={item.realized_profit_minor ?? null} />
               </View>
             </Pressable>
           )}

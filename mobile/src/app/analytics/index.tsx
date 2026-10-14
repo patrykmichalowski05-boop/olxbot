@@ -22,12 +22,12 @@ export default function AnalyticsScreen() {
     let inventory = 0;
     let costs = 0;
     for (const deal of items) {
-      costs += deal.total_costs_minor ?? 0;
+      costs += deal.cost_minor ?? 0;
       if (deal.status === 'SOLD') {
         sold += 1;
-        profit += deal.profit_minor ?? 0;
+        profit += deal.realized_profit_minor ?? 0;
       } else {
-        inventory += deal.purchase_amount_minor ?? 0;
+        inventory += deal.purchase_minor ?? 0;
       }
     }
     return { sold, profit, inventory, costs };
@@ -37,10 +37,18 @@ export default function AnalyticsScreen() {
     <AppScreen scroll>
       <Header title="Analityka" showBack showNotifications={false} />
       <Text style={[typography.body, { color: colors.textMuted, marginBottom: spacing.lg }]}>
-        Rzeczywiste wyniki z zapisanych flipów. Prognozy radaru są oddzielone.
+        Rzeczywiste wyniki pierwszych 30 pobranych flipów. Jeśli masz więcej transakcji, jest to podsumowanie częściowe.
       </Text>
 
-      <View
+      {dealsQuery.isError ? (
+        <Text style={[typography.body, { color: colors.loss, marginBottom: spacing.md }]}>
+          Nie udało się pobrać danych finansowych. Nie pokazujemy niezweryfikowanych sum.
+        </Text>
+      ) : null}
+      {dealsQuery.isLoading ? (
+        <Text style={[typography.caption, { color: colors.textMuted }]}>Ładowanie danych...</Text>
+      ) : null}
+      {!dealsQuery.isError && !dealsQuery.isLoading ? <View
         style={{
           backgroundColor: colors.surface,
           borderRadius: radii.md,
@@ -56,7 +64,7 @@ export default function AnalyticsScreen() {
           Sprzedane przedmioty: {stats.sold}
         </Text>
         <MoneyValue label="Koszty łącznie" amountMinor={stats.costs} />
-      </View>
+      </View> : null}
     </AppScreen>
   );
 }

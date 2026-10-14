@@ -120,15 +120,17 @@ export default function DealDetailScreen() {
         <Text style={[typography.caption, { color: colors.textMuted }]}>
           Status: {deal.status ?? '—'}
         </Text>
-        <MoneyValue label="Zakup" amountMinor={deal.purchase_amount_minor ?? null} emphasize />
-        <MoneyValue label="Koszty łącznie" amountMinor={deal.total_costs_minor ?? null} />
-        <MoneyValue label="Sprzedaż" amountMinor={deal.sale_amount_minor ?? null} />
-        <MoneyValue label="Wynik" amountMinor={deal.profit_minor ?? null} />
+        <MoneyValue label="Zakup" amountMinor={deal.purchase_minor ?? null} emphasize />
+        <MoneyValue label="Koszty łącznie" amountMinor={deal.cost_minor ?? null} />
+        <MoneyValue label="Sprzedaż" amountMinor={deal.sale_minor ?? null} />
+        <MoneyValue label="Wynik" amountMinor={deal.realized_profit_minor ?? null} />
       </View>
 
       <PrimaryButton label="Dodaj koszt" variant="secondary" onPress={() => setSheet('cost')} />
       <View style={{ height: spacing.sm }} />
-      <PrimaryButton label="Zapisz sprzedaż" onPress={() => setSheet('sale')} />
+      {deal.status !== 'SOLD' ? (
+        <PrimaryButton label="Zapisz sprzedaż" onPress={() => setSheet('sale')} />
+      ) : null}
 
       {error ? (
         <Text style={[typography.caption, { color: colors.loss, marginTop: spacing.md }]}>

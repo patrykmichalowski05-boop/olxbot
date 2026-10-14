@@ -5,6 +5,7 @@ import * as liveRadar from '@/api/endpoints/radar';
 import * as liveListings from '@/api/endpoints/listings';
 import * as liveUniversal from '@/api/endpoints/universal';
 import * as liveDeals from '@/api/endpoints/deals';
+import { mapDemoDeal } from '@/api/mappers/deal';
 import { fetchNotificationsPage } from '@/api/endpoints/notifications';
 import { workspaceId } from '@/utils/config';
 import { mapListingDetail, mapRadarItem } from '@/api/mappers/opportunity';
@@ -119,10 +120,23 @@ export const api = {
   },
 
   deals: {
-    list: () =>
-      getAppMode() === 'demo' ? demoClient.deals() : liveDeals.fetchDeals(),
-    get: (id: string) =>
-      getAppMode() === 'demo' ? demoClient.deal(id) : liveDeals.fetchDeal(id),
+    async list() {
+      if (getAppMode() === 'demo') {
+        const page = demoClient.deals();
+        return {
+          items: page.items.map(mapDemoDeal),
+          next_before_id: null,
+        };
+      }
+      return liveDeals.fetchDeals();
+    },
+    async get(id: string) {
+      if (getAppMode() === 'demo') {
+        const deal = demoClient.deal(id);
+        return deal ? mapDemoDeal(deal) : null;
+      }
+      return liveDeals.fetchDeal(id);
+    },
     purchase: liveDeals.recordPurchase,
     cost: liveDeals.recordCost,
     sell: liveDeals.recordSale,

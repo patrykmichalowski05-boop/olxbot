@@ -9,17 +9,9 @@ function ws(): string {
   return id;
 }
 
-export type DealSummary = {
-  id: string;
-  listing_id?: string;
-  status?: string;
-  title?: string;
-  purchase_amount_minor?: number;
-  total_costs_minor?: number;
-  sale_amount_minor?: number | null;
-  profit_minor?: number | null;
-  updated_at?: string;
-};
+import type { FinancialDeal } from '@/api/mappers/deal';
+
+export type DealSummary = FinancialDeal;
 
 export type DealPage = {
   items: DealSummary[];

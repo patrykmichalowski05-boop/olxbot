@@ -348,8 +348,15 @@ def summary(
         )
     )
 
+    listing = session.get(Listing, deal.listing_id)
+
     return {
+        "id": deal.id,
         "deal_id": deal_id,
+        "listing_id": deal.listing_id,
+        "title": listing.title if listing is not None else None,
+        "currency": deal.currency,
+        "created_at": deal.created_at.isoformat(),
         "status": deal.status,
         "purchase_minor": deal.purchase_minor,
         "sale_minor": deal.sale_minor,
@@ -416,11 +423,42 @@ def deal_page(session: Session, workspace_id: str, *, status=None,
     ).limit(limit + 1)).all()
     has_more = len(rows) > limit
     items = rows[:limit]
+    cost_totals = {}
+    titles = {}
+
+    if items:
+        deal_ids = [x.id for x in items]
+        listing_ids = [x.listing_id for x in items]
+
+        cost_totals = dict(session.execute(
+            select(
+                DealCost.deal_id,
+                func.sum(DealCost.amount_minor),
+            )
+            .where(DealCost.deal_id.in_(deal_ids))
+            .group_by(DealCost.deal_id)
+        ).all())
+
+        titles = dict(session.execute(
+            select(Listing.id, Listing.title)
+            .where(Listing.id.in_(listing_ids))
+        ).all())
+
     return {
         "items": [{
-            "id": x.id, "listing_id": x.listing_id,
-            "status": x.status, "purchase_minor": x.purchase_minor,
-            "sale_minor": x.sale_minor, "currency": x.currency,
+            "id": x.id,
+            "listing_id": x.listing_id,
+            "title": titles.get(x.listing_id),
+            "status": x.status,
+            "purchase_minor": x.purchase_minor,
+            "cost_minor": cost_totals.get(x.id, 0),
+            "sale_minor": x.sale_minor,
+            "realized_profit_minor": (
+                x.sale_minor - x.purchase_minor - cost_totals.get(x.id, 0)
+                if x.status == "SOLD" and x.sale_minor is not None
+                else None
+            ),
+            "currency": x.currency,
             "created_at": x.created_at.isoformat(),
         } for x in items],
         "next_before_id": items[-1].id if has_more else None,
