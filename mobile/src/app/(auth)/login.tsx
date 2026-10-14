@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,7 +52,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <AppScreen scroll>
+    <AppScreen scroll maxWidth={520}>
       <DemoBanner />
       <Text style={[typography.title, { color: colors.text, marginBottom: spacing.xs }]}>
         FlipRadar
@@ -119,5 +119,3 @@ export default function LoginScreen() {
     </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({});

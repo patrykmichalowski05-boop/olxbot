@@ -1,6 +1,8 @@
 import { apiRequest } from '@/api/client';
 import { workspaceId } from '@/utils/config';
 
+import type { FinancialDeal } from '@/api/mappers/deal';
+
 function ws(): string {
   const id = workspaceId();
   if (!id) {
@@ -8,8 +10,6 @@ function ws(): string {
   }
   return id;
 }
-
-import type { FinancialDeal } from '@/api/mappers/deal';
 
 export type DealSummary = FinancialDeal;
 

@@ -1,4 +1,4 @@
-import { resolveAppMode } from '@/utils/config';
+import { resolveAppMode , workspaceId } from '@/utils/config';
 import { demoClient } from '@/api/demo/demoClient';
 import * as liveAuth from '@/api/endpoints/auth';
 import * as liveRadar from '@/api/endpoints/radar';
@@ -7,7 +7,6 @@ import * as liveUniversal from '@/api/endpoints/universal';
 import * as liveDeals from '@/api/endpoints/deals';
 import { mapDemoDeal } from '@/api/mappers/deal';
 import { fetchNotificationsPage } from '@/api/endpoints/notifications';
-import { workspaceId } from '@/utils/config';
 import { mapListingDetail, mapRadarItem } from '@/api/mappers/opportunity';
 import type { OpportunityDetail } from '@/features/opportunity/types';
 

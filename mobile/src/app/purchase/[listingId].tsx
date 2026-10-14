@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';

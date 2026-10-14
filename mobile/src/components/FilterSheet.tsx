@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RadarFilters } from '@/features/radar/filterStore';
@@ -18,7 +18,11 @@ type Props = {
 
 const PLATFORMS = ['OLX', 'FACEBOOK', 'VINTED', 'OTOMOTO', 'ALLEGRO', 'EBAY'];
 
-export function FilterSheet({
+export function FilterSheet(props: Props) {
+  return props.visible ? <FilterSheetContent {...props} /> : null;
+}
+
+function FilterSheetContent({
   visible,
   initial,
   onClose,
@@ -28,12 +32,6 @@ export function FilterSheet({
   const { colors, spacing, typography, radii } = useTheme();
   const [draft, setDraft] = useState(initial);
   const [profileName, setProfileName] = useState('');
-
-  useEffect(() => {
-    if (visible) {
-      setDraft(initial);
-    }
-  }, [visible, initial]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>

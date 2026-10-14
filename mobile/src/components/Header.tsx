@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { touchTarget } from '@/theme/tokens';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 type Props = {
   title: string;
@@ -25,7 +26,7 @@ export function Header({
 }: Props) {
   const { colors, spacing, typography } = useTheme();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { isMobile } = useResponsiveLayout();
 
   return (
     <View style={[styles.row, { marginBottom: spacing.md, gap: spacing.sm }]}>
@@ -38,16 +39,14 @@ export function Header({
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-      ) : width < 1000 ? (
-        <View style={{ width: touchTarget }} />
       ) : null}
 
       <View style={styles.titleWrap}>
-        <Text style={[typography.headline, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[isMobile ? typography.headline : typography.title, { color: colors.text }]} numberOfLines={2}>
           {title}
         </Text>
         {subtitle ? (
-          <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
+          <Text style={[typography.caption, { color: colors.textMuted, marginTop: 4 }]} numberOfLines={2}>
             {subtitle}
           </Text>
         ) : null}
@@ -55,7 +54,7 @@ export function Header({
 
       <View style={styles.actions}>
         {rightSlot}
-        {showNotifications ? (
+        {showNotifications && isMobile ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Powiadomienia"
@@ -72,7 +71,7 @@ export function Header({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  titleWrap: { flex: 1 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  titleWrap: { flex: 1, minWidth: 0 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   iconBtn: { alignItems: 'center', justifyContent: 'center' },
 });

@@ -144,7 +144,7 @@ export default function DealDetailScreen() {
         description="Podaj rodzaj i kwotę kosztu przygotowania."
         confirmLabel="Zapisz koszt"
         loading={loading}
-        onConfirm={costForm.handleSubmit((v) => submitFinancial('cost', v))}
+        onConfirm={() => void costForm.handleSubmit((v) => submitFinancial('cost', v))()}
         onCancel={() => setSheet(null)}
       />
 
@@ -178,7 +178,7 @@ export default function DealDetailScreen() {
         description={`Potwierdź kwotę sprzedaży (${formatMoneyMinor(parseMoneyInput(saleForm.getValues('amount')) ?? null)}).`}
         confirmLabel="Zapisz sprzedaż"
         loading={loading}
-        onConfirm={saleForm.handleSubmit((v) => submitFinancial('sale', v))}
+        onConfirm={() => void saleForm.handleSubmit((v) => submitFinancial('sale', v))()}
         onCancel={() => setSheet(null)}
       />
 

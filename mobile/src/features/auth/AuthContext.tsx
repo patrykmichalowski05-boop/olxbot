@@ -10,8 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { api, getAppMode } from '@/api';
 import { checkApiReachable } from '@/api/client';
-import { hasSession, saveTokens, clearTokens } from '@/api/session';
-import { saveReturnPath, consumeReturnPath } from '@/api/session';
+import { hasSession, saveTokens, clearTokens , saveReturnPath, consumeReturnPath } from '@/api/session';
 import { useRouter, useSegments } from 'expo-router';
 
 type AuthState = {

@@ -12,12 +12,12 @@ type Tokens = {
 
 const memory: Partial<Tokens & { returnPath: string }> = {};
 
-function useSecureStore(): boolean {
+function secureStoreAvailable(): boolean {
   return Platform.OS !== 'web';
 }
 
 export async function saveTokens(tokens: Tokens): Promise<void> {
-  if (useSecureStore()) {
+  if (secureStoreAvailable()) {
     await SecureStore.setItemAsync(ACCESS, tokens.access_token);
     await SecureStore.setItemAsync(REFRESH, tokens.refresh_token);
     return;
@@ -27,21 +27,21 @@ export async function saveTokens(tokens: Tokens): Promise<void> {
 }
 
 export async function readAccessToken(): Promise<string | null> {
-  if (useSecureStore()) {
+  if (secureStoreAvailable()) {
     return SecureStore.getItemAsync(ACCESS);
   }
   return memory.access_token ?? null;
 }
 
 export async function readRefreshToken(): Promise<string | null> {
-  if (useSecureStore()) {
+  if (secureStoreAvailable()) {
     return SecureStore.getItemAsync(REFRESH);
   }
   return memory.refresh_token ?? null;
 }
 
 export async function clearTokens(): Promise<void> {
-  if (useSecureStore()) {
+  if (secureStoreAvailable()) {
     await SecureStore.deleteItemAsync(ACCESS);
     await SecureStore.deleteItemAsync(REFRESH);
     return;
@@ -55,7 +55,7 @@ export async function hasSession(): Promise<boolean> {
 }
 
 export async function saveReturnPath(path: string): Promise<void> {
-  if (useSecureStore()) {
+  if (secureStoreAvailable()) {
     await SecureStore.setItemAsync(RETURN_PATH, path);
     return;
   }
@@ -63,7 +63,7 @@ export async function saveReturnPath(path: string): Promise<void> {
 }
 
 export async function consumeReturnPath(): Promise<string | null> {
-  if (useSecureStore()) {
+  if (secureStoreAvailable()) {
     const value = await SecureStore.getItemAsync(RETURN_PATH);
     if (value) {
       await SecureStore.deleteItemAsync(RETURN_PATH);

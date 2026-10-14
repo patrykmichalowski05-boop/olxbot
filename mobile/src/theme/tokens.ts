@@ -4,6 +4,7 @@ export type ThemeColors = {
   background: string;
   surface: string;
   surfaceElevated: string;
+  sidebar: string;
   border: string;
   text: string;
   textMuted: string;
@@ -20,21 +21,22 @@ export type ThemeColors = {
 };
 
 export const darkColors: ThemeColors = {
-  background: '#0B1220',
-  surface: '#111C2E',
-  surfaceElevated: '#162338',
-  border: '#243047',
+  background: '#0B1120',
+  surface: '#172033',
+  surfaceElevated: '#1C2940',
+  sidebar: '#0F172A',
+  border: '#263449',
   text: '#F1F5F9',
-  textMuted: '#A8B5C8',
-  accent: '#2DD4BF',
-  accentMuted: '#1A9E8C',
-  success: '#34D399',
+  textMuted: '#94A3B8',
+  accent: '#14B8A6',
+  accentMuted: '#123A3B',
+  success: '#22C55E',
   successBg: '#0F2A22',
-  risk: '#FBBF24',
+  risk: '#F59E0B',
   riskBg: '#2A220F',
-  loss: '#F87171',
+  loss: '#EF4444',
   lossBg: '#2A1414',
-  warning: '#FB923C',
+  warning: '#F59E0B',
   overlay: 'rgba(11, 18, 32, 0.72)',
 };
 
@@ -42,11 +44,12 @@ export const lightColors: ThemeColors = {
   background: '#F8FAFC',
   surface: '#FFFFFF',
   surfaceElevated: '#F1F5F9',
+  sidebar: '#FFFFFF',
   border: '#CBD5E1',
   text: '#0F172A',
   textMuted: '#64748B',
   accent: '#0D9488',
-  accentMuted: '#14B8A6',
+  accentMuted: '#CCFBF1',
   success: '#059669',
   successBg: '#ECFDF5',
   risk: '#D97706',
@@ -74,7 +77,7 @@ export const radii = {
 } as const;
 
 export const typography = {
-  title: { fontSize: 24, fontWeight: '700' as const, lineHeight: 30 },
+  title: { fontSize: 28, fontWeight: '700' as const, lineHeight: 36 },
   headline: { fontSize: 18, fontWeight: '600' as const, lineHeight: 24 },
   body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
   bodyStrong: { fontSize: 15, fontWeight: '600' as const, lineHeight: 21 },

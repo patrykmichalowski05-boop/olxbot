@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -16,5 +16,3 @@ export function ConfidenceIndicator({ confidence }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({});

@@ -42,9 +42,13 @@ export default function UniversalPanel() {
   }
 
   useEffect(() => {
-    void reload().catch(e =>
-      setMessage(String(e)),
-    );
+    let active = true;
+    void getUniversalWatchlist().then(rows => {
+      if (active) setItems(rows);
+    }).catch(e => {
+      if (active) setMessage(String(e));
+    });
+    return () => { active = false; };
   }, []);
 
   async function addWatch() {

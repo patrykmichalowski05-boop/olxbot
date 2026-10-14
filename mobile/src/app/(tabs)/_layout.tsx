@@ -1,33 +1,30 @@
 import React from 'react';
-import { useWindowDimensions } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
-  const { width } = useWindowDimensions();
-  const desktop = width >= 1000;
+  const { isMobile } = useResponsiveLayout();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: desktop
-          ? { display: 'none' }
-          : {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-            },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          display: isMobile ? 'flex' : 'none',
         },
+        tabBarLabelStyle: { fontSize: 11 },
       }}
     >
+      <Tabs.Screen name="dashboard/index" options={{ title: 'Dashboard', href: null }} />
       <Tabs.Screen
         name="radar/index"
         options={{
@@ -38,7 +35,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="watched/index"
         options={{
@@ -49,7 +45,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="analyze/index"
         options={{
@@ -60,7 +55,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="flips/index"
         options={{
@@ -71,7 +65,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="settings/index"
         options={{
