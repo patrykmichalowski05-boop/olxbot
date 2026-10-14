@@ -139,6 +139,7 @@ def create_app():
                 body.listing_id,
                 body.amount_minor,
                 key,
+                actor_id=_,
             )
         )
 
@@ -166,6 +167,7 @@ def create_app():
                 body.kind,
                 body.amount_minor,
                 key,
+                actor_id=_,
             )
         )
 
@@ -192,6 +194,7 @@ def create_app():
                 deal_id,
                 body.amount_minor,
                 key,
+                actor_id=_,
             )
         )
 

@@ -297,6 +297,16 @@ class OutboxEvent(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    actor_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True,
+    )
     workspace_id: Mapped[str] = mapped_column(
         ForeignKey("workspaces.id"),
         nullable=False,
@@ -315,6 +325,12 @@ class OutboxEvent(Base):
     )
 
     __table_args__ = (
+        Index(
+            "ix_outbox_ws_created_id",
+            "workspace_id",
+            "created_at",
+            "id",
+        ),
         CheckConstraint(
             "delivered IN (0,1)",
             name="outbox_delivered_bool",

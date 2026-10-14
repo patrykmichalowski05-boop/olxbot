@@ -119,6 +119,8 @@ def purchase(
     listing_id: str,
     amount_minor: int,
     key: str,
+    *,
+    actor_id: str | None = None,
 ):
     _amount(amount_minor, positive=True)
 
@@ -163,6 +165,7 @@ def purchase(
             OutboxEvent(
                 id=str(uuid.uuid4()),
                 workspace_id=workspace_id,
+                actor_user_id=actor_id,
                 event_type="DEAL_PURCHASED",
                 payload={"deal_id": deal_id},
             )
@@ -193,6 +196,8 @@ def add_cost(
     kind: str,
     amount_minor: int,
     key: str,
+    *,
+    actor_id: str | None = None,
 ):
     _amount(amount_minor)
 
@@ -228,6 +233,7 @@ def add_cost(
             OutboxEvent(
                 id=str(uuid.uuid4()),
                 workspace_id=workspace_id,
+                actor_user_id=actor_id,
                 event_type="DEAL_COST_ADDED",
                 payload={
                     "deal_id": deal_id,
@@ -263,6 +269,8 @@ def sell(
     deal_id: str,
     amount_minor: int,
     key: str,
+    *,
+    actor_id: str | None = None,
 ):
     _amount(amount_minor, positive=True)
 
@@ -292,6 +300,7 @@ def sell(
             OutboxEvent(
                 id=str(uuid.uuid4()),
                 workspace_id=workspace_id,
+                actor_user_id=actor_id,
                 event_type="DEAL_SOLD",
                 payload={"deal_id": deal_id},
             )
