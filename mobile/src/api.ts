@@ -325,3 +325,125 @@ export async function checkApiConnection():
     clearTimeout(timeout);
   }
 }
+
+export type UniversalWatchItem = {
+  listing_key: string;
+  label: string;
+  updated: string;
+};
+
+export type ManualAnalysisInput = {
+  external_id: string;
+  title: string;
+  price: string;
+  category: 'ELECTRONICS' | 'CAR' | 'FASHION';
+  description?: string;
+};
+
+export type ManualAnalysisResult = {
+  decision: string;
+  reasons?: string[];
+  notification_queued?: boolean;
+};
+
+async function universalAuthenticatedRequest(
+  path: string,
+  options: RequestInit = {},
+): Promise<unknown> {
+  if (!path.startsWith('/api/v1/universal/')) {
+    throw new Error('Niepoprawna sciezka API');
+  }
+
+  const access = await SecureStore.getItemAsync(ACCESS);
+
+  if (!access) {
+    throw new Error('Brak sesji');
+  }
+
+  try {
+    return await request(path, options, access);
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      error.message !== 'API HTTP 401'
+    ) {
+      throw error;
+    }
+  }
+
+  const refresh = await SecureStore.getItemAsync(REFRESH);
+
+  if (!refresh) {
+    await clearSession();
+    throw new Error('Sesja wygasla');
+  }
+
+  try {
+    const tokens = await request(
+      '/api/v1/auth/refresh',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: refresh,
+        }),
+      },
+    ) as Tokens;
+
+    await save(tokens);
+
+    return await request(
+      path,
+      options,
+      tokens.access_token,
+    );
+  } catch (error) {
+    await clearSession();
+    throw error;
+  }
+}
+
+export async function getUniversalWatchlist():
+  Promise<UniversalWatchItem[]> {
+  const result = await universalAuthenticatedRequest(
+    '/api/v1/universal/watchlist',
+  ) as { items: UniversalWatchItem[] };
+
+  return result.items;
+}
+
+export async function addUniversalWatch(
+  key: string,
+  label: string,
+): Promise<void> {
+  await universalAuthenticatedRequest(
+    '/api/v1/universal/watchlist',
+    {
+      method: 'POST',
+      body: JSON.stringify({ key, label }),
+    },
+  );
+}
+
+export async function closeUniversalWatch(
+  key: string,
+): Promise<void> {
+  await universalAuthenticatedRequest(
+    '/api/v1/universal/watchlist/close',
+    {
+      method: 'POST',
+      body: JSON.stringify({ key }),
+    },
+  );
+}
+
+export async function analyzeUniversalManual(
+  data: ManualAnalysisInput,
+): Promise<ManualAnalysisResult> {
+  return await universalAuthenticatedRequest(
+    '/api/v1/universal/manual/analyze',
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  ) as ManualAnalysisResult;
+}
