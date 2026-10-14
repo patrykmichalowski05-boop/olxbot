@@ -27,7 +27,7 @@ def analyze_safe(
     if not purchase['ok'] or not identity.key:
         obs_id, _ = store.observe(row)
 
-        return {
+        result = {
             'observation_id': obs_id,
             'decision': (
                 Decision.NO_RELIABLE_VALUATION.value
@@ -38,6 +38,19 @@ def analyze_safe(
             ),
             'notification_queued': False,
         }
+
+        # Brak ceny rynkowej nie oznacza braku
+        # informacji dla radaru.
+        # Profil chroni izolacje uzytkownikow.
+        store.valuation(
+            obs_id,
+            'guarded-no-valuation-v1',
+            'profile-' + profile.user_id,
+            'NO_RELIABLE_MARKET',
+            result,
+        )
+
+        return result
 
     return analyze(
         row, category, sources, profile,
