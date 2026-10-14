@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import type { RadarFilters } from '@/features/radar/filterStore';
 import { defaultFilters } from '@/features/radar/filterStore';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseMoneyInput } from '@/utils/money';
 import { FormField } from './FormField';
 import { PrimaryButton } from './PrimaryButton';
@@ -32,10 +33,12 @@ function FilterSheetContent({
   const { colors, spacing, typography, radii } = useTheme();
   const [draft, setDraft] = useState(initial);
   const [profileName, setProfileName] = useState('');
+  const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.root, { backgroundColor: colors.background, padding: spacing.lg }]}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.root, { backgroundColor: colors.overlay, paddingHorizontal: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.surface, padding: spacing.lg, borderRadius: radii.lg, borderColor: colors.border }]}>
         <Text style={[typography.title, { color: colors.text }]}>Filtry</Text>
         <ScrollView contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}>
           <FormField
@@ -153,13 +156,15 @@ function FilterSheetContent({
           />
           <PrimaryButton label="Zamknij" variant="ghost" onPress={onClose} />
         </View>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  sheet: { width: '100%', maxWidth: 560, maxHeight: '100%', borderWidth: 1, flexShrink: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderWidth: 1,

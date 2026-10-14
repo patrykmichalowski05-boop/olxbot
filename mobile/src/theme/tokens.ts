@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export type ColorSchemeName = 'dark' | 'light';
 
 export type ThemeColors = {
@@ -76,14 +78,16 @@ export const radii = {
   pill: 999,
 } as const;
 
+const fontFamily = Platform.OS === 'web' ? 'system-ui' : 'System';
+
 export const typography = {
-  title: { fontSize: 28, fontWeight: '700' as const, lineHeight: 36 },
-  headline: { fontSize: 18, fontWeight: '600' as const, lineHeight: 24 },
-  body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
-  bodyStrong: { fontSize: 15, fontWeight: '600' as const, lineHeight: 21 },
-  caption: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
-  money: { fontSize: 22, fontWeight: '700' as const, lineHeight: 28 },
-  moneySmall: { fontSize: 16, fontWeight: '700' as const, lineHeight: 22 },
+  title: { fontFamily, fontSize: 28, fontWeight: '700' as const, lineHeight: 36 },
+  headline: { fontFamily, fontSize: 18, fontWeight: '600' as const, lineHeight: 24 },
+  body: { fontFamily, fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
+  bodyStrong: { fontFamily, fontSize: 15, fontWeight: '600' as const, lineHeight: 21 },
+  caption: { fontFamily, fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
+  money: { fontFamily, fontSize: 22, fontWeight: '700' as const, lineHeight: 28 },
+  moneySmall: { fontFamily, fontSize: 16, fontWeight: '700' as const, lineHeight: 22 },
 };
 
 export const touchTarget = 48;

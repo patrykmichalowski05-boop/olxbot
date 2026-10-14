@@ -10,6 +10,7 @@ type Props = {
   roiBps?: number | null;
   emphasize?: boolean;
   emptyLabel?: string;
+  tone?: 'default' | 'profit';
 };
 
 export function MoneyValue({
@@ -18,9 +19,13 @@ export function MoneyValue({
   roiBps,
   emphasize,
   emptyLabel,
+  tone = 'default',
 }: Props) {
   const { colors, typography } = useTheme();
   const valueStyle = emphasize ? typography.money : typography.moneySmall;
+  const color = tone === 'profit' && amountMinor != null
+    ? amountMinor > 0 ? colors.success : amountMinor < 0 ? colors.loss : colors.text
+    : colors.text;
 
   return (
     <View style={styles.wrap}>
@@ -29,7 +34,7 @@ export function MoneyValue({
       ) : null}
       <Text
         accessibilityLabel={label ? `${label}: ${formatMoneyMinor(amountMinor, 'PLN', { emptyLabel })}` : undefined}
-        style={[valueStyle, { color: colors.text }]}
+        style={[valueStyle, { color }]}
       >
         {formatMoneyMinor(amountMinor, 'PLN', { emptyLabel })}
       </Text>

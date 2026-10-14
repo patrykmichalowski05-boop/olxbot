@@ -37,7 +37,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
   return (
     <View style={[styles.root, { backgroundColor: colors.background, flexDirection: visible ? 'row' : 'column' }]}>
       {visible ? (
-        <View style={[styles.sidebar, { width: sidebarWidth, backgroundColor: colors.sidebar, borderColor: colors.border }]}>
+        <View testID="desktop-sidebar" style={[styles.sidebar, { width: sidebarWidth, backgroundColor: colors.sidebar, borderColor: colors.border }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="FlipRadar — dashboard" onPress={() => router.push('/dashboard')} style={styles.brand}>
             <View style={[styles.brandIcon, { backgroundColor: colors.accentMuted }]}>
               <Ionicons name="radio" size={25} color={colors.accent} />

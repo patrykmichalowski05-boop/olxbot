@@ -28,7 +28,7 @@ export function AppScreen({
     <View
       style={[
         styles.inner,
-        { maxWidth, paddingHorizontal: isMobile ? (padded ? spacing.lg : 0) : (padded ? pagePadding : pagePadding - spacing.lg) },
+        { maxWidth: maxWidth + pagePadding * 2, paddingHorizontal: isMobile ? (padded ? spacing.lg : 0) : (padded ? pagePadding : pagePadding - spacing.lg) },
         { paddingBottom: (isMobile ? insets.bottom : 0) + spacing.lg },
         style,
       ]}
