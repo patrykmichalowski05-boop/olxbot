@@ -21,6 +21,7 @@ from universal_v2.bridge_config import BridgeConfig
 from backend.app.core.settings import Settings
 from backend.app.db.session import make_session_factory
 from backend.app.api.security import WorkspaceSecurity
+from backend.app.services.listing_ingest import ingest
 from backend.app.services.notification_inbox import page as inbox_page
 from backend.app.services.deals import (
     DealConflict,
@@ -32,6 +33,21 @@ from backend.app.services.deals import (
     deal_page,
     deal_events,
 )
+
+
+class IngestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source: str = Field(min_length=2, max_length=40)
+    source_scope: str = Field(min_length=1, max_length=80)
+    external_id: str = Field(min_length=1, max_length=240)
+    title: str = Field(min_length=1, max_length=500)
+    price_minor: StrictInt | None = Field(
+        default=None,
+        ge=0,
+        le=1_000_000_000,
+    )
+    payload: dict = Field(default_factory=dict)
 
 
 class PurchaseBody(BaseModel):
@@ -308,5 +324,31 @@ def create_app():
                 before_id=before_id,
             )
         )
+
+    @app.post(
+        "/api/v2/workspaces/{workspace_id}/listings/ingest"
+    )
+    def ingest_listing(
+        workspace_id: str,
+        body: IngestBody,
+        key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=128,
+        ),
+        user_id: str = Depends(writer),
+        db: Session = Depends(db_session),
+    ):
+        return execute(lambda: ingest(
+            db,
+            workspace_id,
+            source=body.source,
+            source_scope=body.source_scope,
+            external_id=body.external_id,
+            title=body.title,
+            price_minor=body.price_minor,
+            payload=body.payload,
+            key=key,
+        ))
 
     return app
