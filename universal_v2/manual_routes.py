@@ -4,7 +4,7 @@ import hashlib
 from dataclasses import replace
 
 from fastapi import Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 from .manual_input import convert
 from .guarded_pipeline import analyze_safe
@@ -16,6 +16,7 @@ from .outbox import Outbox
 
 
 class ManualRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     external_id: str = Field(
         min_length=1,
         max_length=120
@@ -35,10 +36,10 @@ class ManualRequest(BaseModel):
         max_length=10000
     )
     attributes: dict = Field(
-        default_factory=dict
+        default_factory=dict, max_length=48
     )
-    costs_minor: dict[str, int] = Field(
-        default_factory=dict
+    costs_minor: dict[str, StrictInt] = Field(
+        default_factory=dict, max_length=32
     )
 
 
