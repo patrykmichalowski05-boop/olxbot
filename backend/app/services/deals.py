@@ -224,6 +224,20 @@ def add_cost(
             )
         )
 
+        session.add(
+            OutboxEvent(
+                id=str(uuid.uuid4()),
+                workspace_id=workspace_id,
+                event_type="DEAL_COST_ADDED",
+                payload={
+                    "deal_id": deal_id,
+                    "cost_id": cost_id,
+                    "kind": kind,
+                    "amount_minor": amount_minor,
+                },
+            )
+        )
+
         return {
             "cost_id": cost_id,
             "deal_id": deal_id,

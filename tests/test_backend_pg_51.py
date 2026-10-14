@@ -180,3 +180,11 @@ class PostgresIntegrationTests(unittest.TestCase):
                 event.event_type,
                 "DEAL_PURCHASED",
             )
+
+            cost_events = session.scalars(
+                select(OutboxEvent).where(
+                    OutboxEvent.workspace_id == wid,
+                    OutboxEvent.event_type == "DEAL_COST_ADDED",
+                )
+            ).all()
+            self.assertEqual(len(cost_events), 2)
