@@ -376,3 +376,43 @@ def cost_items(session: Session, workspace_id: str, deal_id: str):
             for c in rows
         ],
     }
+
+
+def deal_page(session: Session, workspace_id: str, *, status=None,
+              limit=20, before_id=None):
+    from sqlalchemy import and_, or_
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("Invalid limit")
+    if status not in (None, "BOUGHT", "SOLD"):
+        raise ValueError("Invalid status")
+
+    query = select(Deal).where(Deal.workspace_id == workspace_id)
+    if status is not None:
+        query = query.where(Deal.status == status)
+
+    if before_id is not None:
+        pivot = session.scalar(select(Deal).where(
+            Deal.id == before_id,
+            Deal.workspace_id == workspace_id,
+        ))
+        if pivot is None:
+            raise ValueError("Invalid cursor")
+        query = query.where(or_(
+            Deal.created_at < pivot.created_at,
+            and_(Deal.created_at == pivot.created_at, Deal.id < pivot.id),
+        ))
+
+    rows = session.scalars(query.order_by(
+        Deal.created_at.desc(), Deal.id.desc()
+    ).limit(limit + 1)).all()
+    has_more = len(rows) > limit
+    items = rows[:limit]
+    return {
+        "items": [{
+            "id": x.id, "listing_id": x.listing_id,
+            "status": x.status, "purchase_minor": x.purchase_minor,
+            "sale_minor": x.sale_minor, "currency": x.currency,
+            "created_at": x.created_at.isoformat(),
+        } for x in items],
+        "next_before_id": items[-1].id if has_more else None,
+    }

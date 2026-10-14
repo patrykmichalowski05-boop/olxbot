@@ -185,6 +185,13 @@ class Test56(unittest.TestCase):
                         repeat.json(),
                     )
 
+                    page = api.get(
+                        path, headers=headers, params={"limit": 1}
+                    )
+                    self.assertEqual(page.status_code, 200, page.text)
+                    self.assertEqual(len(page.json()["items"]), 1)
+                    self.assertEqual(page.json()["items"][0]["status"], "BOUGHT")
+
                     deal_id = first.json()["deal_id"]
                     base = path + "/" + deal_id
 

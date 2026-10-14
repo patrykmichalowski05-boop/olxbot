@@ -6,6 +6,7 @@ from fastapi import (
     Depends,
     Header,
     HTTPException,
+    Query,
 )
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from sqlalchemy.orm import Session
@@ -25,6 +26,7 @@ from backend.app.services.deals import (
     sell,
     summary,
     cost_items,
+    deal_page,
 )
 
 
@@ -226,5 +228,19 @@ def create_app():
         if result is None:
             raise HTTPException(404, "Deal not found")
         return result
+
+    @app.get("/api/v2/workspaces/{workspace_id}/deals")
+    def list_deals(
+        workspace_id: str,
+        status: str | None = Query(default=None),
+        limit: int = Query(default=20, ge=1, le=100),
+        before_id: str | None = Query(default=None, max_length=36),
+        _: str = Depends(reader),
+        db: Session = Depends(db_session),
+    ):
+        return execute(lambda: deal_page(
+            db, workspace_id, status=status,
+            limit=limit, before_id=before_id,
+        ))
 
     return app
