@@ -33,3 +33,4 @@ Status PASS oznacza testy jednostkowe, nie integrację z platformą.
 | 26 | watchlista uzytkownikow | PASS (offline) |
 | 27 | kolejka z retry i tokenem | PASS: testy offline |
 | 28 | izolacja testowych baz | PASS: testy offline |
+| 29 | radar z izolacja profilu | PASS: testy offline |
