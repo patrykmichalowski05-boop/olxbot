@@ -253,7 +253,14 @@ def sell(
     _amount(amount_minor, positive=True)
 
     def work():
-        deal = session.get(Deal, deal_id)
+        deal = session.scalar(
+            select(Deal)
+            .where(
+                Deal.id == deal_id,
+                Deal.workspace_id == workspace_id,
+            )
+            .with_for_update()
+        )
 
         if (
             deal is None
