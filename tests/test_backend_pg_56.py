@@ -261,6 +261,18 @@ class Test56(unittest.TestCase):
                         65000,
                     )
 
+                    after_sale = api.get(path, headers=headers,
+                                         params={"status": "SOLD", "limit": 1})
+                    self.assertEqual(after_sale.status_code, 200)
+                    self.assertEqual(len(after_sale.json()["items"]), 1)
+                    self.assertEqual(after_sale.json()["items"][0]["id"], deal_id)
+
+                    other_scope = api.get(
+                        f"/api/v2/workspaces/{forbidden_workspace}/deals",
+                        headers=headers,
+                    )
+                    self.assertEqual(other_scope.status_code, 403)
+
                     again = api.post(
                         base + "/sell",
                         headers={
