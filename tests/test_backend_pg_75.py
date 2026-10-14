@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.engine.url import make_url
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from flip_core.auth_store import AuthStore
 from backend.app.api.app import create_app
@@ -18,7 +18,10 @@ from backend.app.db.models import (
     User,
     Workspace,
     Membership,
+    OutboxEvent,
+    NotificationInbox,
 )
+from backend.app.services.outbox_dispatch import process_batch
 
 
 @unittest.skipUnless(
@@ -218,6 +221,95 @@ class Test75(unittest.TestCase):
                                 changed.json()["revision"],
                                 2,
                             )
+
+                            with Session(engine) as db:
+                                drops = db.scalars(
+                                    select(OutboxEvent).where(
+                                        OutboxEvent.workspace_id == wid,
+                                        OutboxEvent.event_type == "LISTING_PRICE_DROP",
+                                        OutboxEvent.payload["listing_id"].as_string() == first.json()["listing_id"],
+                                    )
+                                ).all()
+
+                                self.assertEqual(len(drops), 1)
+                                drop_id = drops[0].id
+
+                                self.assertEqual(
+                                    drops[0].payload["from_minor"], 120000
+                                )
+
+                                self.assertEqual(
+                                    drops[0].payload["to_minor"], 99000
+                                )
+
+                            history_url = (
+                                base + "/" +
+                                first.json()["listing_id"] +
+                                "/history"
+                            )
+
+                            history_response = client.get(
+                                history_url,
+                                headers=bearer,
+                            )
+
+                            self.assertEqual(
+                                history_response.status_code,
+                                200,
+                                history_response.text,
+                            )
+
+                            self.assertEqual(
+                                [
+                                    x["price_minor"]
+                                    for x in history_response.json()["items"]
+                                ],
+                                [99000, 120000],
+                            )
+
+                            blocked = client.get(
+                                f"/api/v2/workspaces/{other}/listings/{first.json()['listing_id']}/history",
+                                headers=bearer,
+                            )
+
+                            self.assertEqual(
+                                blocked.status_code,
+                                403,
+                            )
+
+                            factory = sessionmaker(
+                                engine,
+                                expire_on_commit=False,
+                            )
+
+                            for _ in range(5):
+                                process_batch(
+                                    factory,
+                                    limit=100,
+                                )
+
+                                with Session(engine) as db:
+                                    found = db.scalar(
+                                        select(NotificationInbox.id).where(
+                                            NotificationInbox.source_event_id == drop_id
+                                        )
+                                    )
+
+                                    if found:
+                                        break
+
+                            with Session(engine) as db:
+                                entries = db.scalars(
+                                    select(NotificationInbox).where(
+                                        NotificationInbox.source_event_id == drop_id
+                                    )
+                                ).all()
+
+                                self.assertEqual(len(entries), 1)
+                                self.assertEqual(
+                                    entries[0].event_type,
+                                    "LISTING_PRICE_DROP",
+                                )
 
                             radar = client.get(
                                 base,
