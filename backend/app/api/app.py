@@ -1,0 +1,215 @@
+"""Isolated PostgreSQL endpoints attached to existing API."""
+
+from pathlib import Path
+
+from fastapi import (
+    Depends,
+    Header,
+    HTTPException,
+)
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from sqlalchemy.orm import Session
+
+from universal_v2.mobile_bridge import (
+    create_app as create_mobile_app,
+)
+from universal_v2.bridge_config import BridgeConfig
+
+from backend.app.core.settings import Settings
+from backend.app.db.session import make_session_factory
+from backend.app.api.security import WorkspaceSecurity
+from backend.app.services.deals import (
+    DealConflict,
+    purchase,
+    add_cost,
+    sell,
+    summary,
+)
+
+
+class PurchaseBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    listing_id: str = Field(min_length=1, max_length=36)
+    amount_minor: StrictInt = Field(gt=0, le=1_000_000_000)
+
+
+class CostBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str = Field(min_length=1, max_length=32)
+    amount_minor: StrictInt = Field(ge=0, le=1_000_000_000)
+
+
+class SaleBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    amount_minor: StrictInt = Field(gt=0, le=1_000_000_000)
+
+
+def create_app():
+    settings = Settings()
+    bridge = BridgeConfig.from_env()
+
+    # Compose legacy/mobile/universal endpoints.
+    app = create_mobile_app()
+
+    security = WorkspaceSecurity(bridge.auth_db)
+
+    engine, session_factory = make_session_factory(
+        settings.database_url
+    )
+
+    app.state.backend_engine = engine
+
+    def db_session():
+        with session_factory() as db:
+            yield db
+
+    def current_user(
+        authorization: str | None = Header(default=None)
+    ):
+        return security.current_user(authorization)
+
+    def reader(
+        workspace_id: str,
+        user_id: str = Depends(current_user),
+    ):
+        with session_factory() as db:
+            security.require_role(
+                db,
+                workspace_id,
+                user_id,
+                write=False,
+            )
+
+        return user_id
+
+    def writer(
+        workspace_id: str,
+        user_id: str = Depends(current_user),
+    ):
+        # Separate session: do not start transaction
+        # on the service's write session.
+        with session_factory() as db:
+            security.require_role(
+                db,
+                workspace_id,
+                user_id,
+                write=True,
+            )
+
+        return user_id
+
+    def execute(callback):
+        try:
+            return callback()
+
+        except DealConflict as exc:
+            raise HTTPException(
+                409,
+                str(exc),
+            ) from None
+
+        except ValueError as exc:
+            raise HTTPException(
+                422,
+                str(exc),
+            ) from None
+
+    @app.post("/api/v2/workspaces/{workspace_id}/deals")
+    def create_deal(
+        workspace_id: str,
+        body: PurchaseBody,
+        key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=128,
+        ),
+        _: str = Depends(writer),
+        db: Session = Depends(db_session),
+    ):
+        return execute(
+            lambda: purchase(
+                db,
+                workspace_id,
+                body.listing_id,
+                body.amount_minor,
+                key,
+            )
+        )
+
+    @app.post(
+        "/api/v2/workspaces/{workspace_id}"
+        "/deals/{deal_id}/costs"
+    )
+    def create_cost(
+        workspace_id: str,
+        deal_id: str,
+        body: CostBody,
+        key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=128,
+        ),
+        _: str = Depends(writer),
+        db: Session = Depends(db_session),
+    ):
+        return execute(
+            lambda: add_cost(
+                db,
+                workspace_id,
+                deal_id,
+                body.kind,
+                body.amount_minor,
+                key,
+            )
+        )
+
+    @app.post(
+        "/api/v2/workspaces/{workspace_id}"
+        "/deals/{deal_id}/sell"
+    )
+    def sell_deal(
+        workspace_id: str,
+        deal_id: str,
+        body: SaleBody,
+        key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=128,
+        ),
+        _: str = Depends(writer),
+        db: Session = Depends(db_session),
+    ):
+        return execute(
+            lambda: sell(
+                db,
+                workspace_id,
+                deal_id,
+                body.amount_minor,
+                key,
+            )
+        )
+
+    @app.get(
+        "/api/v2/workspaces/{workspace_id}"
+        "/deals/{deal_id}"
+    )
+    def read_deal(
+        workspace_id: str,
+        deal_id: str,
+        _: str = Depends(reader),
+        db: Session = Depends(db_session),
+    ):
+        result = summary(db, workspace_id, deal_id)
+
+        if result is None:
+            raise HTTPException(
+                404,
+                "Deal not found",
+            )
+
+        return result
+
+    return app
