@@ -22,6 +22,7 @@ from backend.app.core.settings import Settings
 from backend.app.db.session import make_session_factory
 from backend.app.api.security import WorkspaceSecurity
 from backend.app.services.listing_ingest import ingest
+from backend.app.services.listing_radar import page as listing_page
 from backend.app.services.notification_inbox import page as inbox_page
 from backend.app.services.deals import (
     DealConflict,
@@ -349,6 +350,35 @@ def create_app():
             price_minor=body.price_minor,
             payload=body.payload,
             key=key,
+        ))
+
+    @app.get(
+        "/api/v2/workspaces/{workspace_id}/listings"
+    )
+    def list_pg_listings(
+        workspace_id: str,
+        limit: int = Query(
+            default=20,
+            ge=1,
+            le=50,
+        ),
+        before_id: str | None = Query(
+            default=None,
+            max_length=36,
+        ),
+        q: str = Query(
+            default="",
+            max_length=120,
+        ),
+        user_id: str = Depends(reader),
+        db: Session = Depends(db_session),
+    ):
+        return execute(lambda: listing_page(
+            db,
+            workspace_id,
+            limit=limit,
+            before_id=before_id,
+            q=q,
         ))
 
     return app
