@@ -96,6 +96,16 @@ class AuthStore:
                 CREATE INDEX IF NOT EXISTS
                 tokens_session_idx
                 ON tokens(session_id);
+
+                CREATE TABLE IF NOT EXISTS session_lineage (
+                    session_id TEXT PRIMARY KEY
+                        REFERENCES sessions(id),
+                    family_id TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS
+                session_lineage_family_idx
+                ON session_lineage(family_id);
             """)
 
     def create_owner(self, username, password):
@@ -139,8 +149,9 @@ class AuthStore:
 
         return user_id
 
-    def _issue(self, db, user_id):
+    def _issue(self, db, user_id, *, family_id=None):
         session_id = str(uuid.uuid4())
+        family_id = family_id or session_id
         access = secrets.token_urlsafe(32)
         refresh = secrets.token_urlsafe(32)
         now = int(time.time())
@@ -152,6 +163,11 @@ class AuthStore:
             session_id,
             user_id,
         ))
+
+        db.execute("""
+            INSERT INTO session_lineage(session_id, family_id)
+            VALUES (?, ?)
+        """, (session_id, family_id))
 
         db.executemany("""
             INSERT INTO tokens
@@ -311,20 +327,86 @@ class AuthStore:
             )["user_id"]
 
     def refresh(self, token):
+        # Transakcja SQLite serializuje rownolegle
+        # wykonywane odswiezenia sesji.
+        invalid = False
+        issued = None
+
         with self.transaction() as db:
-            row = self._lookup(
-                db, token, "refresh"
+            if (
+                not isinstance(token, str)
+                or not 32 <= len(token) <= 256
+            ):
+                invalid = True
+            else:
+                row = db.execute("""
+                    SELECT
+                        s.id AS session_id,
+                        s.user_id,
+                        s.revoked,
+                        t.expires,
+                        COALESCE(
+                            l.family_id,
+                            s.id
+                        ) AS family_id
+                    FROM tokens t
+                    JOIN sessions s
+                        ON s.id=t.session_id
+                    LEFT JOIN session_lineage l
+                        ON l.session_id=s.id
+                    WHERE t.hash=?
+                      AND t.kind='refresh'
+                """, (
+                    token_hash(token),
+                )).fetchone()
+
+                if (
+                    row is None
+                    or row["expires"] <= time.time()
+                ):
+                    invalid = True
+
+                elif row["revoked"]:
+                    # Ponowne uzycie starego tokenu.
+                    # Najpierw zapisz uniewaznienie
+                    # rodziny, dopiero potem blad.
+                    db.execute("""
+                        UPDATE sessions
+                        SET revoked=1
+                        WHERE id IN (
+                            SELECT session_id
+                            FROM session_lineage
+                            WHERE family_id=?
+                        )
+                        OR id=?
+                    """, (
+                        row["family_id"],
+                        row["session_id"],
+                    ))
+
+                    invalid = True
+
+                else:
+                    db.execute("""
+                        UPDATE sessions
+                        SET revoked=1
+                        WHERE id=?
+                    """, (row["session_id"],))
+
+                    issued = self._issue(
+                        db,
+                        row["user_id"],
+                        family_id=row["family_id"],
+                    )
+
+        # Blad poza transakcja:
+        # revocation musi zostac zatwierdzona.
+        if invalid:
+            raise ValueError(
+                "Invalid refresh token"
             )
 
-            db.execute("""
-                UPDATE sessions
-                SET revoked=1
-                WHERE id=?
-            """, (row["session_id"],))
-
-            return self._issue(
-                db, row["user_id"]
-            )
+        return issued
 
     def logout(self, token):
         with self.transaction() as db:
