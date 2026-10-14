@@ -1,10 +1,11 @@
 from fastapi import Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .watchlist_v2 import Watchlist
 
 
 class WatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     key: str = Field(
         min_length=1,
         max_length=240
@@ -14,12 +15,29 @@ class WatchRequest(BaseModel):
         max_length=240
     )
 
+    @field_validator('key', 'label')
+    @classmethod
+    def strip_nonempty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError('Puste pole watchlisty')
+        return cleaned
+
 
 class CloseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     key: str = Field(
         min_length=1,
         max_length=240
     )
+
+    @field_validator('key')
+    @classmethod
+    def strip_nonempty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError('Pusty identyfikator')
+        return cleaned
 
 
 def attach_watch(app, cfg, current_user):
