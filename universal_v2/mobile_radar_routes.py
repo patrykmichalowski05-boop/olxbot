@@ -16,9 +16,9 @@ def normalize(page):
             'platform': item['source'],
             'decision': item['decision'],
             'valuation': item['analysis'],
-            'observed_at': None,
-            'price_minor': None,
-            'url': None,
+            'observed_at': item.get('observed_at'),
+            'price_minor': item.get('price_minor'),
+            'url': item.get('url'),
         })
 
     return {

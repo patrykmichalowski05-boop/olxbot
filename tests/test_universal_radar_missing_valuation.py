@@ -87,8 +87,9 @@ class RadarWithoutValuationTest(unittest.TestCase):
                     first["items"][0]["decision"],
                     "NO_RELIABLE_VALUATION",
                 )
-                self.assertIsNone(
-                    first["items"][0]["price_minor"]
+                self.assertEqual(
+                    first["items"][0]["price_minor"],
+                    100000,
                 )
 
                 # Strona druga.

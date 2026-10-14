@@ -35,6 +35,10 @@ class RadarService:
         result = []
 
         for row in rows:
+            listing = json.loads(row['payload'])
+            if not isinstance(listing, dict):
+                raise ValueError('Zly zapis ogloszenia')
+
             valuation = json.loads(
                 row['result']
             )
@@ -56,7 +60,10 @@ class RadarService:
                     'decision',
                     'UNKNOWN'
                 ),
-                'analysis': valuation
+                'analysis': valuation,
+                'price_minor': listing.get('price_minor'),
+                'url': listing.get('url') or None,
+                'observed_at': listing.get('observed_at')
             })
 
         return {

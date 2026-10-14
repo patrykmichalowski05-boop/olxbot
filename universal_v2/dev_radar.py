@@ -69,6 +69,7 @@ def radar(
                     o.payload,
                     '$.title'
                 ) AS title,
+                o.payload AS payload,
                 v.result AS result
             FROM latest x
             JOIN observations o
