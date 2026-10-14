@@ -7,6 +7,7 @@ from sqlalchemy import (
     func,
     CheckConstraint,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     JSON,
@@ -99,6 +100,11 @@ class Listing(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "id",
+            name="uq_listings_ws_id",
+        ),
         UniqueConstraint(
             "workspace_id",
             "source",
@@ -207,6 +213,11 @@ class Deal(Base):
     )
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["workspace_id", "listing_id"],
+            ["listings.workspace_id", "listings.id"],
+            name="fk_deals_workspace_listing",
+        ),
         Index("ix_deals_workspace_created_id", "workspace_id", "created_at", "id"),
         UniqueConstraint(
             "workspace_id",
