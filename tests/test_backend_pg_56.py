@@ -103,6 +103,18 @@ class Test56(unittest.TestCase):
                 app = create_app()
 
                 with TestClient(app) as api:
+                    health = api.get("/api/v2/healthz")
+
+                    self.assertEqual(
+                        health.status_code,
+                        200,
+                        health.text,
+                    )
+
+                    self.assertEqual(
+                        health.json(),
+                        {"status": "ok"},
+                    )
                     response = api.post(
                         "/api/v1/auth/login",
                         json={

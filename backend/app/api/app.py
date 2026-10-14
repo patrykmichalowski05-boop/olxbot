@@ -9,6 +9,8 @@ from fastapi import (
     Query,
 )
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from universal_v2.mobile_bridge import (
@@ -265,5 +267,22 @@ def create_app():
             )
 
         return result
+
+    @app.get(
+        "/api/v2/healthz",
+        include_in_schema=False,
+    )
+    def healthz():
+        try:
+            with session_factory() as db:
+                db.execute(text("SELECT 1"))
+
+        except SQLAlchemyError:
+            raise HTTPException(
+                503,
+                "Backend unavailable",
+            ) from None
+
+        return {"status": "ok"}
 
     return app
