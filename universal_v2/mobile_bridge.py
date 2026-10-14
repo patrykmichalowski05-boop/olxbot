@@ -102,4 +102,7 @@ def create_app():
                 'Test database unavailable'
             ) from None
 
+    from .manual_routes import attach_manual
+    attach_manual(app, cfg, current_user)
+
     return app
