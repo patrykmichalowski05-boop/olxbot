@@ -105,4 +105,7 @@ def create_app():
     from .manual_routes import attach_manual
     attach_manual(app, cfg, current_user)
 
+    from .watch_routes import attach_watch
+    attach_watch(app, cfg, current_user)
+
     return app
