@@ -1,0 +1,59 @@
+name: Backend development checks
+
+on:
+  push:
+    branches:
+      - 'fix/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install API dependencies
+        run: |
+          python -m pip install -r requirements-flip-api.txt 'httpx>=0.27,<1' 'pydantic>=2,<3'
+
+      - name: Backend regression tests
+        run: |
+          python -m unittest discover -s tests -p 'test_universal_*.py' -q
+          python -m unittest discover -s tests -p 'test_backend_patch_*.py' -q
+          python -m unittest discover -s tests -p 'test_auth_refresh_replay.py' -q
+          python -m unittest discover -s tests -p 'test_flip_mobile_http.py' -q
+
+  mobile-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: TypeScript
+        working-directory: mobile
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
