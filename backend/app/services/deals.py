@@ -353,3 +353,26 @@ def summary(
             else None
         ),
     }
+
+
+def cost_items(session: Session, workspace_id: str, deal_id: str):
+    """Only returns costs belonging to the requested workspace."""
+    deal = session.scalar(
+        select(Deal).where(
+            Deal.id == deal_id,
+            Deal.workspace_id == workspace_id,
+        )
+    )
+    if deal is None:
+        return None
+    rows = session.scalars(
+        select(DealCost).where(DealCost.deal_id == deal_id)
+        .order_by(DealCost.id)
+    ).all()
+    return {
+        "currency": deal.currency,
+        "items": [
+            {"id": c.id, "kind": c.kind, "amount_minor": c.amount_minor}
+            for c in rows
+        ],
+    }

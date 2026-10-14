@@ -208,6 +208,15 @@ class Test56(unittest.TestCase):
                         cost.text,
                     )
 
+                    costs_response = api.get(
+                        base + "/costs", headers=headers
+                    )
+                    self.assertEqual(costs_response.status_code, 200)
+                    self.assertEqual(
+                        costs_response.json()["items"][0]["amount_minor"],
+                        15000,
+                    )
+
                     sale_headers = {
                         **headers,
                         "Idempotency-Key": "sale-00001",

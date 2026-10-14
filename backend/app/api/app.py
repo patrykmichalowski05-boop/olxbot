@@ -24,6 +24,7 @@ from backend.app.services.deals import (
     add_cost,
     sell,
     summary,
+    cost_items,
 )
 
 
@@ -210,6 +211,20 @@ def create_app():
                 "Deal not found",
             )
 
+        return result
+
+    @app.get(
+        "/api/v2/workspaces/{workspace_id}/deals/{deal_id}/costs"
+    )
+    def read_costs(
+        workspace_id: str,
+        deal_id: str,
+        _: str = Depends(reader),
+        db: Session = Depends(db_session),
+    ):
+        result = cost_items(db, workspace_id, deal_id)
+        if result is None:
+            raise HTTPException(404, "Deal not found")
         return result
 
     return app
