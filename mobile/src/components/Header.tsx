@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -25,6 +25,7 @@ export function Header({
 }: Props) {
   const { colors, spacing, typography } = useTheme();
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
   return (
     <View style={[styles.row, { marginBottom: spacing.md, gap: spacing.sm }]}>
@@ -37,9 +38,9 @@ export function Header({
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-      ) : (
+      ) : width < 1000 ? (
         <View style={{ width: touchTarget }} />
-      )}
+      ) : null}
 
       <View style={styles.titleWrap}>
         <Text style={[typography.headline, { color: colors.text }]} numberOfLines={1}>

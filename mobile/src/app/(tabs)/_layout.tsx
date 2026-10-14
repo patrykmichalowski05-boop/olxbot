@@ -6,9 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function TabsLayout() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  const wide = width >= 900;
+  const desktop = width >= 1000;
 
   return (
     <Tabs
@@ -16,24 +16,16 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          ...(wide
-            ? {
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 88,
-                borderTopWidth: 0,
-                borderRightWidth: 1,
-                borderRightColor: colors.border,
-                flexDirection: 'column',
-              }
-            : {}),
+        tabBarStyle: desktop
+          ? { display: 'none' }
+          : {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+            },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
         },
-        tabBarLabelStyle: { fontSize: 11 },
       }}
     >
       <Tabs.Screen
@@ -46,6 +38,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="watched/index"
         options={{
@@ -56,6 +49,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="analyze/index"
         options={{
@@ -66,6 +60,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="flips/index"
         options={{
@@ -76,6 +71,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="settings/index"
         options={{
