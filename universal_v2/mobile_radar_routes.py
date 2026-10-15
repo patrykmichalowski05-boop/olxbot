@@ -1,9 +1,11 @@
 """Kontrakt radaru dla istniejącego klienta Expo."""
 
+import os
 import sqlite3
 
 from fastapi import Depends, HTTPException, Query
 from .radar_service import RadarService
+from .legacy_snapshot_mobile import page as legacy_page
 
 
 def normalize(page):
@@ -36,6 +38,16 @@ def attach(app, cfg, current_user):
         before_id: int | None = Query(default=None, gt=0),
         user_id: str = Depends(current_user),
     ):
+        if os.getenv('FLIPRADAR_READ_LEGACY_SNAPSHOTS') == '1':
+            try:
+                return legacy_page(
+                    limit=limit, before_id=before_id, q=q
+                )
+            except (sqlite3.Error, OSError, ValueError):
+                raise HTTPException(
+                    503, 'Snapshot radar unavailable'
+                ) from None
+
         path = cfg.dev_dir / 'observations.sqlite'
 
         if not path.is_file():
