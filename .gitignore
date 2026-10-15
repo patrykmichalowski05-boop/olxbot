@@ -34,6 +34,11 @@ watchdog_state.json
 !.env.example
 !*.env.example
 secrets/
+runtime/
+*.storage-state.json
+playwright/.auth/
+universal-hunter.local.json
+/mobile/node_modules
 
 # === PYTHON ===
 .venv/

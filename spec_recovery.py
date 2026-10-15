@@ -8,9 +8,17 @@ from openai import OpenAI
 
 load_dotenv("/opt/olx-bot/.env")
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+client = None
+
+
+def get_client():
+    global client
+    if client is None:
+        key = os.getenv("OPENAI_API_KEY")
+        if not key:
+            raise ValueError("Odzyskiwanie specyfikacji AI nie jest skonfigurowane")
+        client = OpenAI(api_key=key)
+    return client
 
 MODEL = os.getenv(
     "OPENAI_SPEC_MODEL",
@@ -244,7 +252,7 @@ Zwróć JSON zgodny ze schematem.
 
     try:
 
-        response = client.responses.create(
+        response = get_client().responses.create(
             model=MODEL,
             input=[
                 {

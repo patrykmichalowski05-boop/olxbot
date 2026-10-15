@@ -8,9 +8,19 @@ from openai import OpenAI
 
 load_dotenv()
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+# Creating a client during import made every scanner/test require an API key,
+# including deterministic valuations. Keep the existing patchable client name.
+client = None
+
+
+def get_client():
+    global client
+    if client is None:
+        key = os.getenv("OPENAI_API_KEY")
+        if not key:
+            raise ValueError("Analiza AI nie jest skonfigurowana")
+        client = OpenAI(api_key=key)
+    return client
 
 
 def parse_json(text):
@@ -112,7 +122,7 @@ Zwróć WYŁĄCZNIE JSON:
 
     try:
 
-        response = client.responses.create(
+        response = get_client().responses.create(
             model="gpt-6-luna",
             input=prompt
         )

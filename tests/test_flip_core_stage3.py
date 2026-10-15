@@ -134,17 +134,18 @@ class Stage3Tests(unittest.TestCase):
                 original["access_token"]
             )
 
+        self.assertEqual(auth.verify_access(fresh["access_token"]), uid)
+
+        # Refresh-token replay revokes the complete session family.
         with self.assertRaises(ValueError):
             auth.refresh(
                 original["refresh_token"]
             )
 
-        self.assertEqual(
-            auth.verify_access(
-                fresh["access_token"]
-            ),
-            uid,
-        )
+        with self.assertRaises(ValueError):
+            auth.verify_access(fresh["access_token"])
+
+        fresh = auth.login("owner", "strong-test-password-123")
 
         auth.logout(
             fresh["access_token"]
@@ -176,7 +177,7 @@ class Stage3Tests(unittest.TestCase):
             )
 
         mobile = (
-            root / "mobile/src/api.ts"
+            root / "mobile/src/utils/config.ts"
         ).read_text()
 
         self.assertIn(

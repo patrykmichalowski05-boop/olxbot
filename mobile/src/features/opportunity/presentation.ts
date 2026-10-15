@@ -1,4 +1,4 @@
-import type { OpportunityCard } from './types';
+import type { OpportunityCard } from "./types";
 
 export function radarSummary(items: OpportunityCard[]) {
   const valued = items.filter((item) => item.hasValuation);
@@ -6,7 +6,8 @@ export function radarSummary(items: OpportunityCard[]) {
     item.roiBps !== null && Number.isFinite(item.roiBps) ? [item.roiBps] : [],
   );
   const profits = valued.flatMap((item) =>
-    item.operatingProfitMinor !== null && Number.isFinite(item.operatingProfitMinor)
+    item.operatingProfitMinor !== null &&
+    Number.isFinite(item.operatingProfitMinor)
       ? [item.operatingProfitMinor]
       : [],
   );
@@ -28,41 +29,46 @@ export function radarSummary(items: OpportunityCard[]) {
 export function isHotDeal(item: OpportunityCard): boolean {
   return (
     item.hasValuation &&
-    ['BUY', 'BUY_CANDIDATE'].includes(item.decision.toUpperCase()) &&
+    ["BUY", "BUY_CANDIDATE"].includes(item.decision.toUpperCase()) &&
     (item.operatingProfitMinor ?? 0) > 0
   );
 }
 
 export function opportunityRisk(item: OpportunityCard): {
   label: string;
-  tone: 'warning' | 'danger' | 'neutral';
+  tone: "warning" | "danger" | "neutral";
 } {
-  if (!item.hasValuation) return { label: 'Ryzyko nieocenione', tone: 'neutral' };
+  if (!item.hasValuation)
+    return { label: "Ryzyko nieocenione", tone: "neutral" };
   if (
-    item.confidence?.toUpperCase() === 'LOW' ||
-    /podróbk|uszkod|fraud|scam/i.test(item.topRisk ?? '')
+    item.confidence?.toUpperCase() === "LOW" ||
+    /podróbk|uszkod|fraud|scam/i.test(item.topRisk ?? "")
   ) {
-    return { label: 'Wysokie ryzyko', tone: 'danger' };
+    return { label: "Wysokie ryzyko", tone: "danger" };
   }
   // Missing risk data must never be presented as proof of low risk.
   return item.topRisk
-    ? { label: 'Do weryfikacji', tone: 'warning' }
-    : { label: 'Ryzyko nieocenione', tone: 'neutral' };
+    ? { label: "Do weryfikacji", tone: "warning" }
+    : { label: "Ryzyko nieocenione", tone: "neutral" };
 }
 
 export function opportunityInsight(item: OpportunityCard): {
   label: string;
   text: string;
 } {
-  if (item.insight?.trim()) return { label: 'Insight AI', text: item.insight.trim() };
+  if (item.insight?.trim())
+    return {
+      label: item.insightSource === "rules" ? "Analiza rynku" : "Insight AI",
+      text: item.insight.trim(),
+    };
   return {
-    label: 'Sygnał z analizy',
+    label: "Sygnał z analizy",
     text: !item.hasValuation
-      ? 'Za mało danych do wiarygodnej wyceny. Sprawdź model i stan przed zakupem.'
+      ? "Za mało danych do wiarygodnej wyceny. Sprawdź model i stan przed zakupem."
       : item.topRisk
         ? item.topRisk
         : isHotDeal(item)
-          ? 'Dodatni wynik w prognozie. Zweryfikuj stan i koszty przed zakupem.'
-          : 'Porównaj cenę, koszty i stan przedmiotu przed podjęciem decyzji.',
+          ? "Dodatni wynik w prognozie. Zweryfikuj stan i koszty przed zakupem."
+          : "Porównaj cenę, koszty i stan przedmiotu przed podjęciem decyzji.",
   };
 }

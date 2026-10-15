@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { AppScreen } from '@/components/AppScreen';
 import { Badge } from '@/components/Badge';
 import { DemoBanner } from '@/components/DemoBanner';
@@ -12,6 +13,7 @@ import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import { layout } from '@/theme/tokens';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { logout, mode } = useAuth();
   const { colors, spacing, typography, radii, preference, setPreference } = useTheme();
   const options: { id: ThemePreference; label: string; icon: IconName }[] = [
@@ -138,6 +140,11 @@ export default function SettingsScreen() {
             );
           })}
         </View>
+        <PrimaryButton
+          label="Moje wyszukiwania i alerty"
+          icon="search-outline"
+          onPress={() => router.push('/searches')}
+        />
         <PrimaryButton
           label="Wyloguj się"
           variant="secondary"

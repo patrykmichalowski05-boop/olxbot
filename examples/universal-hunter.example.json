@@ -1,0 +1,50 @@
+{
+  "owner_id": "UZUPELNIJ_ID_KONTA_Z_API",
+  "database": "../runtime/hunter.sqlite3",
+  "interval_seconds": 180,
+  "sources": [
+    {"platform": "OLX", "mode": "html", "min_interval_seconds": 10},
+    {"platform": "FACEBOOK", "mode": "browser", "storage_state_env": "FLIP_FACEBOOK_STORAGE_STATE", "min_interval_seconds": 15},
+    {"platform": "ALLEGRO_LOKALNIE", "mode": "html", "min_interval_seconds": 10},
+    {"platform": "OTOMOTO", "mode": "browser", "min_interval_seconds": 15},
+    {"platform": "VINTED", "mode": "browser", "min_interval_seconds": 15}
+  ],
+  "searches": [
+    {
+      "id": "rtx-4070-12gb", "name": "RTX 4070 12 GB", "query": "RTX 4070",
+      "category": "ELECTRONICS", "attributes": {"vram_gb": 12},
+      "excluded_terms": ["uszkodzona", "pudełko", "chłodzenie"],
+      "max_price_minor": 170000, "min_profit_minor": 30000, "min_roi_bps": 2000,
+      "min_comparables": 5, "notify_initial": false,
+      "costs": {"shipping_minor": 2000, "sale_fee_bps": 600, "reserve_bps": 500}
+    },
+    {
+      "id": "iphone-14-128", "name": "iPhone 14 128 GB", "query": "iPhone 14",
+      "category": "ELECTRONICS", "attributes": {"storage_gb": 128},
+      "excluded_terms": ["icloud", "zablokowany", "atrapa", "pudełko"],
+      "max_price_minor": 150000, "min_profit_minor": 25000,
+      "costs": {"shipping_minor": 2000, "repairs_minor": 10000, "reserve_bps": 800}
+    },
+    {
+      "id": "golf-2018", "name": "Golf 2018 2.0 TDI manual", "query": "Volkswagen Golf",
+      "platforms": ["OLX", "FACEBOOK", "ALLEGRO_LOKALNIE", "OTOMOTO"],
+      "category": "CAR", "variant_keys": ["generation", "body_type"],
+      "attributes": {"year": 2018, "engine": "2.0 TDI", "gearbox": "manual", "mileage_km": {"min": 80000, "max": 160000}},
+      "min_profit_minor": 500000, "min_roi_bps": 1200,
+      "costs": {"travel_minor": 30000, "repairs_minor": 200000, "other_minor": 150000, "reserve_bps": 500}
+    },
+    {
+      "id": "dunk-low-38", "name": "Nike Dunk Low DD1503-101 r. 38", "query": "Nike Dunk Low",
+      "platforms": ["OLX", "FACEBOOK", "ALLEGRO_LOKALNIE", "VINTED"],
+      "category": "FASHION", "attributes": {"style_code": "DD1503-101", "size": "38"},
+      "max_price_minor": 20000, "min_profit_minor": 8000,
+      "costs": {"shipping_minor": 1500, "reserve_bps": 1000}
+    },
+    {
+      "id": "makita-ddf484", "name": "Makita DDF484 w dobrej cenie", "query": "Makita DDF484",
+      "category": "TOOLS", "variant_keys": ["kit"],
+      "attributes": {"kit": "body"}, "purpose": "cheap", "max_price_minor": 25000,
+      "excluded_terms": ["uszkodzona", "obudowa"]
+    }
+  ]
+}

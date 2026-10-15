@@ -35,6 +35,7 @@ function RootNavigator() {
         <Stack.Screen name="flips/[dealId]" />
         <Stack.Screen name="purchase/[listingId]" />
         <Stack.Screen name="analytics/index" />
+        <Stack.Screen name="searches/index" />
       </Stack>
     </>
   );

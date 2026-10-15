@@ -1,4 +1,4 @@
-import type { CategoryTabId } from '@/utils/labels';
+import type { CategoryTabId } from "@/utils/labels";
 
 export type OpportunityCard = {
   id: string;
@@ -20,6 +20,7 @@ export type OpportunityCard = {
   confidence?: string;
   topRisk?: string;
   insight?: string;
+  insightSource?: "ai" | "rules";
   verifiedAt: string | null;
   imageUrl?: string | null;
   url: string | null;
@@ -34,7 +35,11 @@ export type OpportunityDetail = OpportunityCard & {
   risks: string[];
   unknowns: string[];
   dataQuality?: string;
-  specs: { label: string; value: string; provenance: 'declared' | 'extracted' | 'verified' }[];
+  specs: {
+    label: string;
+    value: string;
+    provenance: "declared" | "extracted" | "verified";
+  }[];
   comparisons: MarketComparison[];
   priceHistory: { at: string; priceMinor: number | null; label: string }[];
   conservativeScenario?: FinancialScenario;
@@ -49,7 +54,7 @@ export type MarketComparison = {
   priceMinor: number | null;
   source: string;
   observedAt: string;
-  kind: 'active' | 'sold';
+  kind: "active" | "sold";
 };
 
 export type FinancialScenario = {

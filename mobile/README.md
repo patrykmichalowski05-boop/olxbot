@@ -5,6 +5,9 @@ Uniwersalny klient mobilny do oceny okazji flipowych — **FlipRadar**.
 Szczegóły implementacji: [GUI_IMPLEMENTATION.md](./GUI_IMPLEMENTATION.md)
 Luki API: [FRONTEND_BACKEND_GAPS.md](./FRONTEND_BACKEND_GAPS.md)
 
+Zapisane modele i powiadomienia: [konfiguracja uniwersalnego radaru](../docs/UNIVERSAL_SETUP.md).
+Ekran **Ustawienia → Moje wyszukiwania i alerty** wymaga włączenia nowego modułu API przez `FLIP_HUNTER_DB`.
+
 ## Szybki start
 
 ```bash

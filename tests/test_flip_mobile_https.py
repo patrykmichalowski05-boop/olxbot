@@ -53,25 +53,25 @@ class MobileHTTPSTests(unittest.TestCase):
 
     def test_mobile_diagnostics_present(self):
         api = (
-            ROOT / "mobile/src/api.ts"
+            ROOT / "mobile/src/api/client.ts"
         ).read_text(encoding="utf-8")
 
         app = (
-            ROOT / "mobile/App.tsx"
+            ROOT / "mobile/src/app/(auth)/login.tsx"
         ).read_text(encoding="utf-8")
 
         self.assertIn(
-            "checkApiConnection",
+            "checkApiReachable",
             api,
         )
 
         self.assertIn(
-            "checkApiConnection",
+            "checkConnection()",
             app,
         )
 
         self.assertIn(
-            "Sprawdź połączenie z API",
+            "Sprawdź połączenie",
             app,
         )
 

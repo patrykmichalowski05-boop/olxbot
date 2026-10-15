@@ -186,15 +186,15 @@ class Stage4Tests(unittest.TestCase):
     def test_mobile_points_to_radar(self):
         root = Path(__file__).resolve().parents[1]
 
-        api = (root / "mobile/src/api.ts").read_text(
+        api = (root / "mobile/src/api/endpoints/radar.ts").read_text(
             encoding="utf-8"
         )
-        app = (root / "mobile/App.tsx").read_text(
+        app = (root / "mobile/src/app/(tabs)/radar/index.tsx").read_text(
             encoding="utf-8"
         )
 
         self.assertIn(
-            "/api/v1/radar?limit=50",
+            "'/api/v1/radar'",
             api,
         )
         self.assertNotIn(
@@ -202,20 +202,20 @@ class Stage4Tests(unittest.TestCase):
             api,
         )
         self.assertIn(
-            "getRadarPage(",
+            "api.radarPage(",
             app,
         )
         self.assertIn(
-            "getRadarPage(",
+            "fetchRadarPage(",
             api,
         )
         self.assertIn(
-            "encodeURIComponent(q)",
+            "params.set('q', query.q.trim().slice(0, 120))",
             api,
         )
         self.assertIn(
             "item.snapshot_id",
-            app,
+            (root / "mobile/src/api/mappers/opportunity.ts").read_text(encoding="utf-8"),
         )
 
 
