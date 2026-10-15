@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { ApiError, apiErrorMessage } from "@/api/errors";
 import {
+  deleteSearch,
   getSearches,
   getSourceHealth,
   saveSearch,
@@ -13,6 +14,7 @@ import {
 } from "@/api/endpoints/searches";
 import { AppScreen } from "@/components/AppScreen";
 import { Badge } from "@/components/Badge";
+import { ConfirmationSheet } from "@/components/ConfirmationSheet";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { FormField } from "@/components/FormField";
@@ -51,9 +53,11 @@ export default function SearchesScreen() {
     "ELECTRONICS" | "CAR" | "FASHION" | "OTHER"
   >("ELECTRONICS");
   const [platforms, setPlatforms] = useState<SearchPlatform[]>([
-    ...searchPlatforms,
+    "ALLEGRO_LOKALNIE",
   ]);
   const [saving, setSaving] = useState(false);
+  const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<SavedSearch | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const enabled = mode === "live";
@@ -82,6 +86,76 @@ export default function SearchesScreen() {
       cache.invalidateQueries({ queryKey: ["source-health", userId] }),
     ]);
   };
+  const numberInput = (minor: number | null | undefined) =>
+    minor == null ? "" : String(minor / 100);
+
+  const resetForm = () => {
+    setEditingSearch(null);
+    setQuery("");
+    setBudget("");
+    setProfit("300");
+    setRoi("20");
+    setShipping("20");
+    setRepairs("0");
+    setFee("0");
+    setReserve("5");
+    setExcluded("uszkodzony, pudełko, atrapa");
+    setPurpose("flip");
+    setCategory("ELECTRONICS");
+    setPlatforms(["ALLEGRO_LOKALNIE"]);
+  };
+
+  const editSearch = (item: SavedSearch) => {
+    setEditingSearch(item);
+    setQuery(item.query);
+    setBudget(numberInput(item.max_price_minor));
+    setProfit(numberInput(item.min_profit_minor));
+    setRoi(numberInput(item.min_roi_bps));
+    setShipping(numberInput(item.costs.shipping_minor));
+    setRepairs(numberInput(item.costs.repairs_minor));
+    setFee(numberInput(item.costs.sale_fee_bps));
+    setReserve(numberInput(item.costs.reserve_bps));
+    setExcluded(item.excluded_terms.join(", "));
+    setPurpose(item.purpose);
+    setCategory(
+      ["ELECTRONICS", "CAR", "FASHION", "OTHER"].includes(item.category)
+        ? (item.category as "ELECTRONICS" | "CAR" | "FASHION" | "OTHER")
+        : "OTHER",
+    );
+    setPlatforms([...item.platforms]);
+    setError("");
+    setMessage(
+      `Edytujesz: ${item.name}. Przewiń do formularza na górze.`
+    );
+  };
+
+  const removeSearch = async () => {
+    if (!pendingDelete || saving) return;
+
+    const id = pendingDelete.id;
+    const name = pendingDelete.name;
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await deleteSearch(id);
+
+      if (editingSearch?.id === id) {
+        resetForm();
+      }
+
+      setPendingDelete(null);
+      setMessage(`Usunięto wyszukiwanie: ${name}`);
+
+      await refresh();
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const toggle = async (item: SavedSearch) => {
     setSaving(true);
     setError("");
@@ -127,7 +201,9 @@ export default function SearchesScreen() {
     setMessage("");
     try {
       await saveSearch({
-        id: `search-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ...(editingSearch ?? {}),
+        id: editingSearch?.id ??
+          `search-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: query.trim().slice(0, 120),
         query: query.trim(),
         platforms,
@@ -142,6 +218,7 @@ export default function SearchesScreen() {
           .filter(Boolean),
         notify_initial: false,
         costs: {
+          ...(editingSearch?.costs ?? {}),
           shipping_minor: deliveryCost,
           repairs_minor: repairCost,
           travel_minor: 0,
@@ -150,9 +227,14 @@ export default function SearchesScreen() {
           reserve_bps: reserveBps,
         },
       });
-      setQuery("");
+      const wasEditing = editingSearch !== null;
+
+      resetForm();
+
       setMessage(
-        "Wyszukiwanie zapisane. Nowe okazje pojawią się po sprawdzeniu źródeł.",
+        wasEditing
+          ? "Zmiany zapisane. Zmiana filtrów może rozpocząć nową obserwację ofert."
+          : "Wyszukiwanie zapisane. Nowe okazje pojawią się po sprawdzeniu źródeł.",
       );
       await refresh();
     } catch (e) {
@@ -207,7 +289,7 @@ export default function SearchesScreen() {
           <>
             <View style={panel}>
               <Text style={[typography.headline, { color: colors.text }]}>
-                Czego szukasz?
+                {editingSearch ? "Edytujesz wyszukiwanie" : "Czego szukasz?"}
               </Text>
               <FormField
                 label="Dokładny model i wariant"
@@ -216,6 +298,15 @@ export default function SearchesScreen() {
                 onChangeText={setQuery}
                 maxLength={150}
               />
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textMuted },
+                ]}
+              >
+                Domyślnie zaznaczono Allegro Lokalnie.
+                Pozostałe platformy wymagają weryfikacji integracji.
+              </Text>
               <View
                 style={{
                   flexDirection: "row",
@@ -373,13 +464,24 @@ export default function SearchesScreen() {
                 Telegram wymagają aktywnej konfiguracji na Twoim koncie.
               </Text>
               <PrimaryButton
-                label="Zapisz wyszukiwanie"
-                icon="add-outline"
+                label={editingSearch ? "Zapisz zmiany" : "Zapisz wyszukiwanie"}
+                icon={editingSearch ? "save-outline" : "add-outline"}
                 loading={saving}
                 onPress={() => {
                   void submit();
                 }}
               />
+              {editingSearch ? (
+                <PrimaryButton
+                  label="Anuluj edycję"
+                  variant="secondary"
+                  disabled={saving}
+                  onPress={() => {
+                    resetForm();
+                    setMessage("");
+                  }}
+                />
+              ) : null}
             </View>
             {searches.data?.length ? (
               searches.data.map((item) => (
@@ -424,6 +526,26 @@ export default function SearchesScreen() {
                     }
                     tone={item.enabled ? "accent" : "neutral"}
                   />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: spacing.sm,
+                    }}
+                  >
+                    <PrimaryButton
+                      label="Edytuj"
+                      variant="secondary"
+                      disabled={saving}
+                      onPress={() => editSearch(item)}
+                    />
+                    <PrimaryButton
+                      label="Usuń"
+                      variant="ghost"
+                      disabled={saving}
+                      onPress={() => setPendingDelete(item)}
+                    />
+                  </View>
                   {health.data?.items
                     .filter((row) => row.search_id === item.id)
                     .map((row) => (
@@ -470,6 +592,23 @@ export default function SearchesScreen() {
         ) : null}
         {error ? <ErrorState message={error} /> : null}
       </View>
+      <ConfirmationSheet
+        visible={pendingDelete !== null}
+        title="Usunąć wyszukiwanie?"
+        description={
+          pendingDelete
+            ? `Usuniesz profil „${pendingDelete.name}”, jego wyniki w radarze i oczekujące alerty. Tej operacji nie można cofnąć.`
+            : ""
+        }
+        confirmLabel="Usuń wyszukiwanie"
+        onConfirm={() => {
+          void removeSearch();
+        }}
+        onCancel={() => {
+          if (!saving) setPendingDelete(null);
+        }}
+        loading={saving}
+      />
     </AppScreen>
   );
 }

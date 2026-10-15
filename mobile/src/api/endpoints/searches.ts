@@ -57,6 +57,13 @@ export async function saveSearch(
     },
   );
 }
+export async function deleteSearch(id: string): Promise<void> {
+  await apiRequest<{ deleted: boolean }>(
+    `/api/v1/universal/searches/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+}
+
 export async function getSourceHealth(signal?: AbortSignal) {
   return apiRequest<{
     items: SourceHealth[];
