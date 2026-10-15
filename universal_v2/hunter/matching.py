@@ -44,14 +44,60 @@ def attributes(offer: Offer) -> dict:
         result.setdefault("item_type", "PHONE")
     elif gpu:
         result.setdefault("gpu", " ".join(x for x in gpu.groups() if x))
+        # Nazwy serii laptopów/komputerów nie zawsze zawierają słowo
+        # "laptop". Bez tej ochrony np. "Lenovo LOQ 16 GB RAM" zostało
+        # uznane za samodzielną kartę z 16 GB VRAM.
         full_pc = bool(
-            re.search(r"\b(pc|komputer|laptop|notebook|zestaw komputerowy)\b", text)
+            re.search(
+                r"\b(pc|komputer|laptop|notebook|zestaw komputerowy|"
+                r"stacja robocza|workstation|gamingowy|"
+                r"lenovo (?:loq|legion|ideapad gaming)|"
+                r"(?:asus )?(?:rog zephyrus|tuf gaming|rog strix g\d{1,2})|"
+                r"hp omen|alienware|"
+                r"msi (?:creator|katana|raider|stealth|cyborg|vector)|"
+                r"acer (?:nitro|predator))\b",
+                text,
+            )
         )
         result.setdefault("item_type", "PC" if full_pc else "GPU")
         if not full_pc:
-            capacities = set(re.findall(r"\b(4|6|8|10|12|16|20|24|32|48) gb\b", text))
-            if len(capacities) == 1:
-                result.setdefault("vram_gb", int(next(iter(capacities))))
+            title = normalize(offer.title)
+            title_gpu = re.search(
+                r"\b(rtx|gtx|rx) (\d{3,4})(?: (ti super|ti|super|xtx|xt))?\b",
+                title,
+            )
+            # Jawna pojemność VRAM, a nie przypadkowe 16/32 GB RAM.
+            explicit = set()
+            for hit in re.finditer(
+                r"\b(?:vram|pamiec (?:karty|graficzna)) (?:\d+ )?(4|6|8|10|12|16|20|24|32|48) gb\b"
+                r"|\b(4|6|8|10|12|16|20|24|32|48) gb (?:vram|gddr)\b",
+                text,
+            ):
+                explicit.add(int(hit.group(1) or hit.group(2)))
+            if title_gpu:
+                tail = title[title_gpu.end():]
+                after_model = re.match(
+                    r"\s*(4|6|8|10|12|16|20|24|32|48) gb(?! (?:ram|ddr))\b",
+                    tail,
+                )
+                if after_model:
+                    explicit.add(int(after_model.group(1)))
+            if len(explicit) == 1:
+                result.setdefault("vram_gb", explicit.pop())
+            elif not explicit:
+                # Wyłącznie modele desktopowe o stałej, znanej pojemności.
+                # RTX 4060 Ti / 5060 Ti mają kilka wariantów i nie mogą
+                # otrzymać pamięci z samej nazwy modelu.
+                known_desktop_vram = {
+                    "rtx 4070": 12,
+                    "rtx 4070 super": 12,
+                    "rtx 4070 ti": 12,
+                    "rtx 4070 ti super": 16,
+                }
+                known = known_desktop_vram.get(result.get("gpu"))
+                if known is not None and "vram_gb" not in result:
+                    result["vram_gb"] = known
+                    result["vram_source"] = "MODEL_SPEC"
         else:
             from facebook.facebook_specs_parser import parse_pc_specs
 

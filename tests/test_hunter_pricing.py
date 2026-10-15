@@ -90,6 +90,42 @@ def test_model_and_variant_do_not_leak(title):
     assert not matches(candidate, search(attributes={"vram_gb": 12}))
 
 
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Lenovo LOQ15ARP9 / RTX 4070 / Ryzen 7 / 16 GB RAM / 1 TB SSD",
+        "ASUS ROG Zephyrus G16 RTX 4070 / 32GB RAM / OLED",
+        "HP OMEN 17 RTX 4070 8GB / 16GB DDR5",
+        "Dell Alienware m16R1 RTX 4070 / 32 GB RAM",
+    ],
+)
+def test_laptop_ram_never_becomes_desktop_gpu_vram(title):
+    from universal_v2.hunter.matching import attributes
+
+    listing = offer(title=title)
+    observed = attributes(listing)
+    assert observed["item_type"] == "PC"
+    assert not matches(listing, search(attributes={"vram_gb": 12}))
+
+
+def test_known_desktop_gpu_vram_and_explicit_conflict():
+    from universal_v2.hunter.matching import attributes
+
+    standalone = offer(title="RTX 4070 MSI Gaming X Trio karta graficzna")
+    spec = attributes(standalone)
+    assert spec["item_type"] == "GPU"
+    assert spec["vram_gb"] == 12
+    assert spec["vram_source"] == "MODEL_SPEC"
+    assert matches(standalone, search(attributes={"vram_gb": 12}))
+
+    contradictory = offer(title="RTX 4070 16GB karta graficzna")
+    assert attributes(contradictory)["vram_gb"] == 16
+    assert not matches(contradictory, search(attributes={"vram_gb": 12}))
+
+    unknown_variant = offer(title="RTX 5060 Ti karta graficzna")
+    assert "vram_gb" not in attributes(unknown_variant)
+
+
 def test_phone_suffix_and_storage_are_distinct():
     profile = Search("phone", "a", "phone", "iPhone 14")
     assert not matches(offer(title="iPhone 14 Pro 128GB"), profile)
