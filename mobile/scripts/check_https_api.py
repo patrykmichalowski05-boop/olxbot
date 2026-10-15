@@ -97,6 +97,7 @@ def probe(base):
         target,
         headers={
             "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0",
         },
     )
 

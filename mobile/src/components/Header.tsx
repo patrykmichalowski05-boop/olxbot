@@ -1,10 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-
 import { useTheme } from '@/theme/ThemeProvider';
-import { touchTarget } from '@/theme/tokens';
+import { IconButton } from './IconButton';
 
 type Props = {
   title: string;
@@ -14,7 +12,6 @@ type Props = {
   rightSlot?: React.ReactNode;
   showNotifications?: boolean;
 };
-
 export function Header({
   title,
   subtitle,
@@ -25,53 +22,50 @@ export function Header({
 }: Props) {
   const { colors, spacing, typography } = useTheme();
   const router = useRouter();
-
   return (
-    <View style={[styles.row, { marginBottom: spacing.md, gap: spacing.sm }]}>
+    <View style={[styles.row, { marginBottom: spacing.lg, gap: spacing.md }]}>
       {showBack ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Wróć"
+        <IconButton
+          icon="chevron-back"
+          label="Wróć"
           onPress={onBack ?? (() => router.back())}
-          style={[styles.iconBtn, { minHeight: touchTarget, minWidth: touchTarget }]}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
-      ) : (
-        <View style={{ width: touchTarget }} />
-      )}
-
+        />
+      ) : null}
       <View style={styles.titleWrap}>
-        <Text style={[typography.headline, { color: colors.text }]} numberOfLines={1}>
+        {!showBack ? (
+          <Text style={[typography.label, { color: colors.accent, marginBottom: 4 }]}>
+            FLIPRADAR
+          </Text>
+        ) : null}
+        <Text
+          style={[typography.title, { color: colors.text }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+        >
           {title}
         </Text>
         {subtitle ? (
-          <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
+          <Text style={[typography.caption, { color: colors.textMuted, marginTop: 4 }]}>
             {subtitle}
           </Text>
         ) : null}
       </View>
-
       <View style={styles.actions}>
         {rightSlot}
         {showNotifications ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Powiadomienia"
+          <IconButton
+            icon="notifications-outline"
+            label="Powiadomienia"
             onPress={() => router.push('/notifications')}
-            style={[styles.iconBtn, { minHeight: touchTarget, minWidth: touchTarget }]}
-          >
-            <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          </Pressable>
+          />
         ) : null}
       </View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  titleWrap: { flex: 1 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  iconBtn: { alignItems: 'center', justifyContent: 'center' },
+  titleWrap: { flex: 1, minWidth: 0 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

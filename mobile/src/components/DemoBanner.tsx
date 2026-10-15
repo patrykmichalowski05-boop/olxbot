@@ -18,16 +18,16 @@ export function DemoBanner() {
       style={[
         styles.banner,
         {
-          backgroundColor: colors.riskBg,
-          borderColor: colors.risk,
+          backgroundColor: colors.accentBg,
+          borderColor: colors.accentMuted,
           borderRadius: radii.sm,
           padding: spacing.sm,
           marginBottom: spacing.sm,
         },
       ]}
     >
-      <Text style={[typography.caption, { color: colors.risk, fontWeight: '600' }]}>
-        TRYB DEMO — dane przykładowe, zapis finansowy nie trafia do API live.
+      <Text style={[typography.caption, { color: colors.accent, fontWeight: '600' }]}>
+        Tryb demo · Dane przykładowe
       </Text>
     </View>
   );

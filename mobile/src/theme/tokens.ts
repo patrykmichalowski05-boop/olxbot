@@ -17,25 +17,33 @@ export type ThemeColors = {
   lossBg: string;
   warning: string;
   overlay: string;
+  accentBg: string;
+  onAccent: string;
+  textSubtle: string;
+  warningBg: string;
 };
 
 export const darkColors: ThemeColors = {
-  background: '#0B1220',
-  surface: '#111C2E',
-  surfaceElevated: '#162338',
-  border: '#243047',
-  text: '#F1F5F9',
-  textMuted: '#A8B5C8',
-  accent: '#2DD4BF',
-  accentMuted: '#1A9E8C',
-  success: '#34D399',
-  successBg: '#0F2A22',
-  risk: '#FBBF24',
-  riskBg: '#2A220F',
-  loss: '#F87171',
-  lossBg: '#2A1414',
-  warning: '#FB923C',
-  overlay: 'rgba(11, 18, 32, 0.72)',
+  background: '#080F1C',
+  surface: '#101B2C',
+  surfaceElevated: '#17253A',
+  border: '#223249',
+  text: '#F2F6FC',
+  textMuted: '#9AADC5',
+  textSubtle: '#8196B1',
+  accent: '#40DCE5',
+  accentMuted: '#218C99',
+  accentBg: '#11303D',
+  onAccent: '#071A24',
+  success: '#59DCA5',
+  successBg: '#12302A',
+  risk: '#F0BC61',
+  riskBg: '#332A1B',
+  loss: '#F88791',
+  lossBg: '#341E2A',
+  warning: '#F0BC61',
+  warningBg: '#332A1B',
+  overlay: 'rgba(3, 8, 18, 0.78)',
 };
 
 export const lightColors: ThemeColors = {
@@ -55,6 +63,10 @@ export const lightColors: ThemeColors = {
   lossBg: '#FEF2F2',
   warning: '#EA580C',
   overlay: 'rgba(15, 23, 42, 0.5)',
+  accentBg: '#E1F5F6',
+  onAccent: '#FFFFFF',
+  textSubtle: '#64748B',
+  warningBg: '#FFFBEB',
 };
 
 export const spacing = {
@@ -62,6 +74,7 @@ export const spacing = {
   sm: 8,
   md: 12,
   lg: 16,
+  section: 20,
   xl: 24,
   xxl: 32,
 } as const;
@@ -70,11 +83,21 @@ export const radii = {
   sm: 8,
   md: 12,
   lg: 16,
+  xl: 20,
+  xxl: 24,
   pill: 999,
 } as const;
 
 export const typography = {
-  title: { fontSize: 24, fontWeight: '700' as const, lineHeight: 30 },
+  label: { fontSize: 11, fontWeight: '700' as const, lineHeight: 16, letterSpacing: 1.1 },
+  tab: { fontSize: 11, fontWeight: '600' as const, lineHeight: 16 },
+  hero: { fontSize: 36, fontWeight: '700' as const, lineHeight: 44, letterSpacing: -1.2 },
+  title: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    lineHeight: 34,
+    letterSpacing: -0.8,
+  },
   headline: { fontSize: 18, fontWeight: '600' as const, lineHeight: 24 },
   body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
   bodyStrong: { fontSize: 15, fontWeight: '600' as const, lineHeight: 21 },
@@ -83,4 +106,5 @@ export const typography = {
   moneySmall: { fontSize: 16, fontWeight: '700' as const, lineHeight: 22 },
 };
 
-export const touchTarget = 48;
+export const touchTarget = 44;
+export const layout = { contentMaxWidth: 1040, formMaxWidth: 640 } as const;

@@ -96,6 +96,8 @@ export function mapRadarItem(item: RadarApiItem): OpportunityCard {
           ? `${Math.round(valuation.ai_confidence * 100)}%`
           : undefined,
     topRisk: pickRisk(valuation),
+    insight: typeof valuation.ai_summary === 'string' ? valuation.ai_summary : undefined,
+    imageUrl: typeof valuation.image_url === 'string' ? valuation.image_url : null,
     verifiedAt: item.observed_at,
     url: item.url,
     category: inferCategory(item.title, valuation),

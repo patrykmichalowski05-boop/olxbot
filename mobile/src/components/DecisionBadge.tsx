@@ -1,41 +1,36 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
-import { useTheme } from '@/theme/ThemeProvider';
+import { Badge } from './Badge';
 import { decisionLabel, decisionTone } from '@/utils/labels';
 
-type Props = { decision: string };
-
-export function DecisionBadge({ decision }: Props) {
-  const { colors, radii, typography } = useTheme();
+export function DecisionBadge({
+  decision,
+  compact = false,
+}: {
+  decision: string;
+  compact?: boolean;
+}) {
   const tone = decisionTone(decision);
-
-  const palette =
-    tone === 'success'
-      ? { fg: colors.success, bg: colors.successBg }
-      : tone === 'risk'
-        ? { fg: colors.risk, bg: colors.riskBg }
-        : tone === 'loss'
-          ? { fg: colors.loss, bg: colors.lossBg }
-          : { fg: colors.textMuted, bg: colors.surfaceElevated };
-
+  const key = decision.toUpperCase();
+  const label = compact
+    ? ['BUY_CANDIDATE', 'BUY'].includes(key)
+      ? 'BUY'
+      : key === 'SKIP' || key === 'NO_RELIABLE_VALUATION'
+        ? 'SKIP'
+        : 'WATCH'
+    : decisionLabel(decision);
   return (
-    <View
-      accessibilityRole="text"
+    <Badge
+      label={label}
       accessibilityLabel={`Decyzja: ${decisionLabel(decision)}`}
-      style={[styles.badge, { backgroundColor: palette.bg, borderRadius: radii.pill }]}
-    >
-      <Text style={[typography.caption, { color: palette.fg, fontWeight: '600' }]}>
-        {decisionLabel(decision)}
-      </Text>
-    </View>
+      tone={
+        tone === 'success'
+          ? 'success'
+          : tone === 'risk'
+            ? 'warning'
+            : tone === 'loss'
+              ? 'danger'
+              : 'neutral'
+      }
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-});

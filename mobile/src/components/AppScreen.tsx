@@ -3,16 +3,19 @@ import { ScrollView, StyleSheet, View, ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme/ThemeProvider';
+import { layout } from '@/theme/tokens';
 
 type Props = ViewProps & {
   scroll?: boolean;
   padded?: boolean;
+  bottomInset?: boolean;
   children: React.ReactNode;
 };
 
 export function AppScreen({
   scroll = false,
   padded = true,
+  bottomInset = true,
   children,
   style,
   ...rest
@@ -24,8 +27,9 @@ export function AppScreen({
     <View
       style={[
         styles.inner,
+        scroll ? { flexGrow: 1 } : { flex: 1 },
         padded && { paddingHorizontal: spacing.lg },
-        { paddingBottom: insets.bottom + spacing.lg },
+        { paddingBottom: spacing.lg + (bottomInset ? insets.bottom : 0) },
         style,
       ]}
       {...rest}
@@ -35,9 +39,23 @@ export function AppScreen({
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.root,
+        {
+          backgroundColor: colors.background,
+          paddingTop: insets.top + spacing.sm,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       {scroll ? (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollGrow}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={styles.scrollGrow}
+        >
           {content}
         </ScrollView>
       ) : (
@@ -49,6 +67,6 @@ export function AppScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  inner: { flex: 1 },
+  inner: { width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' },
   scrollGrow: { flexGrow: 1 },
 });

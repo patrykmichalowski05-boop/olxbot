@@ -200,7 +200,7 @@ export const demoOpportunities: OpportunityDetail[] = [
     id: 'demo-gone-1',
     snapshotId: 1005,
     listingId: 505,
-    title: 'Ogłoszenie niedostępne (IMPORT_ONLY)',
+    title: 'Ogłoszenie niedostępne',
     platform: 'MANUAL',
     purchaseMinor: null,
     operatingProfitMinor: null,

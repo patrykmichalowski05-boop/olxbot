@@ -19,6 +19,7 @@ export type OpportunityCard = {
   decision: string;
   confidence?: string;
   topRisk?: string;
+  insight?: string;
   verifiedAt: string | null;
   imageUrl?: string | null;
   url: string | null;

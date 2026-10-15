@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  ViewStyle,
-} from 'react-native';
-
+import { ActivityIndicator, Pressable, StyleProp, Text, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
-import { touchTarget } from '@/theme/tokens';
+import type { IconName } from './IconButton';
 
 type Props = {
   label: string;
@@ -16,9 +10,9 @@ type Props = {
   disabled?: boolean;
   loading?: boolean;
   variant?: 'primary' | 'secondary' | 'ghost';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  icon?: IconName;
 };
-
 export function PrimaryButton({
   label,
   onPress,
@@ -26,52 +20,60 @@ export function PrimaryButton({
   loading,
   variant = 'primary',
   style,
+  icon,
 }: Props) {
   const { colors, radii, spacing, typography } = useTheme();
-
-  const background =
-    variant === 'primary'
-      ? colors.accent
-      : variant === 'secondary'
-        ? colors.surfaceElevated
-        : 'transparent';
-
-  const textColor =
-    variant === 'primary' ? colors.background : colors.text;
-
+  const foreground = variant === 'primary' ? colors.onAccent : colors.text;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{
+        disabled: Boolean(disabled || loading),
+        busy: Boolean(loading),
+      }}
+      aria-busy={Boolean(loading)}
+      aria-disabled={Boolean(disabled || loading)}
       disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.base,
         {
-          backgroundColor: background,
-          borderRadius: radii.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          gap: spacing.sm,
+          minHeight: 52,
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.lg,
+          borderRadius: radii.lg,
+          backgroundColor:
+            variant === 'primary'
+              ? colors.accent
+              : variant === 'secondary'
+                ? colors.surfaceElevated
+                : 'transparent',
           borderColor: colors.border,
           borderWidth: variant === 'secondary' ? 1 : 0,
-          opacity: pressed || disabled ? 0.75 : 1,
-          minHeight: touchTarget,
-          paddingHorizontal: spacing.lg,
+          opacity: disabled ? 0.45 : pressed ? 0.75 : 1,
         },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={textColor} />
+        <ActivityIndicator color={foreground} />
       ) : (
-        <Text style={[typography.bodyStrong, { color: textColor, textAlign: 'center' }]}>
-          {label}
-        </Text>
+        <>
+          {icon ? <Ionicons name={icon} size={18} color={foreground} /> : null}
+          <Text
+            style={[
+              typography.bodyStrong,
+              { color: foreground, textAlign: 'center', flexShrink: 1 },
+            ]}
+          >
+            {label}
+          </Text>
+        </>
       )}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

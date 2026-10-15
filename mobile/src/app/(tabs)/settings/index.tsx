@@ -1,67 +1,158 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppScreen } from '@/components/AppScreen';
+import { Badge } from '@/components/Badge';
 import { DemoBanner } from '@/components/DemoBanner';
 import { Header } from '@/components/Header';
+import type { IconName } from '@/components/IconButton';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useTheme } from '@/theme/ThemeProvider';
-import type { ThemePreference } from '@/theme/ThemeProvider';
-import { apiBaseUrl, workspaceId } from '@/utils/config';
+import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
+import { layout } from '@/theme/tokens';
 
 export default function SettingsScreen() {
-  const { logout, mode, userId } = useAuth();
-  const { colors, spacing, typography, preference, setPreference } = useTheme();
-
-  const options: { id: ThemePreference; label: string }[] = [
-    { id: 'system', label: 'Zgodnie z systemem' },
-    { id: 'dark', label: 'Ciemny' },
-    { id: 'light', label: 'Jasny' },
+  const { logout, mode } = useAuth();
+  const { colors, spacing, typography, radii, preference, setPreference } = useTheme();
+  const options: { id: ThemePreference; label: string; icon: IconName }[] = [
+    { id: 'dark', label: 'Ciemny', icon: 'moon-outline' },
+    { id: 'light', label: 'Jasny', icon: 'sunny-outline' },
+    { id: 'system', label: 'Systemowy', icon: 'phone-portrait-outline' },
   ];
-
   return (
-    <AppScreen scroll>
-      <Header title="Ustawienia" showNotifications={false} />
-      <DemoBanner />
-
-      <View style={{ gap: spacing.md, marginBottom: spacing.xl }}>
-        <Text style={[typography.bodyStrong, { color: colors.text }]}>Konto</Text>
-        <Text style={[typography.body, { color: colors.textMuted }]}>
-          Użytkownik: {userId ?? '—'}
-        </Text>
-        <Text style={[typography.body, { color: colors.textMuted }]}>
-          Tryb: {mode === 'demo' ? 'DEMO' : 'LIVE'}
-        </Text>
-        <Text style={[typography.caption, { color: colors.textMuted }]}>
-          API: {apiBaseUrl() || 'nie skonfigurowane'}
-        </Text>
-        <Text style={[typography.caption, { color: colors.textMuted }]}>
-          Workspace: {workspaceId() ?? 'brak (wymagane dla API v2 flipów)'}
-        </Text>
-      </View>
-
-      <Text style={[typography.bodyStrong, { color: colors.text, marginBottom: spacing.sm }]}>
-        Motyw
-      </Text>
-      {options.map((option) => (
+    <AppScreen scroll bottomInset={false}>
+      <View
+        style={{
+          width: '100%',
+          maxWidth: layout.formMaxWidth,
+          alignSelf: 'center',
+          gap: spacing.lg,
+        }}
+      >
+        <View>
+          <Header title="Konto i ustawienia" showNotifications={false} />
+          <DemoBanner />
+        </View>
+        <View
+          style={[
+            styles.panel,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.xxl,
+              padding: spacing.section,
+            },
+          ]}
+        >
+          <View style={{ flexDirection: 'row', gap: spacing.lg, alignItems: 'center' }}>
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: radii.lg,
+                backgroundColor: colors.accentBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="person-outline" size={26} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1, gap: spacing.sm }}>
+              <Text style={[typography.headline, { color: colors.text }]}>
+                {mode === 'demo' ? 'Konto demonstracyjne' : 'Twoje konto FlipRadar'}
+              </Text>
+              <Badge
+                label={mode === 'demo' ? 'Dane przykładowe' : 'Konto użytkownika'}
+                tone="accent"
+              />
+            </View>
+          </View>
+        </View>
+        <View
+          style={[
+            styles.panel,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.xxl,
+              padding: spacing.section,
+              gap: spacing.lg,
+            },
+          ]}
+        >
+          <View>
+            <Text style={[typography.headline, { color: colors.text }]}>
+              Wygląd aplikacji
+            </Text>
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.textMuted, marginTop: spacing.sm },
+              ]}
+            >
+              Wybierz motyw, w którym najlepiej Ci się pracuje.
+            </Text>
+          </View>
+          {options.map((option) => {
+            const active = preference === option.id;
+            return (
+              <Pressable
+                key={option.id}
+                accessibilityRole="radio"
+                accessibilityLabel={option.label}
+                accessibilityState={{ checked: active }}
+                aria-checked={active}
+                onPress={() => setPreference(option.id)}
+                style={({ pressed }) => ({
+                  minHeight: 56,
+                  borderWidth: 1,
+                  borderColor: active ? colors.accentMuted : colors.border,
+                  borderRadius: radii.lg,
+                  padding: spacing.lg,
+                  backgroundColor: active ? colors.accentBg : colors.background,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Ionicons
+                  name={option.icon}
+                  size={20}
+                  color={active ? colors.accent : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    typography.bodyStrong,
+                    { flex: 1, color: active ? colors.accent : colors.text },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                <Ionicons
+                  name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={active ? colors.accent : colors.textSubtle}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
         <PrimaryButton
-          key={option.id}
-          label={`${option.label}${preference === option.id ? ' ✓' : ''}`}
-          variant={preference === option.id ? 'primary' : 'secondary'}
-          onPress={() => setPreference(option.id)}
-          style={{ marginBottom: spacing.sm }}
+          label="Wyloguj się"
+          variant="secondary"
+          icon="log-out-outline"
+          onPress={() => {
+            void logout();
+          }}
         />
-      ))}
-
-      <View style={{ marginTop: spacing.xl }}>
-        <PrimaryButton label="Wyloguj" variant="secondary" onPress={() => void logout()} />
+        <Text
+          style={[typography.caption, { color: colors.textSubtle, textAlign: 'center' }]}
+        >
+          FlipRadar · Twoje centrum okazji
+        </Text>
       </View>
-
-      <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.lg }]}>
-        Powiadomienia push i menu udostępniania wymagają osobnej konfiguracji natywnej — patrz
-        GUI_IMPLEMENTATION.md.
-      </Text>
     </AppScreen>
   );
 }
+const styles = StyleSheet.create({ panel: { borderWidth: 1 } });

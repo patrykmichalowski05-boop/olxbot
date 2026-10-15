@@ -60,7 +60,7 @@ export default function LoginScreen() {
       <Text style={[typography.body, { color: colors.textMuted, marginBottom: spacing.xl }]}>
         {mode === 'demo'
           ? 'Podgląd interfejsu z danymi demonstracyjnymi.'
-          : 'Zaloguj się do workspace flipów.'}
+          : 'Zaloguj się i zarządzaj swoimi okazjami.'}
       </Text>
 
       <Controller
@@ -99,11 +99,12 @@ export default function LoginScreen() {
       {mode === 'live' ? (
         <View style={{ marginTop: spacing.lg }}>
           <PrimaryButton
-            label="Sprawdź połączenie z API"
+            label="Sprawdź połączenie"
             variant="secondary"
             onPress={async () => {
               try {
-                setApiMessage(await checkConnection());
+                await checkConnection();
+                setApiMessage('Usługa jest dostępna.');
               } catch (error) {
                 setApiMessage(apiErrorMessage(error));
               }

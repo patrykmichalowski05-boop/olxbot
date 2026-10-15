@@ -1,70 +1,108 @@
 import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-
+import { useRouter } from 'expo-router';
 import { api } from '@/api';
+import { apiErrorMessage } from '@/api/errors';
 import { AppScreen } from '@/components/AppScreen';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
-import { MoneyValue } from '@/components/MoneyValue';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { StatCard } from '@/components/StatCard';
 import { useTheme } from '@/theme/ThemeProvider';
+import { workspaceId } from '@/utils/config';
+import { formatMoneyMinor } from '@/utils/money';
 
 export default function AnalyticsScreen() {
-  const { colors, spacing, typography, radii } = useTheme();
+  const router = useRouter();
+  const { colors, spacing, typography } = useTheme();
+  const available = api.mode === 'demo' || Boolean(workspaceId());
   const dealsQuery = useQuery({
     queryKey: ['deals', api.mode, 'analytics'],
     queryFn: () => api.deals.list(),
+    enabled: available,
   });
-
   const stats = useMemo(() => {
     const items = dealsQuery.data?.items ?? [];
-    let sold = 0;
-    let profit = 0;
-    let inventory = 0;
-    let costs = 0;
-    for (const deal of items) {
-      costs += deal.cost_minor ?? 0;
-      if (deal.status === 'SOLD') {
-        sold += 1;
-        profit += deal.realized_profit_minor ?? 0;
-      } else {
-        inventory += deal.purchase_minor ?? 0;
-      }
-    }
-    return { sold, profit, inventory, costs };
+    const sold = items.filter((deal) => deal.status === 'SOLD');
+    const open = items.filter((deal) =>
+      ['BOUGHT', 'PURCHASED', 'LISTED'].includes(deal.status),
+    );
+    return {
+      sold: sold.length,
+      profit: sold.reduce((sum, deal) => sum + (deal.realized_profit_minor ?? 0), 0),
+      inventory: open.reduce((sum, deal) => sum + deal.purchase_minor, 0),
+      costs: items.reduce((sum, deal) => sum + deal.cost_minor, 0),
+    };
   }, [dealsQuery.data]);
-
   return (
     <AppScreen scroll>
-      <Header title="Analityka" showBack showNotifications={false} />
-      <Text style={[typography.body, { color: colors.textMuted, marginBottom: spacing.lg }]}>
-        Rzeczywiste wyniki pierwszych 30 pobranych flipów. Jeśli masz więcej transakcji, jest to podsumowanie częściowe.
-      </Text>
-
-      {dealsQuery.isError ? (
-        <Text style={[typography.body, { color: colors.loss, marginBottom: spacing.md }]}>
-          Nie udało się pobrać danych finansowych. Nie pokazujemy niezweryfikowanych sum.
+      <Header
+        title="Analityka"
+        subtitle="Wyniki Twoich transakcji."
+        showBack
+        showNotifications={false}
+      />
+      <View style={{ gap: spacing.lg }}>
+        <Text style={[typography.body, { color: colors.textMuted }]}>
+          Podsumowanie pobranych flipów (do 30). Wynik obejmuje zakończone sprzedaże.
         </Text>
-      ) : null}
-      {dealsQuery.isLoading ? (
-        <Text style={[typography.caption, { color: colors.textMuted }]}>Ładowanie danych...</Text>
-      ) : null}
-      {!dealsQuery.isError && !dealsQuery.isLoading ? <View
-        style={{
-          backgroundColor: colors.surface,
-          borderRadius: radii.md,
-          padding: spacing.lg,
-          gap: spacing.lg,
-          borderWidth: 1,
-          borderColor: colors.border,
-        }}
-      >
-        <MoneyValue label="Zrealizowany zysk" amountMinor={stats.profit} emphasize />
-        <MoneyValue label="Kapitał w zapasach" amountMinor={stats.inventory} />
-        <Text style={[typography.bodyStrong, { color: colors.text }]}>
-          Sprzedane przedmioty: {stats.sold}
-        </Text>
-        <MoneyValue label="Koszty łącznie" amountMinor={stats.costs} />
-      </View> : null}
+        {!available ? (
+          <EmptyState
+            title="Analityka czeka na pierwszego flipa"
+            icon="stats-chart-outline"
+            description="Po zapisaniu zakupów i sprzedaży pojawią się tutaj Twoje wyniki."
+            actionLabel="Przejdź do radaru"
+            onAction={() => router.push('/radar')}
+          />
+        ) : dealsQuery.isPending ? (
+          <LoadingSkeleton rows={2} />
+        ) : dealsQuery.isError ? (
+          <ErrorState
+            message={apiErrorMessage(dealsQuery.error)}
+            onRetry={() => {
+              void dealsQuery.refetch();
+            }}
+            retrying={dealsQuery.isFetching}
+          />
+        ) : (
+          <View style={{ gap: spacing.md }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              <StatCard
+                label="Zrealizowany wynik"
+                value={formatMoneyMinor(stats.profit)}
+                icon="trending-up-outline"
+                accent
+              />
+              <StatCard
+                label="Zakup aktywnych pozycji"
+                value={formatMoneyMinor(stats.inventory)}
+                icon="wallet-outline"
+              />
+              <StatCard
+                label="Sprzedane przedmioty"
+                value={String(stats.sold)}
+                icon="checkmark-circle-outline"
+              />
+              <StatCard
+                label="Koszty łącznie"
+                value={formatMoneyMinor(stats.costs)}
+                icon="receipt-outline"
+              />
+            </View>
+            {!dealsQuery.data?.items.length ? (
+              <EmptyState
+                title="Brak transakcji do podsumowania"
+                icon="stats-chart-outline"
+                description="Zapisz pierwszy zakup ze szczegółów oferty, aby zacząć śledzić wyniki."
+                actionLabel="Przejdź do radaru"
+                onAction={() => router.push('/radar')}
+              />
+            ) : null}
+          </View>
+        )}
+      </View>
     </AppScreen>
   );
 }
