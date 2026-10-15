@@ -1111,6 +1111,15 @@ def send_flip_alert(
             score=result["score"],
             mode=mode,
         )
+        if action.get("action") == "WATCH":
+            try:
+                from watch_review_alert import send_watch_review
+                delivered = send_watch_review(
+                    details, valuation, action, offer_url, send_message
+                )
+                print("[WATCH-REVIEW]", "SENT" if delivered else "SKIPPED")
+            except Exception as error:
+                print("[WATCH-REVIEW] ERROR:", type(error).__name__)
         print("[TELEGRAM] SUPPRESSED:", action.get("action"))
         return "SUPPRESSED" if return_status else False
 
