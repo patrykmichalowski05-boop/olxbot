@@ -182,3 +182,38 @@ export function mapListingDetail(listing: ListingSummary): OpportunityDetail {
         : null,
   };
 }
+
+
+export function mapSnapshotDetail(item: RadarApiItem): OpportunityDetail {
+  const card = mapRadarItem(item);
+  const valuation = item.valuation ?? {};
+  const strings = (key: string): string[] => {
+    const value = valuation[key];
+    return Array.isArray(value)
+      ? value.filter((x): x is string => typeof x === 'string')
+      : [];
+  };
+
+  return {
+    ...card,
+    valuation,
+    decisionReason:
+      typeof valuation.ai_summary === 'string'
+        ? valuation.ai_summary : undefined,
+    risks: strings('ai_issues'),
+    unknowns: strings('ai_missing_info'),
+    dataQuality: card.confidence,
+    specs: [],
+    comparisons: [],
+    priceHistory: [],
+    baseScenario: {
+      label: 'Bazowy',
+      purchaseMinor: card.purchaseMinor,
+      resaleMinor: card.resaleRange?.highMinor ?? null,
+      costsMinor: valuationNumber(valuation, 'total_cost'),
+      profitMinor: card.operatingProfitMinor,
+      roiBps: card.roiBps,
+    },
+    maxBuyMinor: valuationNumber(valuation, 'max_buy'),
+  };
+}

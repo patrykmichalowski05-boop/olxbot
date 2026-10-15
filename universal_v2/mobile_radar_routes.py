@@ -3,9 +3,9 @@
 import os
 import sqlite3
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Path as ApiPath, Query
 from .radar_service import RadarService
-from .legacy_snapshot_mobile import page as legacy_page
+from .legacy_snapshot_mobile import page as legacy_page, get_snapshot as legacy_get
 
 
 def normalize(page):
@@ -69,3 +69,24 @@ def attach(app, cfg, current_user):
             raise HTTPException(
                 503, 'Development radar unavailable'
             ) from None
+
+
+    @app.get('/api/v1/universal/mobile-radar/{snapshot_id}')
+    def mobile_radar_detail(
+        snapshot_id: int = ApiPath(gt=0),
+        user_id: str = Depends(current_user),
+    ):
+        if os.getenv('FLIPRADAR_READ_LEGACY_SNAPSHOTS') != '1':
+            raise HTTPException(404, 'Snapshot not found')
+
+        try:
+            item = legacy_get(snapshot_id)
+        except (sqlite3.Error, OSError, ValueError):
+            raise HTTPException(
+                503, 'Snapshot unavailable'
+            ) from None
+
+        if item is None:
+            raise HTTPException(404, 'Snapshot not found')
+
+        return item

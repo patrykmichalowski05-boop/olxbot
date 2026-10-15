@@ -161,6 +161,7 @@ export default function OfferDetailScreen() {
               Linking.openURL(item.url).catch(() => undefined);
             }}
           />
+          {item.listingId ? (
           <PrimaryButton
             label="Dodaj do moich flipów (zakup)"
             onPress={() =>
@@ -170,6 +171,7 @@ export default function OfferDetailScreen() {
               })
             }
           />
+          ) : null}
           <PrimaryButton
             label="Analizuj ponownie"
             onPress={() => router.push('/analyze')}

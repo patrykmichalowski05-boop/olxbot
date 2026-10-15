@@ -5,6 +5,32 @@ from pathlib import Path
 
 DB = Path('/opt/olx-bot/offer_snapshots.db')
 
+
+def _as_item(row):
+    valuation = json.loads(row['valuation_json'] or '{}')
+    action = json.loads(row['action_json'] or '{}')
+    if not isinstance(valuation, dict) or not isinstance(action, dict):
+        raise ValueError('Invalid snapshot JSON')
+
+    valuation.setdefault('category', 'ELECTRONICS')
+    title = row['title'] or ''
+
+    return {
+        'snapshot_id': row['id'],
+        'offer_key': row['offer_key'],
+        'title': title,
+        'url': row['url'],
+        'platform': 'FACEBOOK' if title.startswith(
+            '[FB Marketplace]') else 'OLX',
+        'price_minor': int(round(float(row['price']) * 100))
+            if row['price'] is not None else None,
+        'observed_at': row['created_at'],
+        'decision': action.get('action', 'UNKNOWN'),
+        'valuation': valuation,
+        'source_status': 'HISTORICAL',
+    }
+
+
 def page(limit=20, before_id=None, q='', db_path=DB):
     if not 1 <= limit <= 100 or len(q) > 120:
         raise ValueError('Invalid radar query')
@@ -27,30 +53,31 @@ def page(limit=20, before_id=None, q='', db_path=DB):
                 OR instr(lower(s.offer_key),lower(?))>0)
             ORDER BY s.id DESC LIMIT ?
         """, (before_id, before_id, q, q, limit+1)).fetchall()
-    items = []
-    for row in rows[:limit]:
-        valuation = json.loads(row['valuation_json'] or '{}')
-        action = json.loads(row['action_json'] or '{}')
-        valuation.setdefault('category', 'ELECTRONICS')
-        title = row['title'] or ''
-
-        items.append({
-            'snapshot_id': row['id'],
-            'offer_key': row['offer_key'],
-            'title': title,
-            'url': row['url'],
-            'platform': 'FACEBOOK' if title.startswith(
-                '[FB Marketplace]') else 'OLX',
-            'price_minor': int(round(float(row['price'])*100))
-                if row['price'] is not None else None,
-            'observed_at': row['created_at'],
-            'decision': action.get('action', 'UNKNOWN'),
-            'valuation': valuation,
-            'source_status': 'HISTORICAL',
-        })
+    items = [_as_item(row) for row in rows[:limit]]
 
     return {
         'items': items,
         'next_before_id': items[-1]['snapshot_id']
             if len(rows) > limit else None,
     }
+
+
+def get_snapshot(snapshot_id, db_path=DB):
+    if type(snapshot_id) is not int or snapshot_id <= 0:
+        raise ValueError('Invalid snapshot ID')
+
+    path = Path(db_path).resolve(strict=True)
+    if path.name != 'offer_snapshots.db':
+        raise ValueError('Unexpected database')
+
+    with sqlite3.connect(
+        path.as_uri() + '?mode=ro', uri=True
+    ) as db:
+        db.row_factory = sqlite3.Row
+        db.execute('PRAGMA query_only=ON')
+        row = db.execute(
+            'SELECT * FROM snapshots WHERE id=?',
+            (snapshot_id,)
+        ).fetchone()
+
+    return _as_item(row) if row is not None else None

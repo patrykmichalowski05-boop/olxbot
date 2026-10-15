@@ -1,4 +1,4 @@
-import { resolveAppMode } from '@/utils/config';
+import { resolveAppMode, radarSource } from '@/utils/config';
 import { demoClient } from '@/api/demo/demoClient';
 import * as liveAuth from '@/api/endpoints/auth';
 import * as liveRadar from '@/api/endpoints/radar';
@@ -8,7 +8,7 @@ import * as liveDeals from '@/api/endpoints/deals';
 import { mapDemoDeal } from '@/api/mappers/deal';
 import { fetchNotificationsPage } from '@/api/endpoints/notifications';
 import { workspaceId } from '@/utils/config';
-import { mapListingDetail, mapRadarItem } from '@/api/mappers/opportunity';
+import { mapListingDetail, mapRadarItem, mapSnapshotDetail } from '@/api/mappers/opportunity';
 import type { OpportunityDetail } from '@/features/opportunity/types';
 
 export function getAppMode() {
@@ -66,6 +66,18 @@ export const api = {
       if (byListing) return byListing;
       const page = await demoClient.radarPage({});
       return page.items.find((o) => o.id === id || String(o.snapshotId) === id) ?? null;
+    }
+
+
+    if (id.startsWith('snap-')) {
+      if (radarSource() !== 'universal') return null;
+      const snapshotId = Number(id.slice(5));
+      if (!Number.isSafeInteger(snapshotId) || snapshotId <= 0) {
+        return null;
+      }
+      return mapSnapshotDetail(
+        await liveRadar.fetchRadarSnapshot(snapshotId),
+      );
     }
 
     const listingId = Number(id);

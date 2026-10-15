@@ -1,6 +1,6 @@
 import { apiRequest } from '@/api/client';
 import { radarSource } from '@/utils/config';
-import type { RadarPageResponse } from '@/api/types/radar';
+import type { RadarApiItem, RadarPageResponse } from '@/api/types/radar';
 
 export type RadarQuery = {
   limit?: number;
@@ -28,4 +28,16 @@ export async function fetchRadarPage(query: RadarQuery): Promise<RadarPageRespon
   return apiRequest<RadarPageResponse>(`${pathBase}?${params.toString()}`, {
     signal: query.signal,
   });
+}
+
+
+export async function fetchRadarSnapshot(
+  snapshotId: number,
+): Promise<RadarApiItem> {
+  if (!Number.isSafeInteger(snapshotId) || snapshotId <= 0) {
+    throw new Error('Nieprawidłowy snapshot ID');
+  }
+  return apiRequest<RadarApiItem>(
+    `/api/v1/universal/mobile-radar/${snapshotId}`,
+  );
 }

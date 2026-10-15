@@ -197,7 +197,7 @@ export default function RadarScreen() {
               onPress={() =>
                 router.push({
                   pathname: '/offer/[id]',
-                  params: { id: String(item.listingId ?? item.snapshotId) },
+                  params: { id: item.listingId ? String(item.listingId) : item.id },
                 })
               }
               onWatch={() => watchMutation.mutate(item)}
