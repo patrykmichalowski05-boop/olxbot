@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  Linking,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -12,6 +13,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { useRouter } from 'expo-router';
 
 import { api } from '@/api';
+import { radarSource } from '@/utils/config';
 import { apiErrorMessage } from '@/api/errors';
 import { AppScreen } from '@/components/AppScreen';
 import { DemoBanner } from '@/components/DemoBanner';
@@ -194,12 +196,27 @@ export default function RadarScreen() {
           renderItem={({ item }) => (
             <ProductCard
               item={item}
-              onPress={() =>
+              onPress={() => {
+                if (
+                  api.mode === 'live' &&
+                  radarSource() === 'legacy' &&
+                  !item.listingId
+                ) {
+                  if (item.url) {
+                    void Linking.openURL(item.url).catch(() => undefined);
+                  }
+                  return;
+                }
+
                 router.push({
                   pathname: '/offer/[id]',
-                  params: { id: item.listingId ? String(item.listingId) : item.id },
-                })
-              }
+                  params: {
+                    id: item.listingId
+                      ? String(item.listingId)
+                      : item.id,
+                  },
+                });
+              }}
               onWatch={() => watchMutation.mutate(item)}
             />
           )}

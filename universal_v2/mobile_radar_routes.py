@@ -39,6 +39,8 @@ def attach(app, cfg, current_user):
         user_id: str = Depends(current_user),
     ):
         if os.getenv('FLIPRADAR_READ_LEGACY_SNAPSHOTS') == '1':
+            if user_id != os.getenv('FLIPRADAR_LEGACY_OWNER_ID'):
+                raise HTTPException(403, 'Snapshot access forbidden')
             try:
                 return legacy_page(
                     limit=limit, before_id=before_id, q=q
@@ -78,6 +80,9 @@ def attach(app, cfg, current_user):
     ):
         if os.getenv('FLIPRADAR_READ_LEGACY_SNAPSHOTS') != '1':
             raise HTTPException(404, 'Snapshot not found')
+
+        if user_id != os.getenv('FLIPRADAR_LEGACY_OWNER_ID'):
+            raise HTTPException(403, 'Snapshot access forbidden')
 
         try:
             item = legacy_get(snapshot_id)
