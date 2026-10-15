@@ -28,6 +28,45 @@ def contains(text: str, phrase: str) -> bool:
     return f" {normalize(phrase)} " in f" {text} "
 
 
+
+def _complete_system_title(title: str) -> bool:
+    """Rozpoznaje kompletny komputer lub laptop zamiast samej karty GPU."""
+
+    normalized = normalize(title)
+
+    system_model = (
+        r"\b(?:pc|komputer|laptop|notebook|zestaw komputerowy|"
+        r"stacja robocza|workstation|gamingowy komputer|"
+        r"lenovo (?:loq|legion|ideapad|thinkpad|yoga)|"
+        r"(?:asus )?(?:zenbook|vivobook|rog zephyrus|rog strix g (?:14|15|16|17|18))|"
+        r"hp (?:victus|omen|pavilion|envy|zbook)|"
+        r"(?:dell )?(?:alienware|inspiron|precision|xps)|"
+        r"(?:gigabyte )?aorus (?:15|16|17)(?: [a-z])?|"
+        r"msi (?:creator|katana|raider|stealth|cyborg|vector)|"
+        r"acer (?:nitro|predator))\b"
+    )
+
+    if re.search(system_model, normalized):
+        return True
+
+    raw = title.casefold()
+
+    cpu = bool(re.search(
+        r"\b(?:i[3579][- ]?\d{4,5}[a-z]{0,2}|"
+        r"(?:amd )?ryzen\s*[3579][- ]?\d{4,5}[a-z0-9]{0,3}|"
+        r"r[3579][- ]?\d{4,5}[a-z]{0,3}|"
+        r"core\s+ultra\s*[3579])\b",
+        raw,
+    ))
+
+    system_component = bool(re.search(
+        r"\b(?:ddr[345]|ram|ssd|nvme|z[679]\d{2}|b[456]\d{2})\b",
+        raw,
+    ))
+
+    return cpu and system_component
+
+
 def attributes(offer: Offer) -> dict:
     text = normalize(offer.title + " " + offer.description)
     result = dict(offer.attributes)
@@ -44,21 +83,8 @@ def attributes(offer: Offer) -> dict:
         result.setdefault("item_type", "PHONE")
     elif gpu:
         result.setdefault("gpu", " ".join(x for x in gpu.groups() if x))
-        # Nazwy serii laptopów/komputerów nie zawsze zawierają słowo
-        # "laptop". Bez tej ochrony np. "Lenovo LOQ 16 GB RAM" zostało
-        # uznane za samodzielną kartę z 16 GB VRAM.
-        full_pc = bool(
-            re.search(
-                r"\b(pc|komputer|laptop|notebook|zestaw komputerowy|"
-                r"stacja robocza|workstation|gamingowy|"
-                r"lenovo (?:loq|legion|ideapad gaming)|"
-                r"(?:asus )?(?:rog zephyrus|tuf gaming|rog strix g\d{1,2})|"
-                r"hp omen|alienware|"
-                r"msi (?:creator|katana|raider|stealth|cyborg|vector)|"
-                r"acer (?:nitro|predator))\b",
-                text,
-            )
-        )
+        # Komputer i laptop nie sa samodzielna karta graficzna.
+        full_pc = _complete_system_title(offer.title)
         result.setdefault("item_type", "PC" if full_pc else "GPU")
         if not full_pc:
             title = normalize(offer.title)
@@ -169,7 +195,7 @@ def matches(offer: Offer, search: Search) -> bool:
         if normalize(values.get("gpu", "")) != expected:
             return False
         if (
-            values.get("item_type") == "PC"
+            (values.get("item_type") == "PC" or _complete_system_title(offer.title))
             and not re.search(r"\b(pc|komputer|laptop|notebook)\b", query)
             and search.attributes.get("item_type") != "PC"
         ):
