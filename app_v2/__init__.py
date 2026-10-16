@@ -25,6 +25,9 @@ def create_app():
     from .routes import bp
     app.register_blueprint(bp)
 
+    from .flip_radar_routes_dev import flip_bp
+    app.register_blueprint(flip_bp)
+
     @app.before_request
     def protect_application():
         ensure_csrf_token()

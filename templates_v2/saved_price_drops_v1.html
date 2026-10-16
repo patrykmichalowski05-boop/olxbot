@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<link rel="stylesheet"
+ href="{{ url_for('static', filename='saved_searches_v1.css') }}">
+
+<div class="search-wrap">
+
+  <a href="{{ url_for('flip_radar.search_page') }}">
+    ← Moje wyszukiwania
+  </a>
+
+  <h1>Obniżki cen OLX</h1>
+
+  <p>
+    Zarejestrowane obniżki cen ofert
+    z ostatnich {{ report.days }} dni.
+  </p>
+
+  <section class="search-box">
+    <h2>{{ report.total }} zmian cen</h2>
+    <p>
+      To obserwowane ceny ogłoszeń OLX,
+      a nie potwierdzone ceny sprzedaży.
+    </p>
+  </section>
+
+  {% for item in report['items'] %}
+
+  <section class="search-box">
+    <h2>{{ item.title }}</h2>
+
+    <p>Poprzednia cena: <s>{{ item.old_price }} zł</s></p>
+
+    <p>
+      Cena po obniżce:
+      <strong>{{ item.new_price }} zł</strong>
+    </p>
+
+    <p>
+      Spadek:
+      <strong>
+        -{{ item.drop_zl }} zł
+        (-{{ item.drop_pct }}%)
+      </strong>
+    </p>
+
+    {% if item.historical %}
+    <p>
+      Uwaga: aktualnie zapisana cena ogłoszenia
+      to {{ item.current_price if item.current_price is not none
+      else 'brak danych' }} zł.
+      Ta obniżka jest historyczna.
+    </p>
+    {% endif %}
+
+    {% if item.needs_review %}
+    <p>Stan techniczny wymaga weryfikacji.</p>
+    {% endif %}
+
+    <p>Zaobserwowano: {{ item.observed_utc }} UTC</p>
+    <p>Ostatnio widziana: {{ item.last_seen_utc }} UTC</p>
+
+    <a class="btn btn-primary"
+       href="{{ item.url }}"
+       target="_blank"
+       rel="noopener noreferrer">
+      Zobacz ogłoszenie OLX
+    </a>
+  </section>
+
+  {% else %}
+
+  <section class="search-box">
+    <p>
+      Jeszcze nie zarejestrowano żadnej obniżki.
+      Kolejne skany będą porównywać zapisane ceny.
+    </p>
+  </section>
+
+  {% endfor %}
+
+</div>
+{% endblock %}

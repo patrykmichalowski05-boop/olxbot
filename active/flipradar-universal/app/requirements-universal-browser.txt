@@ -1,0 +1,2 @@
+-r requirements-universal.txt
+playwright>=1.51,<2

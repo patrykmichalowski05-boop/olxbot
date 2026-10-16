@@ -1,0 +1,10 @@
+[Unit]
+Description=OLX Flip Hunter CRM Follow-up
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/followup_worker.py

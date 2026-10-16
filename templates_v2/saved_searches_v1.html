@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<link rel="stylesheet"
+ href="{{ url_for('static', filename='saved_searches_v1.css') }}">
+
+<div class="search-wrap">
+  <h1>Moje wyszukiwania</h1>
+<p>
+  <a href="{{ url_for('flip_radar.price_drops_page') }}">
+    Obniżki cen OLX
+  </a>
+</p>
+
+    <p>
+      <a class="btn btn-primary"
+         href="{{ url_for('flip_radar.review_queue_page') }}">
+        Do sprawdzenia
+      </a>
+    </p>
+    
+
+  <p>
+    Obserwuj komputery, laptopy i części.
+    Nowe profile nie są jeszcze podłączone do skanera.
+  </p>
+
+  {% set v = editing or {} %}
+
+  <section class="search-box">
+    <h2>
+      {{ 'Edytuj wyszukiwanie'
+         if editing else 'Dodaj wyszukiwanie' }}
+    </h2>
+
+    <form method="post"
+      action="{{ url_for('flip_radar.search_edit', search_id=editing.id)
+                if editing else url_for('flip_radar.search_page') }}">
+
+      <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+
+      <div class="search-grid">
+
+        <label>Nazwa
+          <input name="name" maxlength="100"
+            value="{{ v.get('name','') }}"
+            placeholder="RTX 5060 okazje">
+        </label>
+
+        <label>Czego szukać?
+          <input name="query_text" required maxlength="150"
+            value="{{ v.get('query_text','') }}"
+            placeholder="RTX 5060 / ASUS LGA 1200">
+        </label>
+
+        <label>Kategoria
+          <select name="category">
+            {% for k,t in [
+              ('pc','Komputer PC'),
+              ('laptop','Laptop'),
+              ('gpu','Karta graficzna'),
+              ('cpu','Procesor'),
+              ('ram','Pamięć RAM'),
+              ('motherboard','Płyta główna'),
+              ('ssd','Dysk SSD / HDD'),
+              ('other','Inny sprzęt')
+            ] %}
+            <option value="{{ k }}"
+              {% if v.get('category','gpu') == k %}
+              selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>Cel zakupu
+          <select name="purpose">
+            <option value="cheap"
+              {% if v.get('purpose','cheap') == 'cheap' %}
+              selected{% endif %}>Kup jak najtaniej</option>
+            <option value="flip"
+              {% if v.get('purpose') == 'flip' %}
+              selected{% endif %}>Odsprzedaż</option>
+          </select>
+        </label>
+
+        <label>Cena od (zł)
+          <input name="min_price_zl" type="number" min="0"
+            value="{{ v.get('min_price_zl') or '' }}"
+            placeholder="Bez minimum">
+        </label>
+
+        <label>Cena do (zł)
+          <input name="max_price_zl" type="number" min="0"
+            value="{{ v.get('max_price_zl') or '' }}"
+            placeholder="Bez limitu">
+        </label>
+
+        <label>Minimalny zysk (zł)
+          <input name="min_profit_zl" type="number" min="0"
+            required
+            value="{{ v.get('min_profit_zl',policy.min_profit_zl) }}">
+        </label>
+
+        <label>Minimalne ROI (%)
+          <input name="min_roi_pct" type="number"
+            min="0" max="300" step="0.1" required
+            value="{{ v.get('min_roi_pct',policy.min_roi_pct) }}">
+        </label>
+
+        <label>Źródła
+          <select name="source">
+            {% for k,t in [
+              ('both','OLX + Facebook'),
+              ('olx','OLX'),
+              ('facebook','Facebook')
+            ] %}
+            <option value="{{ k }}"
+              {% if v.get('source','both') == k %}
+              selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>Priorytet
+          <select name="priority">
+            {% for k,t in [
+              ('normal','Normalny'),
+              ('high','Wysoki')
+            ] %}
+            <option value="{{ k }}"
+              {% if v.get('priority','normal') == k %}
+              selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>Marka
+          <input name="brand" maxlength="300"
+            value="{{ v.get('brand','') }}"
+            placeholder="ASUS">
+        </label>
+
+        <label>Socket
+          <input name="socket" maxlength="300"
+            value="{{ v.get('socket','') }}"
+            placeholder="LGA 1200">
+        </label>
+
+        <label>Pojemność (GB)
+          <input name="capacity_gb" type="number" min="0"
+            value="{{ v.get('capacity_gb') or '' }}"
+            placeholder="512">
+        </label>
+
+        <label>Dodatkowe wymagania
+          <input name="notes" maxlength="300"
+            value="{{ v.get('notes','') }}">
+        </label>
+
+      </div>
+
+      <p>
+        Pusta cena maksymalna = brak limitu.
+        Zysk i ROI dotyczą zakupów pod odsprzedaż.
+      </p>
+
+      <button class="btn btn-primary" type="submit">
+        Zapisz wyszukiwanie
+      </button>
+
+      {% if editing %}
+      <a class="btn btn-ghost"
+        href="{{ url_for('flip_radar.search_page') }}">
+        Anuluj
+      </a>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="search-box">
+    <h2>Zapisane wyszukiwania: {{ searches|length }}</h2>
+
+    {% for s in searches %}
+    <div class="search-item">
+      <div>
+        <strong>{{ s.name }}</strong>
+        <p>
+          {{ s.query_text }} · {{ s.category }} ·
+          {{ s.source }} · {{ s.purpose }} ·
+          {% if s.max_price_zl %}
+          do {{ s.max_price_zl }} zł
+          {% else %}
+          bez limitu
+          {% endif %}
+        </p>
+        <small>
+          {{ 'Aktywne' if s.enabled else 'Wstrzymane' }}
+          · {% set st = search_stats.get(s.id) %}
+    {% if st %}
+      · Pasujące: {{ st.match_count }}
+      · Do sprawdzenia: {{ st.review_count }}
+      · Nowe 24 h: {{ st.new_24h_count }}
+      · Odrzucone: {{ st.rejected_count }}
+      {% if st.status %}
+        · Ostatni skan: {{ st.last_attempt_utc }}
+        · {{ st.status }}
+      {% else %}
+        · Oczekuje na skan
+      {% endif %}
+    {% endif %}
+        </small>
+      </div>
+
+      
+<div class="search-actions">
+  <a class="btn btn-primary"
+     href="{{ url_for(
+       'flip_radar.saved_search_results_page',
+       search_id=s.id
+     ) }}">
+    Zobacz wyniki OLX
+  </a>
+
+        <a class="btn btn-ghost"
+          href="{{ url_for('flip_radar.search_edit', search_id=s.id) }}">
+          Edytuj
+        </a>
+
+        {% for action,label in [
+          ('pause','Wstrzymaj') if s.enabled else ('resume','Wznów'),
+          ('archive','Archiwizuj')
+        ] %}
+        <form method="post"
+          action="{{ url_for('flip_radar.search_action', search_id=s.id) }}">
+          <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="{{ action }}">
+          <button class="btn btn-ghost" type="submit">
+            {{ label }}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% else %}
+    <p>Dodaj pierwsze wyszukiwanie powyżej.</p>
+    {% endfor %}
+  </section>
+</div>
+
+{% endblock %}

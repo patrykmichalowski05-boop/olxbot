@@ -1,0 +1,539 @@
+
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flip Hunter - Ranking PC</title>
+
+<style>
+:root {
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0c111b;
+    color: #e8edf7;
+    font: 15px system-ui, Segoe UI, sans-serif;
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 28px 18px;
+}
+
+a {
+    color: #a5c5ff;
+    text-decoration: none;
+}
+
+h1 {
+    font-size: 29px;
+    margin-bottom: 8px;
+}
+
+h2 {
+    font-size: 19px;
+    margin: 12px 0;
+}
+
+.muted {
+    color: #aab5c8;
+}
+
+.notice {
+    padding: 16px;
+    background: #202c3c;
+    border: 1px solid #40536e;
+    border-radius: 12px;
+    margin: 20px 0;
+    line-height: 1.7;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 12px;
+    margin: 24px 0;
+}
+
+.stat {
+    background: #151e2d;
+    border: 1px solid #344259;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.stat strong {
+    display: block;
+    font-size: 27px;
+    margin-top: 8px;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 22px 0;
+}
+
+button, input {
+    background: #182335;
+    color: #e8edf7;
+    border: 1px solid #43536c;
+    border-radius: 9px;
+    padding: 11px 14px;
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+button.active {
+    background: #315d9f;
+    border-color: #729ce3;
+}
+
+input {
+    width: 100%;
+    margin: 8px 0;
+}
+
+.offer-card {
+    background: #151d2a;
+    border: 1px solid #344259;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.offer-card[data-group="deal"] {
+    border-color: #56846b;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.tag {
+    display: inline-block;
+    color: #c7d5eb;
+    background: #263449;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.profit {
+    font-size: 26px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.positive {
+    color: #71d3a0;
+}
+
+.negative {
+    color: #ed9b9b;
+}
+
+.details {
+    color: #bac5d7;
+    line-height: 1.9;
+}
+
+.financial {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 12px;
+    background: #101827;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 16px 0;
+}
+
+.financial strong {
+    display: block;
+    font-size: 19px;
+    margin-top: 5px;
+}
+
+.warning {
+    color: #f6cb88;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 750px) {
+    .stats {
+        grid-template-columns: repeat(2,1fr);
+    }
+
+    .financial {
+        grid-template-columns: 1fr;
+    }
+
+    .top {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- FLIP_RANKING_V1 -->
+
+<main>
+
+<nav>
+<a href="/flip-radar/">← Radar</a>
+&nbsp; | &nbsp;
+<a href="/flip-radar/seller-questions-preview">
+Wymagają informacji
+</a>
+</nav>
+
+<h1>Ranking komputerów</h1>
+
+<p class="muted">
+Ostatnia analiza: {{ generated }}
+</p>
+
+<div class="notice">
+<strong>Wyceny testowe — niezweryfikowane.</strong>
+Ceny odsprzedaży pochodzą z modelu V3,
+a nie z potwierdzonych transakcji.
+
+Ranking jest migawką z ostatniej analizy
+i nie odświeża się automatycznie.
+Nie wysyła wiadomości i nie kupuje sprzętu.
+</div>
+
+<div class="stats">
+
+<div class="stat">
+<span class="muted">Przeanalizowane</span>
+<strong>{{ rows|length }}</strong>
+</div>
+
+<div class="stat">
+<span class="muted">Potencjał ≥400 zł</span>
+<strong>{{ rows|selectattr("group","equalto","deal")|list|length }}</strong>
+</div>
+
+<div class="stat">
+<span class="muted">Bez wyceny</span>
+<strong>{{ rows|selectattr("group","equalto","unknown")|list|length }}</strong>
+</div>
+
+<div class="stat">
+<span class="muted">Zmiana ceny</span>
+<strong>{{ rows|selectattr("group","equalto","changed")|list|length }}</strong>
+</div>
+
+</div>
+
+<input
+    id="search"
+    type="search"
+    placeholder="Szukaj po nazwie, CPU, GPU..."
+    aria-label="Wyszukaj komputer"
+>
+
+<div class="controls">
+<button class="active" data-filter="all">Wszystkie</button>
+<button data-filter="deal">Potencjał ≥400 zł</button>
+<button data-filter="stress">
+≥400 zł po korekcie -10%
+</button>
+<button data-filter="watch">Szacunek bez silnych porównań</button>
+<button data-filter="other">Poniżej 400 zł</button>
+<button data-filter="unknown">Brak wyceny</button>
+<button data-filter="risk">Pilna weryfikacja</button>
+<button data-filter="changed">Zmiana ceny</button>
+</div>
+
+<p id="counter" class="muted"></p>
+
+<section id="offers">
+
+{% for r in rows %}
+
+<article
+    class="offer-card"
+    data-group="{{ r.group }}"
+    data-stress10="{{ 'yes' if (
+        r.profit_zl is not none
+        and r.resale_zl is not none
+        and not r.price_changed
+        and r.profit_zl - r.resale_zl * 0.10 >= 400
+    ) else 'no' }}"
+    data-risk="{{ 'yes' if r.risk_review else 'no' }}"
+    data-search="{{ (r.title ~ ' ' ~ r.cpu ~ ' ' ~ r.gpu)|lower }}"
+>
+
+<div class="top">
+
+<div>
+<span class="tag">
+
+{% if r.group == "deal" %}
+POTENCJALNA OKAZJA — DO WERYFIKACJI
+{% elif r.group == "changed" %}
+CENA ZMIENIONA — PRZELICZ WYCENĘ
+{% elif r.group == "watch" %}
+SZACUNEK BEZ SILNYCH PORÓWNAŃ RYNKOWYCH
+{% elif r.group == "unknown" %}
+BRAK WIARYGODNEJ WYCENY
+{% else %}
+PONIŻEJ PROGU 400 ZŁ
+{% endif %}
+
+</span>
+
+<h2>{{ r.title }}</h2>
+</div>
+
+<div class="profit">
+
+{% if r.price_changed %}
+<span class="warning">Ponowna wycena</span>
+
+{% elif r.profit_zl is not none %}
+<span class="{{ 'positive' if r.profit_zl >= 400 else 'negative' }}">
+{{ '+' if r.profit_zl > 0 else '' }}{{ r.profit_zl }} zł
+</span>
+
+{% else %}
+<span class="muted">Brak wyceny</span>
+{% endif %}
+
+</div>
+</div>
+
+<div class="details">
+CPU: <strong>{{ r.cpu }}</strong> |
+GPU: <strong>{{ r.gpu }}</strong> |
+RAM: <strong>{{ r.ram_gb }} GB</strong>
+</div>
+
+
+{% if r.risk_review %}
+<div class="notice" style="border-color:#c89b4b">
+<strong>PILNA WERYFIKACJA OFERTY</strong>
+<p>{{ r.risk_reason }}</p>
+{% if r.risk_reference_zl is not none %}
+<p>
+Wartość referencyjna samej karty graficznej:
+{{ r.risk_reference_zl }} zł.
+To wartość z lokalnego katalogu, nie potwierdzona
+aktualna cena transakcyjna.
+</p>
+{% endif %}
+<p>
+Nie traktuj tego oznaczenia jako potwierdzonej okazji.
+</p>
+</div>
+{% endif %}
+<div class="financial">
+
+<div>
+<span class="muted">Cena ogłoszenia</span>
+<strong>{{ r.purchase_zl }} zł</strong>
+</div>
+
+<div>
+<span class="muted">Modelowa odsprzedaż</span>
+<strong>
+{% if r.resale_zl is not none %}
+{{ r.resale_zl }} zł
+{% else %}
+Brak
+{% endif %}
+</strong>
+</div>
+
+<div>
+<span class="muted">Szacowany wynik po kosztach</span>
+<strong>
+{% if r.price_changed %}
+Wymaga przeliczenia
+{% elif r.profit_zl is not none %}
+{{ r.profit_zl }} zł
+{% else %}
+Brak
+{% endif %}
+</strong>
+</div>
+
+</div>
+
+
+<!-- FLIP_STRESS_TEST_V1 -->
+{% if r.profit_zl is not none
+      and r.resale_zl is not none
+      and not r.price_changed %}
+<div class="notice">
+<strong>Odporność szacowanego zysku</strong>
+<p>
+Cena odsprzedaży niższa o 10%:
+<strong>
+{{ (r.profit_zl - r.resale_zl * 0.10)|round|int }} zł
+</strong>
+</p>
+<p>
+Cena odsprzedaży niższa o 15%:
+<strong>
+{{ (r.profit_zl - r.resale_zl * 0.15)|round|int }} zł
+</strong>
+</p>
+<p>
+Odsprzedaż -10% i dodatkowe 100 zł kosztów:
+<strong>
+{{ (r.profit_zl - r.resale_zl * 0.10 - 100)|round|int }} zł
+</strong>
+</p>
+<p class="muted">
+Scenariusze testowe, nie prognozy transakcji.
+Pozostałe założenia wyceny V3 bez zmian.
+</p>
+</div>
+{% endif %}
+{% if r.price_changed %}
+<p class="warning">
+Cena w bazie zmieniła się na
+<strong>{{ r.current_price_zl }} zł</strong>.
+Dotychczasowa wycena może być nieaktualna.
+</p>
+{% endif %}
+
+<div class="details">
+
+rrrrrrrrródło:
+<strong>{{ r.valuation_source }}</strong>
+
+&nbsp; | &nbsp;
+
+Pewność modelu:
+<strong>{{ r.confidence }}</strong>
+
+&nbsp; | &nbsp;
+
+Próbki EXACT:
+<strong>{{ r.exact_samples }}</strong>
+
+</div>
+
+{% if r.reason %}
+<p class="muted">
+Powód braku wyceny: {{ r.reason }}
+</p>
+{% endif %}
+
+{% if r.url %}
+<p>
+<a
+    href="{{ r.url }}"
+    target="_blank"
+    rel="noopener noreferrer"
+>
+Otwórz ogłoszenie ↗
+</a>
+</p>
+{% endif %}
+
+<p class="muted">
+Status: do ręcznej weryfikacji sprzętu,
+ceny, stanu i dostępności.
+</p>
+
+</article>
+
+{% endfor %}
+
+</section>
+
+</main>
+
+<script>
+(() => {
+    const search = document.getElementById("search");
+    const cards = [
+        ...document.querySelectorAll(".offer-card")
+    ];
+    const buttons = [
+        ...document.querySelectorAll("[data-filter]")
+    ];
+    const counter = document.getElementById("counter");
+
+    let activeFilter = "all";
+
+    function update() {
+        const query = search.value
+            .trim()
+            .toLocaleLowerCase("pl-PL");
+
+        let visible = 0;
+
+        for (const card of cards) {
+            const matchesText = card.dataset.search
+                .toLocaleLowerCase("pl-PL")
+                .includes(query);
+
+            const matchesFilter =
+                (activeFilter === "stress" && card.dataset.stress10 === "yes") ||
+                activeFilter === "all" ||
+                (activeFilter === "risk"
+                    ? card.dataset.risk === "yes"
+                    : card.dataset.group === activeFilter);
+
+            const show = matchesText && matchesFilter;
+
+            card.hidden = !show;
+
+            if (show) {
+                visible++;
+            }
+        }
+
+        counter.textContent =
+            "Widoczne oferty: " + visible +
+            " z " + cards.length;
+    }
+
+    search.addEventListener("input", update);
+
+    for (const button of buttons) {
+        button.addEventListener("click", () => {
+            activeFilter = button.dataset.filter;
+
+            for (const item of buttons) {
+                item.classList.toggle(
+                    "active",
+                    item === button
+                );
+            }
+
+            update();
+        });
+    }
+
+    update();
+})();
+</script>
+
+</body>
+</html>

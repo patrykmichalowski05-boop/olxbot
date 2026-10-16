@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flip Hunter - Podgląd wycen PC</title>
+<style>
+:root{color-scheme:dark}
+body{background:#0c111b;color:#e6edf7;
+font:15px system-ui,Segoe UI,sans-serif;margin:0}
+main{max-width:1100px;margin:auto;padding:25px}
+a{color:#a6c6ff}
+.card{background:#151d29;border:1px solid #344053;
+border-radius:14px;padding:18px;margin:14px 0}
+.meta{color:#afbdd1;line-height:1.9}
+.price{font-size:21px;font-weight:bold}
+.note{background:#243044;border-radius:9px;padding:14px}
+.badge{color:#ffce81;font-size:12px}
+</style>
+</head>
+<body>
+<main id="valuation-preview">
+<a href="/flip-radar/">← Radar</a>
+<h1>Podgląd wycen komputerów</h1>
+<p class="meta">Ostatnia analiza: {{ generated }}</p>
+<div class="note">
+<strong>Tryb testowy.</strong>
+To szacunki oparte między innymi na cenach ofertowych
+i modelach wartości podzespołów, nie na potwierdzonych
+transakcjach. Brak automatycznych zakupów i wiadomości.
+</div>
+
+{% for r in rows %}
+<div class="card">
+<span class="badge">WYCENA NIEZWERYFIKOWANA</span>
+<h2>{{ r.title }}</h2>
+<div class="meta">
+CPU: {{ r.cpu }} |
+GPU: {{ r.gpu }} |
+RAM: {{ r.ram_gb }} GB
+</div>
+<p class="price">Cena zakupu: {{ r.price_zl }} zł</p>
+
+{% if r.ok %}
+<p>Modelowa cena szybkiej odsprzedaży:
+<strong>{{ r.resale_zl }} zł</strong></p>
+<p>Szacowany wynik po założonych kosztach:
+<strong>{{ r.profit_zl }} zł</strong></p>
+<p class="meta">
+Źródło: {{ r.valuation_source }} |
+Pewność modelu: {{ r.confidence }} |
+Porównania EXACT: {{ r.exact_samples }}
+</p>
+{% else %}
+<p>Nie można bezpiecznie wycenić:
+{{ r.reason }}</p>
+{% endif %}
+
+{% if r.url %}
+<p><a href="{{ r.url }}" target="_blank"
+rel="noopener noreferrer">Otwórz ogłoszenie ↗</a></p>
+{% endif %}
+</div>
+{% endfor %}
+</main>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Magazyn — Flip Hunter{% endblock %}
+{% block heading %}Magazyn i sprzedaż{% endblock %}
+{% block content %}
+<div class="metric-grid metric-grid-5">
+    <div class="metric-card"><span>W magazynie</span><strong>{{ data.stats.count }}</strong><small>aktywne sztuki</small></div>
+    <div class="metric-card"><span>Kapitał</span><strong>{{ money(data.stats.capital) }}</strong><small>zamrożony</small></div>
+    <div class="metric-card"><span>Potencjalny zysk</span><strong class="profit">{{ money(data.stats.potential_profit) }}</strong><small>przy target price</small></div>
+    <div class="metric-card"><span>Wystawione</span><strong>{{ data.stats.listed }}</strong><small>aktywne listingi</small></div>
+    <div class="metric-card"><span>Wymaga akcji</span><strong>{{ data.stats.attention }}</strong><small>priorytet</small></div>
+</div>
+<div class="panel"><div class="panel-head"><div><h2>Komputery</h2><p>Zakup → przygotowanie → wystawienie → sprzedaż</p></div></div><div class="table-wrap"><table><thead><tr><th>Status</th><th>Komputer</th><th>Zakup</th><th>Prep</th><th>Łącznie</th><th>Target</th><th>Min.</th><th>Zysk</th><th>Akcja</th></tr></thead><tbody>
+{% for item in data['items'] %}<tr><td><span class="tag">{{ item.status }}</span></td><td>{% if item.alert_id %}<a href="{{ url_for('main.offer', alert_id=item.alert_id) }}"><strong>{{ item.title }}</strong></a>{% else %}<strong>{{ item.title }}</strong>{% endif %}<div class="subtle">{{ item.offer_key }}</div></td><td>{{ money(item.purchase_price) }}</td><td>{{ money(item.prep_cost) }}</td><td>{{ money(item.total_investment) }}</td><td>{{ money(item.target_price) }}</td><td>{{ money(item.minimum_price) }}</td><td class="profit">{{ money(item.projected_profit) }}</td><td><span class="attention attention-{{ item.attention|lower }}">{{ item.attention_label }}</span></td></tr>
+{% else %}<tr><td colspan="9" class="empty">Brak aktywnego magazynu.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% if data.error %}<div class="flash flash-error">{{ data.error }}</div>{% endif %}
+{% endblock %}

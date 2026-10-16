@@ -1,0 +1,9 @@
+[Unit]
+Description=OLX Bot Watchdog
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=-/opt/olx-bot/.env
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/watchdog.py

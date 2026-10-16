@@ -1,0 +1,24 @@
+[Unit]
+Description=OLX Flip Hunter Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+ExecStart=/opt/olx-bot/venv/bin/gunicorn \
+    --bind 0.0.0.0:8088 \
+    --workers 2 \
+    --timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    dashboard:app
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

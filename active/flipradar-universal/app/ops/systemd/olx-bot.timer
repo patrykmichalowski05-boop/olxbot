@@ -1,0 +1,11 @@
+[Unit]
+Description=OLX Flip Hunter timer
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=5min
+AccuracySec=5s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

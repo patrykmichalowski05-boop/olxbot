@@ -1,0 +1,1 @@
+"""Komercyjny rdzeń Flip Hunter."""

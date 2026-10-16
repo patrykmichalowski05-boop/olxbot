@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<link rel="stylesheet"
+ href="{{ url_for('static', filename='saved_searches_v1.css') }}">
+
+<div class="search-wrap">
+
+  <a href="{{ url_for('flip_radar.search_page') }}">
+    ← Moje wyszukiwania
+  </a>
+
+  <h1>Wyniki: {{ search.name }}</h1>
+
+  <p>
+    Szukany sprzęt: {{ search.query_text }}
+    · Źródło: OLX
+  </p>
+
+  <section class="search-box">
+    {% if run %}
+      <p>
+        Ostatni skan (UTC): {{ run.last_attempt_utc }}
+      </p>
+      <p>
+        Przejrzane oferty: {{ run.scanned_cards }}
+        · Dopasowane w ostatnim skanie:
+        {{ run.saved_matches }}
+      </p>
+    {% else %}
+      <p>Wyszukiwanie nie zostało jeszcze uruchomione.</p>
+    {% endif %}
+
+
+<div class="search-box">
+  <h2>Analiza cen OLX</h2>
+
+  <p>
+    Surowa próbka cen wystawienia, bez filtrowania stanu i cen odstających. Nie służy do prognozowania zysku.
+    Okres: ostatnie {{ market.days }} dni.
+  </p>
+
+  <p>
+    Liczba porównywanych ogłoszeń:
+    <strong>{{ market.count }}</strong>
+  </p>
+
+  {% if market.available %}
+    <p>
+      Mediana ceny:
+      <strong>{{ market.median_zl }} zł</strong>
+    </p>
+
+    <p>
+      Dolny kwartyl: {{ market.low_zl }} zł
+      · Górny kwartyl: {{ market.high_zl }} zł
+    </p>
+
+    <p>
+      Najniższa cena: {{ market.minimum_zl }} zł
+      · Najwyższa cena: {{ market.maximum_zl }} zł
+    </p>
+
+    {% if market.quality == 'duza_rozbieznosc' %}
+      <p>
+        Uwaga: duża rozbieżność cen.
+        Konieczna dodatkowa weryfikacja modeli i stanu.
+      </p>
+    {% else %}
+      <p>
+        Wstępna próbka ofert.
+        To jeszcze nie jest potwierdzona wycena odsprzedaży.
+      </p>
+    {% endif %}
+
+  {% else %}
+    <p>
+      Za mało aktualnych, porównywalnych ofert.
+      Potrzeba co najmniej 5 ogłoszeń.
+    </p>
+  {% endif %}
+</div>
+
+<h2>Zapisane oferty: {{ offers|length }}</h2>
+
+    <p>
+      To wstępne dopasowania. Nie są jeszcze
+      zweryfikowanymi okazjami ani wycenami AI.
+      Wyświetlamy maksymalnie 200 najnowszych wyników.
+    </p>
+
+    {% for offer in offers %}
+    <div class="search-item">
+      <div>
+        <a href="{{ offer.url }}"
+           target="_blank"
+           rel="noopener noreferrer">
+          <strong>{{ offer.title }}</strong>
+        </a>
+
+        <p>
+          {% if offer.first_seen_utc >= new_cutoff %}
+          <strong>NOWA — ostatnie 24 h</strong>
+          {% endif %}
+          Cena ogłoszenia:
+          <strong>{{ offer.asking_price_zl }} zł</strong>
+        </p>
+
+        {% if offer.match_status == 'REVIEW' %}
+        <p>
+          ⚠️ DO SPRAWDZENIA:
+          {{ offer.match_reason }}
+        </p>
+        {% endif %}
+
+
+{% if search.category == 'gpu' %}
+
+{% set g = gpu_guard.get(offer.url) %}
+
+<section class="search-box">
+  <h3>Kontrola porównywalności ofert GPU</h3>
+
+  {% if g %}
+
+
+  {% if g.listing_status != 'STANDALONE_GPU' %}
+  <p>
+    <strong>Oferta wykluczona z porównań:</strong>
+    {{ g.listing_reason }}
+  </p>
+  {% endif %}
+
+  <p>Model: <strong>{{ g.model }}</strong></p>
+
+  <p>
+    Stan według tytułu:
+    {% if g.condition == 'nowy_deklarowany' %}
+      deklarowany nowy
+    {% elif g.condition == 'uzywany_deklarowany' %}
+      deklarowany używany
+    {% else %}
+      nieustalony
+    {% endif %}
+  </p>
+
+  <p>
+    Porównania przed filtrowaniem:
+    {{ g.before_filter }}
+  </p>
+
+  <p>
+    Porównania po filtrowaniu:
+    <strong>{{ g.peer_count }}</strong>
+  </p>
+
+  {% if g.excluded_prices %}
+  <p>
+    Ceny wykluczone jako odstające:
+    {{ g.excluded_prices | join(', ') }} zł
+  </p>
+  {% endif %}
+
+  {% if g.available %}
+
+  <p>
+    Mediana porównywalnych ogłoszeń:
+    <strong>{{ g.median_zl }} zł</strong>
+  </p>
+
+  <p>
+    To cena ofertowa, niepotwierdzona
+    transakcjami sprzedaży.
+  </p>
+
+  {% else %}
+
+  <p>
+    <strong>
+      Za mało porównywalnych ofert
+      do wiarygodnej wyceny.
+    </strong>
+  </p>
+
+  <p>
+    Minimum: 5 innych ogłoszeń tego samego
+    modelu i tej samej kategorii stanu.
+  </p>
+
+  {% endif %}
+
+  <p>
+    <strong>Symulacja zysku i ROI: wstrzymana.</strong>
+    Wymagana dalsza weryfikacja cen odsprzedaży
+    oraz stanu sprzętu.
+  </p>
+
+  {% else %}
+
+  <p>
+    Brak wystarczających danych o ofercie.
+    Nie wykonano wyceny.
+  </p>
+
+  {% endif %}
+</section>
+
+{% else %}
+
+{% set p = peer_finance.get(offer.url) %}
+
+{% if p %}
+<section class="search-box">
+
+  <p>
+    <strong>Wycena bez analizowanego ogłoszenia</strong>
+  </p>
+
+  <p>
+    Inne dopasowane oferty:
+    <strong>{{ p.peer_count }}</strong>
+  </p>
+
+  {% if p.available %}
+
+    <p>
+      Mediana:
+      <strong>{{ p.median_zl }} zł</strong>
+    </p>
+
+    <p>
+      Dolny kwartyl (Q1):
+      <strong>{{ p.q1_zl }} zł</strong>
+    </p>
+
+    <p>
+      Różnica ceny względem Q1:
+      <strong>{{ p.difference_pct }}%</strong>
+    </p>
+
+    <p>
+      Ocena: <strong>{{ p.verdict }}</strong>
+    </p>
+
+    <p>
+      Wiarygodność porównania:
+      <strong>{{ p.confidence }}</strong>
+    </p>
+
+    {% if p.confidence == 'ograniczona' %}
+    <p>
+      Uwaga: ograniczona próbka lub rozbieżne ceny.
+      Porównywane ogłoszenia mogą różnić się
+      stanem, gwarancją i wersją sprzętu.
+    </p>
+    {% endif %}
+
+    {% if p.scenario %}
+
+    <div>
+      <p>
+        <strong>Hipotetyczna symulacja odsprzedaży</strong>
+      </p>
+
+      <p>
+        Zakładana cena odsprzedaży: {{ p.q1_zl }} zł.
+        To kwartyl cen wystawienia, a nie
+        potwierdzona cena transakcyjna.
+      </p>
+
+      <p>
+        Marża po uwzględnieniu rezerwy kosztowej:
+        <strong>{{ p.scenario.margin_zl }} zł</strong>
+      </p>
+
+      <p>
+        ROI:
+        <strong>{{ p.scenario.roi_pct }}%</strong>
+      </p>
+
+      <p>
+        Maksymalna cena zakupu przy zadanych progach:
+        <strong>{{ p.scenario.max_buy_zl }} zł</strong>
+      </p>
+
+      <p>
+        {% if p.scenario.meets_target %}
+          Progi matematyczne spełnione w symulacji.
+          Wymagana weryfikacja realnej wartości
+          odsprzedaży i stanu sprzętu.
+        {% else %}
+          Progi zysku i ROI niespełnione
+          w symulacji.
+        {% endif %}
+      </p>
+    </div>
+
+    {% elif offer.match_status == 'REVIEW' %}
+
+    <p>
+      Symulacja wstrzymana:
+      stan techniczny wymaga sprawdzenia.
+    </p>
+
+    {% else %}
+
+    <p>
+      Symulacja niedostępna.
+      Sprawdź ustawienia kosztów.
+    </p>
+
+    {% endif %}
+
+  {% else %}
+
+    <p>
+      <strong>Za mało danych do wyceny.</strong>
+      Wymagamy minimum pięciu innych,
+      zaakceptowanych ofert OLX.
+    </p>
+
+  {% endif %}
+
+  <small>
+    Wynik informacyjny.
+    Nie jest rekomendacją zakupu ani gwarancją zysku.
+  </small>
+
+</section>
+{% endif %}
+
+{% endif %}
+
+        <small>
+          Wykryto (UTC): {{ offer.first_seen_utc }}
+        </small>
+      </div>
+
+      <a class="btn btn-primary"
+         href="{{ offer.url }}"
+         target="_blank"
+         rel="noopener noreferrer">
+        Otwórz OLX
+      </a>
+    </div>
+
+    {% else %}
+      <p>Brak dopasowanych ofert.</p>
+    {% endfor %}
+  </section>
+</div>
+
+{% endblock %}

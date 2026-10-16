@@ -29,6 +29,8 @@
             <div class="nav-section">Dane</div>
             <a class="nav-link {{ 'active' if page == 'analytics' else '' }}" href="{{ url_for('main.analytics') }}">Analityka</a>
             <a class="nav-link {{ 'active' if page == 'market' else '' }}" href="{{ url_for('main.market') }}">Rynek</a>
+            <a class="nav-link {{ 'active' if page == 'market' else '' }}" href="/flip-radar/">Flip Radar</a>
+<a href="/flip-radar/searches">Moje wyszukiwania</a>
 
             <div class="nav-section">Techniczne</div>
             <a class="nav-link {{ 'active' if page == 'system' else '' }}" href="{{ url_for('main.system') }}">System</a>

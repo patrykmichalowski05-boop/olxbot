@@ -1,0 +1,11 @@
+[Unit]
+Description=Flip Hunter V2 - Check Updates Every Minute
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+AccuracySec=10s
+Unit=olx-deploy-v2.service
+
+[Install]
+WantedBy=timers.target

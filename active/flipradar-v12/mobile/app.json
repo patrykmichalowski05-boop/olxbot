@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "FlipRadar",
+    "slug": "flipradar",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "scheme": "flipradar",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "root": "./src/app"
+        }
+      ],
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.flipradar.app"
+    },
+    "android": {
+      "package": "com.flipradar.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1220"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

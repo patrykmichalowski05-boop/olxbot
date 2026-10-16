@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Flip Hunter{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block topbar_actions %}
+<span class="status-pill status-{{ data.health.status|lower }}" data-health-pill>{{ data.health.status }} · {{ data.health.score }}/100</span>
+{% endblock %}
+{% block content %}
+<div class="metric-grid metric-grid-5">
+    <div class="metric-card"><span>Alerty 24h</span><strong data-live="alerts_24h">{{ data.alerts_24h }}</strong><small>wszystkie źródła</small></div>
+    <div class="metric-card"><span>Mocne okazje 24h</span><strong data-live="hot_24h">{{ data.hot_24h }}</strong><small>score ≥ 75</small></div>
+    <div class="metric-card"><span>Watchlista</span><strong data-live="watch_count">{{ data.watch_count }}</strong><small>aktywne</small></div>
+    <div class="metric-card"><span>Aktywne deale</span><strong data-live="active_deals">{{ data.active_deals }}</strong><small>CRM</small></div>
+    <div class="metric-card"><span>Zrealizowany zysk</span><strong data-live="realized_profit">{{ money(data.realized_profit) }}</strong><small>sprzedane</small></div>
+</div>
+
+<div class="layout-2-1">
+    <div class="panel">
+        <div class="panel-head"><div><h2>Najnowsze okazje</h2><p>Ostatnie alerty z OLX i Facebook Marketplace · <span data-live-state>Synchronizacja...</span></p></div><a class="btn btn-ghost" href="{{ url_for('main.offers') }}">Wszystkie</a></div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Score</th><th>Oferta</th><th>Źródło</th><th>Cena</th><th>Quick sale</th><th>Zysk</th><th>Decyzja</th></tr></thead>
+                <tbody data-live-offers>
+                {% for item in data.offers if not (item.title or '').upper().startswith('TEST ') and 'IDTESTACTION' not in (item.url or '').upper() %}
+                    <tr class="clickable-row" data-href="{{ url_for('main.offer', alert_id=item.id) }}">
+                        <td><span class="score score-{{ 'hot' if (item.score or 0) >= 85 else 'good' if (item.score or 0) >= 75 else 'mid' }}">{{ item.score or 0 }}</span></td>
+                        <td><strong>{{ item.title }}</strong><div class="subtle">{{ item.created_at }}</div></td>
+                        <td><span class="source source-{{ item.source|lower }}">{{ item.source }}</span></td>
+                        {% set suspicious = (item.price or 0) > 0 and (item.quick_sale or 0) >= (item.price or 0) * 2 %}
+                        <td>{{ money(item.price) }}</td>
+                        <td>
+                            {{ money(item.quick_sale) }}
+                            {% if suspicious %}
+                            <div class="subtle">⚠ Wycena do ponownej weryfikacji</div>
+                            {% endif %}
+                        </td>
+                        <td class="{{ 'subtle' if suspicious else 'profit' }}">
+                            {{ 'Do weryfikacji' if suspicious else money(item.profit) }}
+                        </td>
+                        <td><span class="decision decision-{{ item.decision|lower }}">{{ item.decision }}</span></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" class="empty">Brak alertów.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="stack">
+        <div class="panel">
+            <div class="panel-head"><div><h2>Kolejka</h2><p>FAST → DEEP</p></div></div>
+            <div class="kv-list">
+                <div><span>Pending</span><strong data-live="queue.pending">{{ data.queue.pending }}</strong></div>
+                <div><span>Processing</span><strong data-live="queue.processing">{{ data.queue.processing }}</strong></div>
+                <div><span>Failed</span><strong data-live="queue.failed" class="{{ 'danger-text' if data.queue.failed else '' }}">{{ data.queue.failed }}</strong></div>
+                <div><span>Done</span><strong data-live="queue.done">{{ data.queue.done }}</strong></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><h2>Magazyn</h2><p>Kapitał i potencjał</p></div><a class="btn btn-ghost" href="{{ url_for('main.inventory') }}">Otwórz</a></div>
+            <div class="kv-list">
+                <div><span>Komputery</span><strong data-live="inventory.stats.count">{{ data.inventory.stats.count }}</strong></div>
+                <div><span>Kapitał</span><strong data-live="inventory.stats.capital">{{ money(data.inventory.stats.capital) }}</strong></div>
+                <div><span>Potencjalny zysk</span><strong data-live="inventory.stats.potential_profit" class="profit">{{ money(data.inventory.stats.potential_profit) }}</strong></div>
+                <div><span>Wymaga akcji</span><strong data-live="inventory.stats.attention">{{ data.inventory.stats.attention }}</strong></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-head"><div><h2>Stan systemu</h2><p>Watchdog, timery i błędy usług</p></div><a class="btn btn-ghost" href="{{ url_for('main.system') }}">System</a></div>
+    <div class="module-grid">
+        {% for module in data.health.modules %}
+        <div class="module-card">
+            <div class="module-top"><strong>{{ module.name }}</strong><span class="status-dot status-{{ module.status|lower }}">{{ module.status }}</span></div>
+            <div class="subtle">timer: {{ module.timer }} · result: {{ module.result }}</div>
+            <div class="subtle">błędy 24h: {{ module.errors }} · ostatni start: {{ module.last_start or '—' }}</div>
+        </div>
+        {% else %}<div class="empty">Brak danych health.</div>{% endfor %}
+    </div>
+</div>
+{% endblock %}

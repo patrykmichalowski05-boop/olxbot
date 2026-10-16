@@ -81,27 +81,115 @@ def parse_gpu(text):
 
 
 def parse_ram(text):
-    if not text:
+    """Read system RAM only from explicit RAM/DDR/kit evidence."""
+
+    if not isinstance(text, str) or not text.strip():
         return None
 
-    patterns = [
-        r'RAM\s*[:\-]?\s*(\d{1,3})\s*GB',
-        r'(\d{1,3})\s*GB\s*(?:DDR[345]\s*)?RAM',
-    ]
+    qty = r'(?:[1-8]\s*[x×]\s*\d{1,3}|\d{1,3})\s*GB'
 
-    for pattern in patterns:
-        m = re.search(
-            pattern,
-            text,
-            re.I
-        )
+    label = (
+        r'(?:RAM|pami[eę]ć\s+(?:operacyjna|RAM)|'
+        r'system\s+memory)'
+    )
 
-        if m:
-            return int(
-                m.group(1)
+    patterns = (
+        (
+            'ram_before',
+            rf'\b{label}\b\s*[:=\-–]?\s*'
+            rf'(?:DDR[345]\s*)?(?P<size>{qty})\b',
+        ),
+        (
+            'ram_after',
+            rf'(?P<size>{qty})\s*(?:DDR[345]\s*)?'
+            rf'\b{label}\b',
+        ),
+        (
+            'ddr_before',
+            rf'\bDDR[345]\b\s*[:=\-–]?\s*'
+            rf'(?P<size>{qty})\b',
+        ),
+        (
+            'ddr_after',
+            rf'(?P<size>{qty})\s*\bDDR[345]\b',
+        ),
+        (
+            'kit',
+            r'(?P<size>[1-8]\s*[x×]\s*\d{1,3}\s*GB)\b',
+        ),
+    )
+
+    for kind, pattern in patterns:
+        for match in re.finditer(pattern, text, re.I):
+
+            amount = match.group('size')
+
+            kit = re.fullmatch(
+                r'([1-8])\s*[x×]\s*(\d{1,3})\s*GB',
+                amount,
+                re.I,
             )
 
+            if kit:
+                gb = int(kit[1]) * int(kit[2])
+            else:
+                gb = int(
+                    re.search(r'\d{1,3}', amount).group()
+                )
+
+            if not 4 <= gb <= 256:
+                continue
+
+            # Nie traktuj pamięci GPU jako RAM.
+
+            start = match.start('size')
+
+            last_sep = max(
+                (
+                    text.rfind(c, 0, start)
+                    for c in '\n;|,'
+                ),
+                default=-1,
+            )
+
+            prefix = text[last_sep + 1:start]
+
+            gpu_matches = list(re.finditer(
+                r'\b(?:RTX|GTX|Radeon|VRAM|'
+                r'GDDR[456]\w*|RX\s*\d{4})\b',
+                prefix,
+                re.I,
+            ))
+
+            if gpu_matches and kind != 'ram_before':
+                # Rozdzielamy VRAM GPU od RAM komputera.
+                suffix = prefix[gpu_matches[-1].end():]
+
+                previous_capacity = re.search(
+                    r'\b\d{1,3}\s*GB\b',
+                    suffix,
+                    re.I,
+                )
+
+                if not previous_capacity:
+                    continue
+
+            near = text[
+                max(0, match.start() - 15):
+                match.end() + 15
+            ]
+
+            if kind == 'kit' and re.search(
+                r'\b(?:VRAM|GDDR\w*)\b',
+                near,
+                re.I,
+            ):
+                continue
+
+            return gb
+
     return None
+
 
 
 def parse_disks(text):

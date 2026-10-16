@@ -1,0 +1,47 @@
+.env
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# === FLIP HUNTER - RUNTIME DATA ===
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+
+# === BACKUPS ===
+*.bak
+*.bak-*
+*.backup
+*.backup-*
+
+# === LOGS / STATE ===
+*.log
+*.pid
+watchdog_state.json
+
+# === SECRETS ===
+.env
+.env.*
+!.env.example
+!*.env.example
+secrets/
+runtime/
+*.storage-state.json
+playwright/.auth/
+universal-hunter.local.json
+/mobile/node_modules
+
+# === PYTHON ===
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

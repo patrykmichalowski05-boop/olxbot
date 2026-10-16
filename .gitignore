@@ -40,3 +40,21 @@ secrets/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Local runtime data and secrets (Ubuntu sync)
+*.db
+*.db-*
+*.sqlite*
+*.log
+*.pid
+.env
+.env.*
+!.env.example
+__pycache__/
+node_modules/
+venv/
+.venv/
+*.pem
+*.key
+*.p12
+*.pfx

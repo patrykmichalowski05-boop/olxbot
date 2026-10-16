@@ -1,0 +1,13 @@
+[Unit]
+Description=Flip Hunter V2 Automatic Deployment
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot
+Environment=HOME=/root
+Environment=GIT_TERMINAL_PROMPT=0
+ExecStart=/usr/local/sbin/olx-deploy-v2 --apply
+TimeoutStartSec=180

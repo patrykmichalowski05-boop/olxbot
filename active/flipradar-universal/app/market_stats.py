@@ -1,0 +1,1158 @@
+import sqlite3
+import statistics
+
+from datetime import (
+    datetime,
+    timedelta
+)
+
+
+DB_FILE = "/opt/olx-bot/market.db"
+
+
+# ============================================================
+# DB
+# ============================================================
+
+def connect():
+
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+
+    conn.row_factory = (
+        sqlite3.Row
+    )
+
+    return conn
+
+
+# ============================================================
+# CZAS
+# ============================================================
+
+def parse_date(value):
+
+    if not value:
+        return None
+
+    try:
+        return datetime.fromisoformat(
+            value
+        )
+
+    except:
+        return None
+
+
+def life_hours(row):
+    """
+    Czas życia oferty.
+
+    Dla nieaktywnej:
+    first_seen -> inactive_since
+
+    Dla aktywnej:
+    first_seen -> teraz
+    """
+
+    first = parse_date(
+        row["first_seen"]
+    )
+
+    if not first:
+        return None
+
+    if (
+        "active" in row.keys()
+        and
+        row["active"] == 0
+        and
+        row["inactive_since"]
+    ):
+
+        end = parse_date(
+            row["inactive_since"]
+        )
+
+    else:
+
+        end = datetime.now()
+
+    if not end:
+        return None
+
+    delta = end - first
+
+    return max(
+        0,
+        delta.total_seconds()
+        / 3600
+    )
+
+
+# ============================================================
+# STATYSTYKA
+# ============================================================
+
+def percentile(
+    values,
+    p
+):
+
+    values = sorted(
+        values
+    )
+
+    if not values:
+        return None
+
+    if len(values) == 1:
+        return float(
+            values[0]
+        )
+
+    index = (
+        len(values) - 1
+    ) * p
+
+    lower = int(index)
+
+    upper = min(
+        lower + 1,
+        len(values) - 1
+    )
+
+    fraction = (
+        index - lower
+    )
+
+    return (
+        values[lower]
+        +
+        (
+            values[upper]
+            -
+            values[lower]
+        )
+        * fraction
+    )
+
+
+def weighted_percentile(
+    items,
+    p
+):
+    """
+    items:
+    [
+        (price, weight),
+        ...
+    ]
+    """
+
+    if not items:
+        return None
+
+    items = sorted(
+        items,
+        key=lambda x: x[0]
+    )
+
+    total_weight = sum(
+        weight
+        for _, weight
+        in items
+    )
+
+    if total_weight <= 0:
+        return None
+
+    target = (
+        total_weight * p
+    )
+
+    cumulative = 0
+
+    for price, weight in items:
+
+        cumulative += weight
+
+        if cumulative >= target:
+            return float(price)
+
+    return float(
+        items[-1][0]
+    )
+
+
+def remove_outliers(
+    rows
+):
+    """
+    Odrzucamy absurdalne ceny na podstawie IQR.
+    """
+
+    if len(rows) < 5:
+        return rows
+
+    prices = [
+        row["price"]
+        for row in rows
+        if row["price"] is not None
+    ]
+
+    if len(prices) < 5:
+        return rows
+
+    q1 = percentile(
+        prices,
+        0.25
+    )
+
+    q3 = percentile(
+        prices,
+        0.75
+    )
+
+    iqr = q3 - q1
+
+    lower = (
+        q1 - 1.5 * iqr
+    )
+
+    upper = (
+        q3 + 1.5 * iqr
+    )
+
+    return [
+        row
+        for row in rows
+        if (
+            row["price"]
+            is not None
+            and
+            lower
+            <= row["price"]
+            <= upper
+        )
+    ]
+
+
+# ============================================================
+# WAGI OFERT
+# ============================================================
+
+def freshness_weight(
+    row
+):
+
+    last_seen = parse_date(
+        row["last_seen"]
+    )
+
+    if not last_seen:
+        return 0.50
+
+    age_days = (
+        datetime.now()
+        -
+        last_seen
+    ).total_seconds() / 86400
+
+    if age_days <= 3:
+        return 1.00
+
+    if age_days <= 7:
+        return 0.90
+
+    if age_days <= 14:
+        return 0.75
+
+    if age_days <= 30:
+        return 0.55
+
+    return 0.30
+
+
+def lifecycle_weight(
+    row
+):
+    """
+    Zniknięcie nie oznacza na pewno sprzedaży.
+
+    Ale szybkie zniknięcie jest wartościowym
+    sygnałem rynku.
+
+    Aktywne oferty:
+    neutralna waga.
+
+    Nieaktywne:
+    im szybciej zniknęły, tym większa waga.
+    """
+
+    active = row["active"]
+
+    hours = life_hours(
+        row
+    )
+
+    if active == 1:
+
+        # Bardzo długo wisząca aktywna oferta
+        # dostaje mniejszą wagę.
+
+        if hours is None:
+            return 0.80
+
+        if hours <= 72:
+            return 1.00
+
+        if hours <= 168:
+            return 0.90
+
+        if hours <= 336:
+            return 0.75
+
+        if hours <= 720:
+            return 0.60
+
+        return 0.45
+
+    # ----------------------------------------
+    # OFERTA ZNIKNĘŁA
+    # ----------------------------------------
+
+    if hours is None:
+        return 0.90
+
+    if hours <= 6:
+        return 1.40
+
+    if hours <= 24:
+        return 1.30
+
+    if hours <= 72:
+        return 1.20
+
+    if hours <= 168:
+        return 1.05
+
+    if hours <= 336:
+        return 0.90
+
+    return 0.70
+
+
+def reference_quality_weight(row):
+    import re
+
+    title = str(row["title"] or "")
+
+    try:
+        raw_verified = row["last_verified"]
+    except (KeyError, IndexError, TypeError):
+        raw_verified = None
+
+    if not raw_verified:
+        weight = 0.80
+    else:
+        try:
+            verified = parse_date(raw_verified)
+        except (ValueError, TypeError):
+            verified = None
+
+        if verified is None:
+            weight = 0.80
+        else:
+            days = (
+                datetime.now() - verified
+            ).total_seconds() / 86400
+
+            if days <= 7:
+                weight = 1.00
+            elif days <= 14:
+                weight = 0.90
+            elif days <= 30:
+                weight = 0.75
+            else:
+                weight = 0.60
+
+    new_pc = bool(re.search(
+        r"\b(?:fabrycznie\s+nowy|"
+        r"nowy\s+(?:komputer|pc|zestaw)|"
+        r"(?:komputer|pc|zestaw)\s+nowy)\b",
+        title, re.I
+    ))
+
+    new_cpu_pc = bool(
+        re.search(
+            r"^\s*nowy\s+(?:ryzen|intel)\b",
+            title, re.I
+        )
+        and re.search(
+            r"\b(?:komputer|pc|zestaw)\b",
+            title, re.I
+        )
+    )
+
+    if new_pc or new_cpu_pc:
+        weight *= 0.65
+
+    return weight
+
+
+def offer_weight(
+    row
+):
+
+    return (
+        freshness_weight(row)
+        *
+        lifecycle_weight(row)
+        *
+        reference_quality_weight(row)
+    )
+
+
+# ============================================================
+# POBIERANIE DANYCH
+# ============================================================
+
+def get_exact_comparables(
+    cpu,
+    gpu,
+    max_age_days=30
+):
+
+    cutoff = (
+        datetime.now()
+        -
+        timedelta(
+            days=max_age_days
+        )
+    ).isoformat(
+        timespec="seconds"
+    )
+
+    with connect() as conn:
+
+        rows = conn.execute("""
+            SELECT
+                offer_id,
+                title,
+                price,
+                first_price,
+                lowest_price,
+                highest_price,
+
+                cpu,
+                gpu,
+                ram,
+
+                first_seen,
+                last_seen,
+
+                active,
+                inactive_since,
+
+                seen_count,
+                price_changes,
+                last_verified
+
+            FROM market_offers
+
+            WHERE
+                UPPER(cpu) = UPPER(?)
+
+                AND
+                UPPER(gpu) = UPPER(?)
+
+                AND
+                price IS NOT NULL
+
+                AND
+                last_seen >= ?
+        """, (
+            cpu,
+            gpu,
+            cutoff
+        )).fetchall()
+
+    return rows
+
+
+# ============================================================
+# LICZENIE
+# ============================================================
+
+def calculate_market_stats(
+    rows
+):
+
+    from market_reference_quality import reject_reason
+
+    rows = [
+        row for row in rows
+        if reject_reason(row) is None
+    ]
+
+    rows = [
+        row
+        for row in rows
+        if (
+            row["price"]
+            is not None
+            and
+            500
+            <= row["price"]
+            <= 20000
+        )
+    ]
+
+    raw_samples = len(
+        rows
+    )
+
+    if not rows:
+        return empty_stats()
+
+    # ========================================================
+    # QUALITY FILTER
+    #
+    # Pojedyncze świeże aktywne ogłoszenie nie jest jeszcze
+    # wiarygodnym dowodem wartości rynkowej.
+    #
+    # Jeżeli mamy tylko 1-2 rekordy, odrzucamy aktywne oferty
+    # widziane tylko jeden raz. Rekord pozostaje w market.db
+    # i zacznie być używany po ponownym zobaczeniu przez skaner.
+    # ========================================================
+
+    if len(rows) <= 2:
+
+        confirmed_rows = [
+            row
+            for row in rows
+            if (
+                row["active"] == 0
+                or
+                (row["seen_count"] or 0) >= 2
+                or
+                (row["price_changes"] or 0) >= 1
+            )
+        ]
+
+        rows = confirmed_rows
+
+    if not rows:
+        return empty_stats()
+
+    rows = remove_outliers(
+        rows
+    )
+
+    if not rows:
+
+        return empty_stats()
+
+    active_rows = [
+        row
+        for row in rows
+        if row["active"] == 1
+    ]
+
+    inactive_rows = [
+        row
+        for row in rows
+        if row["active"] == 0
+    ]
+
+    prices = [
+        row["price"]
+        for row in rows
+    ]
+
+    weighted = [
+        (
+            row["price"],
+            offer_weight(row)
+        )
+        for row in rows
+    ]
+
+    # ----------------------------------------
+    # Zwykłe statystyki
+    # ----------------------------------------
+
+    minimum = min(
+        prices
+    )
+
+    maximum = max(
+        prices
+    )
+
+    median = statistics.median(
+        prices
+    )
+
+    p25 = percentile(
+        prices,
+        0.25
+    )
+
+    p75 = percentile(
+        prices,
+        0.75
+    )
+
+    # ----------------------------------------
+    # Statystyki ważone życiem ofert
+    # ----------------------------------------
+
+    weighted_p20 = (
+        weighted_percentile(
+            weighted,
+            0.20
+        )
+    )
+
+    weighted_p25 = (
+        weighted_percentile(
+            weighted,
+            0.25
+        )
+    )
+
+    weighted_median = (
+        weighted_percentile(
+            weighted,
+            0.50
+        )
+    )
+
+    # ----------------------------------------
+    # Oferty znikające szybko
+    # ----------------------------------------
+
+    fast_exit_prices = []
+
+    fast_exit_under_24h = 0
+    fast_exit_under_72h = 0
+
+    lifecycle_hours = []
+
+    for row in inactive_rows:
+
+        hours = life_hours(
+            row
+        )
+
+        if hours is None:
+            continue
+
+        lifecycle_hours.append(
+            hours
+        )
+
+        if hours <= 24:
+
+            fast_exit_under_24h += 1
+
+            fast_exit_prices.append(
+                row["price"]
+            )
+
+        elif hours <= 72:
+
+            fast_exit_under_72h += 1
+
+            fast_exit_prices.append(
+                row["price"]
+            )
+
+    fast_exit_median = None
+
+    if fast_exit_prices:
+
+        fast_exit_median = (
+            statistics.median(
+                fast_exit_prices
+            )
+        )
+
+    median_life_hours = None
+
+    if lifecycle_hours:
+
+        median_life_hours = (
+            statistics.median(
+                lifecycle_hours
+            )
+        )
+
+    # ========================================================
+    # QUICK SALE
+    # ========================================================
+
+    candidates = []
+
+    if weighted_p25:
+        candidates.append(
+            weighted_p25
+        )
+
+    if weighted_p20:
+        candidates.append(
+            weighted_p20
+        )
+
+    # Jeżeli mamy kilka szybkich zniknięć,
+    # wykorzystujemy je jako dodatkowy sygnał.
+    if (
+        fast_exit_median
+        is not None
+        and
+        len(fast_exit_prices) >= 2
+    ):
+
+        candidates.append(
+            fast_exit_median
+        )
+
+    if candidates:
+
+        # Nie bierzemy największej wartości.
+        # Konserwatywnie używamy dolnej części rynku.
+        base_quick_sale = min(
+            candidates
+        )
+
+    else:
+
+        base_quick_sale = p25
+
+    # Końcowy bufor bezpieczeństwa użytkownika:
+    # dodatkowe -10%.
+    quick_sale = round(
+        base_quick_sale
+        * 0.90
+    )
+
+    # ========================================================
+    # CONFIDENCE
+    # ========================================================
+
+    samples = len(
+        rows
+    )
+
+    inactive_samples = len(
+        inactive_rows
+    )
+
+    if (
+        samples >= 15
+        and
+        inactive_samples >= 5
+    ):
+
+        confidence = (
+            "BARDZO WYSOKI"
+        )
+
+    elif (
+        samples >= 10
+        and
+        inactive_samples >= 3
+    ):
+
+        confidence = (
+            "WYSOKI"
+        )
+
+    elif samples >= 5:
+
+        confidence = (
+            "ŚREDNI"
+        )
+
+    elif samples >= 3:
+
+        confidence = (
+            "NISKI"
+        )
+
+    else:
+
+        confidence = (
+            "BARDZO NISKI"
+        )
+
+    return {
+        "samples":
+            samples,
+
+        "raw_samples":
+            raw_samples,
+
+        "active_samples":
+            len(active_rows),
+
+        "inactive_samples":
+            len(inactive_rows),
+
+        "min":
+            round(minimum),
+
+        "p25":
+            round(p25),
+
+        "median":
+            round(median),
+
+        "p75":
+            round(p75),
+
+        "max":
+            round(maximum),
+
+        "weighted_p20":
+            round(
+                weighted_p20
+            )
+            if weighted_p20
+            else None,
+
+        "weighted_p25":
+            round(
+                weighted_p25
+            )
+            if weighted_p25
+            else None,
+
+        "weighted_median":
+            round(
+                weighted_median
+            )
+            if weighted_median
+            else None,
+
+        "fast_exit_samples":
+            len(
+                fast_exit_prices
+            ),
+
+        "fast_exit_under_24h":
+            fast_exit_under_24h,
+
+        "fast_exit_under_72h":
+            fast_exit_under_72h,
+
+        "fast_exit_median":
+            round(
+                fast_exit_median
+            )
+            if fast_exit_median
+            else None,
+
+        "median_life_hours":
+            round(
+                median_life_hours,
+                1
+            )
+            if median_life_hours
+            else None,
+
+        "base_quick_sale":
+            round(
+                base_quick_sale
+            ),
+
+        "quick_sale":
+            quick_sale,
+
+        "confidence":
+            confidence
+    }
+
+
+def empty_stats():
+
+    return {
+        "samples": 0,
+        "raw_samples": 0,
+
+        "active_samples": 0,
+        "inactive_samples": 0,
+
+        "min": None,
+        "p25": None,
+        "median": None,
+        "p75": None,
+        "max": None,
+
+        "weighted_p20": None,
+        "weighted_p25": None,
+        "weighted_median": None,
+
+        "fast_exit_samples": 0,
+        "fast_exit_under_24h": 0,
+        "fast_exit_under_72h": 0,
+        "fast_exit_median": None,
+
+        "median_life_hours": None,
+
+        "base_quick_sale": None,
+        "quick_sale": None,
+
+        "confidence": "BRAK"
+    }
+
+
+# ============================================================
+# PUBLICZNE API
+# ============================================================
+
+def get_cpu_gpu_stats(
+    cpu,
+    gpu,
+    max_age_hours=720
+):
+    """
+    Zachowujemy nazwę funkcji, żeby valuation.py
+    dalej działał bez zmian.
+
+    max_age_hours -> zamiana na dni.
+    """
+
+    max_age_days = max(
+        1,
+        round(
+            max_age_hours
+            / 24
+        )
+    )
+
+    rows = get_exact_comparables(
+        cpu,
+        gpu,
+        max_age_days=max_age_days
+    )
+
+    return calculate_market_stats(
+        rows
+    )
+
+
+def get_gpu_stats(
+    gpu,
+    max_age_hours=720
+):
+
+    cutoff = (
+        datetime.now()
+        -
+        timedelta(
+            hours=max_age_hours
+        )
+    ).isoformat(
+        timespec="seconds"
+    )
+
+    with connect() as conn:
+
+        rows = conn.execute("""
+            SELECT
+                offer_id,
+                title,
+                price,
+                first_price,
+                lowest_price,
+                highest_price,
+
+                cpu,
+                gpu,
+                ram,
+
+                first_seen,
+                last_seen,
+
+                active,
+                inactive_since,
+
+                seen_count,
+                price_changes,
+                last_verified
+
+            FROM market_offers
+
+            WHERE
+                UPPER(gpu) = UPPER(?)
+
+                AND
+                price IS NOT NULL
+
+                AND
+                last_seen >= ?
+        """, (
+            gpu,
+            cutoff
+        )).fetchall()
+
+    return calculate_market_stats(
+        rows
+    )
+
+
+# ============================================================
+# DEBUG
+# ============================================================
+
+def print_stats(
+    label,
+    data
+):
+
+    print()
+    print("=" * 70)
+    print(label)
+    print("=" * 70)
+
+    print(
+        f"Próbki:             "
+        f"{data['samples']}"
+    )
+
+    print(
+        f"Aktywne:            "
+        f"{data['active_samples']}"
+    )
+
+    print(
+        f"Nieaktywne:         "
+        f"{data['inactive_samples']}"
+    )
+
+    if data["samples"] == 0:
+
+        print(
+            "Brak danych."
+        )
+
+        return
+
+    print()
+
+    print(
+        f"Minimum:            "
+        f"{data['min']} zł"
+    )
+
+    print(
+        f"P25:                "
+        f"{data['p25']} zł"
+    )
+
+    print(
+        f"Mediana:            "
+        f"{data['median']} zł"
+    )
+
+    print(
+        f"P75:                "
+        f"{data['p75']} zł"
+    )
+
+    print()
+
+    print(
+        f"Weighted P20:       "
+        f"{data['weighted_p20']} zł"
+    )
+
+    print(
+        f"Weighted P25:       "
+        f"{data['weighted_p25']} zł"
+    )
+
+    print(
+        f"Weighted mediana:   "
+        f"{data['weighted_median']} zł"
+    )
+
+    print()
+
+    print(
+        f"Szybkie zniknięcia: "
+        f"{data['fast_exit_samples']}"
+    )
+
+    print(
+        f"<=24h:              "
+        f"{data['fast_exit_under_24h']}"
+    )
+
+    print(
+        f"<=72h:              "
+        f"{data['fast_exit_under_72h']}"
+    )
+
+    print(
+        f"Mediana szybkich:   "
+        f"{data['fast_exit_median']}"
+    )
+
+    print(
+        f"Mediana życia [h]:  "
+        f"{data['median_life_hours']}"
+    )
+
+    print()
+
+    print(
+        f"Baza quick sale:    "
+        f"{data['base_quick_sale']} zł"
+    )
+
+    print(
+        f"Po buforze -10%:    "
+        f"{data['quick_sale']} zł"
+    )
+
+    print(
+        f"Confidence:         "
+        f"{data['confidence']}"
+    )
+
+
+if __name__ == "__main__":
+
+    tests = [
+        (
+            "Ryzen 5 3600",
+            "RTX 3060"
+        ),
+
+        (
+            "Ryzen 5 5600",
+            "RTX 3060"
+        ),
+
+        (
+            "Ryzen 5 5600X",
+            "RX 6650 XT"
+        ),
+    ]
+
+    for cpu, gpu in tests:
+
+        result = get_cpu_gpu_stats(
+            cpu,
+            gpu
+        )
+
+        print_stats(
+            f"{cpu} + {gpu}",
+            result
+        )

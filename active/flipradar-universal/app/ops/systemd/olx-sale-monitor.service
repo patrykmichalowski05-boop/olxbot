@@ -1,0 +1,10 @@
+[Unit]
+Description=OLX Flip Hunter Sale Listing Monitor
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/sale_listing_monitor.py

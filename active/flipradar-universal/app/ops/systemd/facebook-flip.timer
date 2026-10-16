@@ -1,0 +1,11 @@
+[Unit]
+Description=Facebook scan 30 minutes after previous completion
+
+[Timer]
+OnActiveSec=1min
+OnUnitInactiveSec=60min
+AccuracySec=30s
+Unit=facebook-flip.service
+
+[Install]
+WantedBy=timers.target

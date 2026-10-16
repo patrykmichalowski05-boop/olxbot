@@ -1,0 +1,8 @@
+[Unit]
+Description=Flip Hunter DEV - Telegram candidate alerts
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot-budget-dev
+ExecStart=/usr/bin/flock -n /run/flip-telegram-dev.lock /opt/olx-bot/venv/bin/python -u /opt/olx-bot-budget-dev/telegram_candidates_dev.py --send
+TimeoutStartSec=4min

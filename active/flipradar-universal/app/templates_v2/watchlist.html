@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Watchlista — Flip Hunter{% endblock %}
+{% block heading %}Watchlista{% endblock %}
+{% block content %}
+<div class="panel">
+    <div class="panel-head"><div><h2>Obserwowane oferty</h2><p>Pozycje utworzone przez watchlist.py i lifecycle</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Status</th><th>Oferta</th><th>Cena</th><th>Max buy</th><th>Opening</th><th>Score</th><th>Ostatnio</th><th></th></tr></thead><tbody>
+    {% for item in items %}<tr><td><span class="tag">{{ item.status }}</span></td><td><a href="{{ item.url }}" target="_blank" rel="noopener"><strong>{{ item.title }}</strong></a><div class="subtle">{{ item.offer_key }}</div></td><td>{{ money(item.current_price) }}</td><td>{{ money(item.max_buy) }}</td><td>{{ money(item.opening) }}</td><td>{{ item.score or 0 }}</td><td>{{ item.last_seen }}</td><td>{% if item.status == 'WATCHING' %}<form method="post" action="{{ url_for('main.action_watch_close', item_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-small" type="submit" data-confirm="Zamknąć obserwację?">Zamknij</button></form>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="8" class="empty">Watchlista jest pusta.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

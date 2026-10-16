@@ -11,7 +11,21 @@
         </div>
     </div>
 
-    <form method="post"
+    
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Zysk, ROI i koszty zakupu</h2>
+      <p>Ustaw jeden przejrzysty zestaw zasad finansowych.</p>
+    </div>
+  </div>
+  <a class="btn btn-primary"
+     href="{{ url_for('flip_radar.flip_policy_settings') }}">
+    Konfiguruj zysk i ROI
+  </a>
+</div>
+
+<form method="post"
           action="{{ url_for('main.scanner_settings_page') }}">
         <input type="hidden" name="csrf_token"
                value="{{ csrf_token() }}">

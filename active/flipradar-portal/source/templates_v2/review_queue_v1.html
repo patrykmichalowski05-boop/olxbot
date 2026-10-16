@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<link rel="stylesheet"
+ href="{{ url_for('static', filename='saved_searches_v1.css') }}">
+
+<div class="search-wrap">
+
+  <a href="{{ url_for('flip_radar.search_page') }}">
+    ← Moje wyszukiwania
+  </a>
+
+  <h1>Do sprawdzenia</h1>
+<p>
+  <a href="{{ url_for('flip_radar.price_drops_page') }}">
+    Obniżki cen OLX
+  </a>
+</p>
+
+
+  <p>
+    Tutaj trafiają oferty z niepewnym stanem
+    lub ceną znacznie niższą od porównywalnych
+    ogłoszeń OLX.
+  </p>
+
+  <section class="search-box">
+    <h2>{{ report.total }} kandydatów do weryfikacji</h2>
+    <p>
+      Podejrzanie niska cena: {{ report.suspicious }}
+      · Niepewny stan: {{ report.technical }}
+    </p>
+    <p>
+      Porównania wykorzystują ceny wystawienia,
+      nie potwierdzone ceny sprzedaży.
+      Maksymalnie 100 pozycji na tej stronie.
+    </p>
+  </section>
+
+  {% for item in report['items'] %}
+  <section class="search-box">
+
+    <small>{{ item.search_name }}</small>
+
+    <h2>{{ item.title }}</h2>
+
+    <p>
+      Cena OLX:
+      <strong>{{ item.price }} zł</strong>
+    </p>
+
+    <p>
+      <strong>Powód weryfikacji:</strong>
+      {{ item.reason }}
+    </p>
+
+    {% if item.q1 %}
+    <p>
+      Dolny kwartyl OLX: {{ item.q1 }} zł
+      · Różnica: {{ item.difference }}%
+      · Próbka: {{ item.sample }} ogłoszeń
+    </p>
+    {% else %}
+    <p>Za mało danych do porównania ceny.</p>
+    {% endif %}
+
+    <p>
+      Ostatnio widziana (UTC):
+      {{ item.last_seen }}
+    </p>
+
+    <p>
+      Sprawdź stan sprzętu, zdjęcia, gwarancję,
+      sprzedającego i możliwość przetestowania.
+    </p>
+
+    <a class="btn btn-primary"
+       href="{{ item.url }}"
+       target="_blank"
+       rel="noopener noreferrer">
+      Otwórz ogłoszenie OLX
+    </a>
+<form method="post"
+ action="{{ url_for('flip_radar.review_set_decision') }}">
+ <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+ <input type="hidden" name="search_id"
+        value="{{ item.search_id }}">
+ <input type="hidden" name="listing_id"
+        value="{{ item.listing_id }}">
+ <input type="hidden" name="review_token"
+        value="{{ review_token(item.search_id, item.listing_id) }}">
+ <button type="submit" name="decision"
+         value="interest">Interesuje mnie</button>
+ <button type="submit" name="decision"
+         value="checked">Sprawdzone</button>
+ <button type="submit" name="decision"
+         value="rejected">Odrzuć</button>
+</form>
+{% include 'review_note_form_v1.html' %}
+{% include 'review_note_history_v1.html' %}
+
+  </section>
+
+  {% else %}
+  <section class="search-box">
+    <p>Brak ofert wymagających weryfikacji.</p>
+  </section>
+  {% endfor %}
+
+<section class="search-box">
+ <h2>Historia decyzji ({{ report['handled_total'] }})</h2>
+
+ {% for item in report['handled'] %}
+ <div class="search-item">
+  <div>
+   <strong>{{ item.title }}</strong>
+   <p>{{ item.price }} zł</p>
+   <p>
+    Status:
+    {% if item.decision == 'interest' %}
+      Interesuje mnie
+    {% elif item.decision == 'checked' %}
+      Sprawdzone
+    {% else %}
+      Odrzucone
+    {% endif %}
+   </p>
+  </div>
+
+  <form method="post"
+   action="{{ url_for('flip_radar.review_set_decision') }}">
+   <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+   <input type="hidden" name="search_id"
+          value="{{ item.search_id }}">
+   <input type="hidden" name="listing_id"
+          value="{{ item.listing_id }}">
+   <input type="hidden" name="review_token"
+          value="{{ review_token(item.search_id, item.listing_id) }}">
+   <button type="submit" name="decision"
+           value="pending">Przywróć do kolejki</button>
+  </form>
+{% include 'review_note_form_v1.html' %}
+{% include 'review_note_history_v1.html' %}
+ </div>
+ {% else %}
+ <p>Brak zapisanych decyzji dla aktualnych kandydatów.</p>
+ {% endfor %}
+</section>
+
+</div>
+{% endblock %}

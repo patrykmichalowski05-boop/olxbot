@@ -1,0 +1,14 @@
+[Unit]
+Description=Facebook Marketplace Flip Scanner
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+ExecStart=/opt/olx-bot/venv/bin/python -u -m facebook.facebook_flip_scanner
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/opt/olx-bot/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TimeoutStartSec=1h
+StandardOutput=journal
+StandardError=journal

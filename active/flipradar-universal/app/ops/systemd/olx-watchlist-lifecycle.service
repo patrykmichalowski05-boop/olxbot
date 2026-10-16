@@ -1,0 +1,12 @@
+[Unit]
+Description=OLX Flip Hunter Watchlist Lifecycle
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/watchlist_lifecycle.py

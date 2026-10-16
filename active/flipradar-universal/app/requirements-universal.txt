@@ -1,0 +1,7 @@
+# Isolated universal scanner; legacy scanners keep their own dependencies.
+requests>=2.32.4,<3
+beautifulsoup4>=4.13,<5
+python-dotenv>=1.1,<2
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+# Browser mode is optional: pip install -r requirements-universal-browser.txt

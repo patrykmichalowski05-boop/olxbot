@@ -1,0 +1,63 @@
+name: Flip Hunter V2 - Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check Python syntax
+        run: |
+          python -m compileall -q \
+            app_v2 \
+            webapp_v2.py \
+            dashboard.py \
+            scanner.py \
+            deep_worker.py \
+            deal_action.py \
+            telegram_notifier.py \
+            valuation.py \
+            valuation_v3.py \
+            market_stats.py
+
+
+      - name: Check JavaScript syntax
+        run: node --check static_v2/app.js
+
+  publish-validated:
+    name: Publish validated revision
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout validated revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish validated revision
+        run: |
+          git fetch origin refs/heads/deploy-ready:refs/remotes/origin/deploy-ready
+          git merge-base --is-ancestor origin/deploy-ready HEAD
+          git push origin HEAD:refs/heads/deploy-ready

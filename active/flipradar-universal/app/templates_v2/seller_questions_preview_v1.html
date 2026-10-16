@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flip Hunter — Wymagają informacji</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{
+  margin:0;background:#0c111b;color:#e6edf7;
+  font:15px system-ui,Segoe UI,sans-serif
+}
+main{max-width:1100px;margin:auto;padding:28px 16px}
+a{color:#9bbdff;text-decoration:none}
+nav{display:flex;gap:20px;margin-bottom:25px}
+h1{font-size:26px}
+.muted{color:#a7b1c6}
+.notice{
+  padding:16px;background:#243044;
+  border:1px solid #52627c;border-radius:12px
+}
+.offer{
+  background:#151d29;border:1px solid #344053;
+  border-radius:14px;padding:18px;margin-top:15px
+}
+.top{display:flex;justify-content:space-between;gap:15px}
+.price{font-size:21px;font-weight:bold;white-space:nowrap}
+.tag{color:#ffda8b;font-size:12px}
+.meta{line-height:1.8;margin:14px 0}
+details{margin-top:14px}
+summary{cursor:pointer;color:#9bbdff}
+blockquote{
+  white-space:pre-wrap;background:#243044;
+  padding:14px;border-radius:8px;margin:10px 0
+}
+@media(max-width:550px){.top{display:block}}
+</style>
+</head>
+<body>
+<main>
+<nav>
+<a href="/flip-radar/">← Radar</a>
+<a href="/flip-radar/review">Kolejka weryfikacji</a>
+</nav>
+
+<h1>Wymagają informacji</h1>
+<input id="offer-search" type="search"
+       placeholder="Szukaj po nazwie lub brakujących danych..."
+       aria-label="Filtruj oferty"
+       style="width:100%;padding:12px;margin:12px 0;
+              background:#111827;color:white;
+              border:1px solid #52627c;border-radius:9px">
+<p id="visible-count" class="muted"></p>
+<p class="muted">
+Podgląd {{ rows|length }} z {{ total }} ofert.
+</p>
+
+<div class="notice">
+<strong>Tryb testowy.</strong>
+Wiadomości nie zostały wysłane.
+Oferty nie mają jeszcze potwierdzonego zysku.
+</div>
+
+{% for r in rows %}
+<article class="offer"
+ data-filter="{{ (r.title ~ ' ' ~ r.missing ~ ' ' ~ r.conflicts)|lower }}">
+<div class="top">
+<div>
+<span class="tag">DO WERYFIKACJI</span>
+<h2>{{ r.title }}</h2>
+</div>
+<div class="price">{{ r.price_zl }} zł</div>
+</div>
+
+<div class="meta">
+<div><strong>Brakuje:</strong> {{ r.missing }}</div>
+<div><strong>Rozbieżności:</strong> {{ r.conflicts }}</div>
+<div><strong>Dane z tytułu/opisu:</strong> {{ r.hints }}</div>
+</div>
+
+{% if r.url %}
+<a href="{{ r.url }}" target="_blank"
+   rel="noopener noreferrer">
+Otwórz ogłoszenie ↗
+</a>
+{% endif %}
+
+<details>
+<summary>Podgląd wiadomości — nie wysłano</summary>
+<blockquote class="draft-message">{{ r.message }}</blockquote>
+<button type="button" class="copy-message"
+ style="background:#315caa;color:white;border:0;
+        border-radius:8px;padding:10px 16px;cursor:pointer">
+Kopiuj wiadomość
+</button>
+</details>
+</article>
+{% else %}
+<p>Brak ofert spełniających kryteria.</p>
+{% endfor %}
+
+<p class="muted">
+Flip Hunter — odczyt z bazy, bez wysyłania wiadomości.
+</p>
+
+{% if pages > 1 %}
+<div style="display:flex;gap:15px;align-items:center;
+            margin:25px 0;flex-wrap:wrap">
+{% if page > 1 %}
+<a href="/flip-radar/seller-questions-preview?page={{ page - 1 }}">
+← Poprzednia
+</a>
+{% endif %}
+<strong>Strona {{ page }} z {{ pages }}</strong>
+{% if page < pages %}
+<a href="/flip-radar/seller-questions-preview?page={{ page + 1 }}">
+Następna →
+</a>
+{% endif %}
+</div>
+{% endif %}
+<p class="muted">
+Wyszukiwanie filtruje aktualnie wyświetloną stronę.
+Nie potwierdzono rentowności tych ofert.
+</p>
+</main>
+
+<script>
+(() => {
+  const search = document.getElementById('offer-search');
+  const cards = [...document.querySelectorAll('.offer')];
+  const counter = document.getElementById('visible-count');
+
+  function filterOffers() {
+    const term = search.value.trim().toLocaleLowerCase('pl-PL');
+    let visible = 0;
+
+    for (const card of cards) {
+      const matches = card.dataset.filter
+        .toLocaleLowerCase('pl-PL').includes(term);
+
+      card.hidden = !matches;
+      if (matches) visible++;
+    }
+
+    counter.textContent = 'Widoczne oferty: ' + visible;
+  }
+
+  search.addEventListener('input', filterOffers);
+  filterOffers();
+
+  for (const button of document.querySelectorAll('.copy-message')) {
+    button.addEventListener('click', async () => {
+      const block = button.closest('.offer')
+        .querySelector('.draft-message');
+
+      const message = block.textContent.trim();
+
+      try {
+        await navigator.clipboard.writeText(message);
+        button.textContent = 'Skopiowano';
+      } catch (error) {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(block);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        button.textContent = 'Zaznaczono — Ctrl+C';
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

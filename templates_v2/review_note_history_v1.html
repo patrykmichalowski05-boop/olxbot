@@ -1,0 +1,56 @@
+<details class="search-box">
+  <summary>
+    Historia kontaktu ({{ item['history']|length }})
+  </summary>
+
+  <p>
+    Wyświetlamy 20 ostatnich wpisów.
+    Wszystkie wpisy pozostają w bazie danych.
+  </p>
+
+  {% set status_labels = {
+    'none': 'Brak kontaktu',
+    'messaged': 'Wysłano wiadomość',
+    'replied': 'Sprzedający odpowiedział',
+    'meeting': 'Umówione spotkanie',
+    'closed': 'Kontakt zakończony'
+  } %}
+
+  {% for event in item['history'] %}
+
+  <div class="search-item">
+    <div>
+      <small>
+        {{ event.created_utc }} UTC
+      </small>
+
+      <p>
+        <strong>
+          {{ status_labels.get(
+               event.contact_status,
+               event.contact_status
+          ) }}
+        </strong>
+      </p>
+
+      {% if event.seller_name %}
+      <p>Sprzedający: {{ event.seller_name }}</p>
+      {% endif %}
+
+      {% if event.note_text %}
+      <p style="white-space:pre-wrap">{{ event.note_text }}</p>
+      {% endif %}
+
+      {% if event.event_kind == 'import' %}
+      <small>
+        Stan notatki sprzed uruchomienia historii
+      </small>
+      {% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  <p>Nie zapisano jeszcze historii kontaktów.</p>
+  {% endfor %}
+
+</details>

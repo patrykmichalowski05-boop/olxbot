@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}System — Flip Hunter{% endblock %}
+{% block heading %}System i procesy{% endblock %}
+{% block topbar_actions %}<span class="status-pill status-{{ data.health.status|lower }}">{{ data.health.status }} · {{ data.health.score }}/100</span>{% endblock %}
+{% block content %}
+<div class="layout-1-1">
+<div class="panel"><div class="panel-head"><div><h2>Usługi</h2><p>Stan timerów i ostatnie wykonania</p></div></div><div class="module-grid module-grid-one">{% for module in data.health.modules %}<div class="module-card"><div class="module-top"><strong>{{ module.name }}</strong><span class="status-dot status-{{ module.status|lower }}">{{ module.status }}</span></div><div class="subtle">timer: {{ module.timer }} · result: {{ module.result }}</div><div class="subtle">błędy 1h: {{ module.recent_errors }} · 24h: {{ module.errors }}</div><div class="subtle">ostatni start: {{ module.last_start or '—' }}</div></div>{% else %}<div class="empty">Brak danych z systemd.</div>{% endfor %}</div></div>
+<div class="panel"><div class="panel-head"><div><h2>Uruchom zadanie</h2><p>Allowlista bez możliwości wykonania dowolnej komendy</p></div></div><div class="job-list">{% for key, job in data.jobs.items() %}<div class="job-row"><div><strong>{{ job.label }}</strong><div class="subtle">{{ job.service }}</div></div><div class="button-row"><a class="btn btn-ghost btn-small" href="{{ url_for('main.logs', job_key=key) }}">Logi</a><form method="post" action="{{ url_for('main.action_run_job', job_key=key) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary btn-small" type="submit" data-confirm="Uruchomić {{ job.label }}?">Uruchom</button></form></div></div>{% endfor %}</div></div>
+</div>
+<div class="panel"><div class="panel-head"><div><h2>Bazy danych</h2><p>{{ data.bot_root }}</p></div></div><div class="db-grid">{% for name, db in data.dbs.items() %}<div class="db-card"><div class="module-top"><strong>{{ name }}</strong><span class="status-dot {{ 'status-ok' if db.exists else 'status-error' }}">{{ 'OK' if db.exists else 'BRAK' }}</span></div><div class="subtle break-all">{{ db.path }}</div><div class="subtle">{{ (db.size / 1024 / 1024)|round(2) }} MB</div></div>{% endfor %}</div></div>
+{% endblock %}

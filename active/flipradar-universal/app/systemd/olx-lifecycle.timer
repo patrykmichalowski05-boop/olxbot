@@ -1,0 +1,10 @@
+[Unit]
+Description=OLX Flip Hunter Market Lifecycle Timer
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+AccuracySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

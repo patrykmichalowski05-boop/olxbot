@@ -1,0 +1,78 @@
+.flip-policy-wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.flip-policy-head {
+  margin-bottom: 24px;
+}
+
+.flip-policy-head h1 {
+  margin: 8px 0;
+}
+
+.flip-policy-head p,
+.flip-policy-description,
+.flip-policy-help {
+  color: #a2b5cc;
+}
+
+.flip-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.flip-policy-card {
+  border: 1px solid #304258;
+  background: #111c2a;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.flip-policy-card label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.flip-policy-card input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #435670;
+  border-radius: 9px;
+  background: #1c2939;
+  color: #fff;
+  font-size: 18px;
+}
+
+.flip-policy-description {
+  font-size: 13px;
+  line-height: 1.55;
+  margin-bottom: 12px;
+}
+
+.flip-policy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.flip-policy-example {
+  margin-top: 20px;
+  padding: 18px 20px;
+  background: #15243a;
+  border: 1px solid #304967;
+  border-radius: 12px;
+}
+
+.flip-policy-example strong {
+  font-size: 24px;
+}
+
+@media (max-width: 700px) {
+  .flip-policy-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=Flip Radar - skanowanie OLX co okolo 30 minut
+
+[Timer]
+OnActiveSec=30min
+OnUnitInactiveSec=30min
+AccuracySec=1min
+RandomizedDelaySec=2min
+Unit=flip-radar-scan-dev.service
+
+[Install]
+WantedBy=timers.target

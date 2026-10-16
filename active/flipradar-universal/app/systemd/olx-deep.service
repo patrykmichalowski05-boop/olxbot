@@ -1,0 +1,14 @@
+[Unit]
+Description=OLX Flip Hunter DEEP Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+Environment=DEEP_MAX_JOBS=5
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/deep_worker.py
+
+TimeoutStartSec=600
+Nice=10

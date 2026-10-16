@@ -1,0 +1,12 @@
+[Unit]
+Description=Flip Hunter - Automatic PC Ranking Refresh
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/olx-bot
+Environment=PYTHONPATH=/opt/olx-bot
+ExecStart=/usr/bin/flock -w 10 /run/lock/flip-ranking-refresh.lock /opt/olx-bot/venv/bin/python /root/flip-pc-mvp/valuation-gui/refresh_ranking_v1.py
+TimeoutStartSec=360
+Nice=10

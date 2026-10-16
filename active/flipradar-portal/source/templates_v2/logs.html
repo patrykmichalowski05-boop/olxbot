@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Logi {{ data.service }} — Flip Hunter{% endblock %}
+{% block heading %}Logi usługi{% endblock %}
+{% block topbar_actions %}<a class="btn btn-ghost" href="{{ url_for('main.system') }}">Wróć</a>{% endblock %}
+{% block content %}<div class="panel"><div class="panel-head"><div><h2>{{ data.service }}</h2><p>Ostatnie wpisy journalctl</p></div></div><pre class="logs">{{ data.text or 'Brak logów.' }}</pre></div>{% endblock %}

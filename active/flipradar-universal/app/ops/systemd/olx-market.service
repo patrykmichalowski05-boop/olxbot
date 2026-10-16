@@ -1,0 +1,19 @@
+[Unit]
+Description=OLX Flip Hunter Market Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+
+Environment=MARKET_QUERY_LIMIT=20
+Environment=MARKET_MAX_DETAILS=60
+Environment=MARKET_MAX_DETAILS_PER_QUERY=6
+Environment=MARKET_AI_LIMIT=10
+
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/market_collector_v2.py
+
+TimeoutStartSec=1800
+Nice=15

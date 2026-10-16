@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Rynek — Flip Hunter{% endblock %}
+{% block heading %}Baza rynku{% endblock %}
+{% block content %}
+<div class="metric-grid metric-grid-4">
+    <div class="metric-card"><span>Wszystkie próbki</span><strong>{{ data.stats.total }}</strong><small>market.db</small></div>
+    <div class="metric-card"><span>Aktywne</span><strong>{{ data.stats.active }}</strong><small>zweryfikowane</small></div>
+    <div class="metric-card"><span>Nieaktywne</span><strong>{{ data.stats.inactive }}</strong><small>lifecycle</small></div>
+    <div class="metric-card"><span>Zmiany cen</span><strong>{{ data.stats.price_changes }}</strong><small>historia rynku</small></div>
+</div>
+<div class="panel"><div class="panel-head"><div><h2>Najnowsze próbki rynku</h2><p>Dane wykorzystywane przez valuation_v3 i similarity engines</p></div></div><div class="table-wrap"><table><thead><tr><th>Oferta</th><th>CPU</th><th>GPU</th><th>RAM</th><th>Cena</th><th>Status</th><th>Ostatnio</th></tr></thead><tbody>{% for item in data.recent %}<tr><td><a href="{{ item.url }}" target="_blank" rel="noopener"><strong>{{ item.title }}</strong></a></td><td>{{ item.cpu or '—' }}</td><td>{{ item.gpu or '—' }}</td><td>{{ item.ram or '—' }}</td><td>{{ money(item.price) }}</td><td><span class="tag">{{ 'ACTIVE' if item.active else 'INACTIVE' }}</span></td><td>{{ item.last_seen }}</td></tr>{% else %}<tr><td colspan="7" class="empty">Brak danych market.db.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

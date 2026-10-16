@@ -1,0 +1,13 @@
+[Unit]
+Description=OLX Flip Hunter FAST Radar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/olx-bot
+EnvironmentFile=/opt/olx-bot/.env
+ExecStart=/opt/olx-bot/venv/bin/python -u /opt/olx-bot/fast_scanner.py
+
+TimeoutStartSec=90
+Nice=5

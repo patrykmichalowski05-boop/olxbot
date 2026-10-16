@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Konfiguracja — Flip Hunter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="auth-page">
+<div class="auth-card auth-card-wide">
+    <div class="brand auth-brand">
+        <div class="brand-mark">FH</div>
+        <div><div class="brand-name">Flip Hunter</div><div class="brand-sub">Wymagana konfiguracja</div></div>
+    </div>
+    <h1>Panel jest zablokowany</h1>
+    <p>Domyślnie V2 nie uruchamia się bez hasła. Dodaj do <code>/opt/olx-bot/.env</code>:</p>
+    <pre>DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=ustaw-mocne-haslo
+DASHBOARD_SECRET_KEY=dlugi-losowy-sekret
+DASHBOARD_AUTH_REQUIRED=1</pre>
+    <p class="muted">Następnie zrestartuj usługę dashboardu.</p>
+</div>
+</body>
+</html>

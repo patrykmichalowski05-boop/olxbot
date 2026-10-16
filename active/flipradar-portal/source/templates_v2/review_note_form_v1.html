@@ -1,0 +1,72 @@
+<details class="search-box">
+  <summary>Notatki i kontakt ze sprzedającym</summary>
+
+  <form method="post"
+        action="{{ url_for('flip_radar.review_save_note') }}">
+
+    <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+
+    <input type="hidden" name="search_id"
+           value="{{ item.search_id }}">
+
+    <input type="hidden" name="listing_id"
+           value="{{ item.listing_id }}">
+
+    <input type="hidden" name="review_token"
+           value="{{ review_token(item.search_id, item.listing_id) }}">
+
+    <div class="search-grid">
+
+      <label>
+        Nazwa sprzedającego
+        <input type="text"
+               name="seller_name"
+               maxlength="120"
+               value="{{ item.seller_name }}"
+               placeholder="Sprzedawca OLX">
+      </label>
+
+      <label>
+        Status kontaktu
+        <select name="contact_status">
+          {% for value, label in [
+            ('none', 'Nie kontaktowałem się'),
+            ('messaged', 'Wysłano wiadomość'),
+            ('replied', 'Sprzedający odpowiedział'),
+            ('meeting', 'Umówione spotkanie'),
+            ('closed', 'Kontakt zakończony')
+          ] %}
+          <option value="{{ value }}"
+            {% if item.contact_status == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+
+    </div>
+
+    <label>
+      Notatka
+      <textarea name="note_text"
+                maxlength="3000"
+                rows="4"
+                style="width:100%;padding:12px;border-radius:8px"
+                placeholder="Np. poprosiłem o GPU-Z, test temperatur i zdjęcie dowodu zakupu">{{ item.note_text }}</textarea>
+    </label>
+
+    <p>
+      {% if item.note_updated_utc %}
+        Ostatnio zapisano (UTC): {{ item.note_updated_utc }}
+      {% else %}
+        Brak zapisanej notatki.
+      {% endif %}
+    </p>
+
+    <button class="btn btn-primary" type="submit">
+      Zapisz notatkę
+    </button>
+
+  </form>
+</details>
