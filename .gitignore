@@ -51,6 +51,7 @@ __pycache__/
 .env.*
 !.env.example
 __pycache__/
+node_modules
 node_modules/
 venv/
 .venv/
@@ -58,3 +59,16 @@ venv/
 *.key
 *.p12
 *.pfx
+
+# Expo releases keep their bundled font/image assets, including vendor paths.
+.dist-build-*/
+!active/flipradar-v12/dist/assets/**/
+!active/flipradar-v12/dist/assets/**/*.ttf
+!active/flipradar-v12/dist/assets/**/*.woff
+!active/flipradar-v12/dist/assets/**/*.woff2
+!active/flipradar-v12/dist/assets/**/*.png
+!active/flipradar-v12/dist/assets/**/*.svg
+
+.dist-backup-*/
+
+.expo/

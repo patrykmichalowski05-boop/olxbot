@@ -19,6 +19,8 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { layout } from "@/theme/tokens";
 import { portalEnabled } from "@/utils/config";
 import { IconButton, type IconName } from "@/components/IconButton";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
+import { WorkspaceNotice } from "./WorkspaceNotice";
 import { WorkspaceContext, useWorkspaceLayout } from "./layout";
 
 const navigation: {
@@ -56,6 +58,7 @@ const navigation: {
 
 export function BotShell({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
+  const runtime = useRuntimeCapabilities();
   const router = useRouter();
   const pathname = usePathname();
   const { colors, typography, radii } = useTheme();
@@ -410,6 +413,11 @@ export function BotShell({ children }: { children: React.ReactNode }) {
                   active={open}
                 />
               </View>
+            </View>
+          ) : null}
+          {runtime.capabilities.read_only ? (
+            <View style={{ padding: 12 }}>
+              <WorkspaceNotice text="Oglądasz podgląd. Zmiany danych są wyłączone." />
             </View>
           ) : null}
           {children}

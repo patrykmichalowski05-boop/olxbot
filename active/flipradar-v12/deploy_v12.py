@@ -120,7 +120,7 @@ def _finish_prepare():
         backup = ROOT / ('dist.previous.' + time.strftime('%Y%m%d-%H%M%S') + '-' + str(os.getpid()))
         DIST.rename(backup)
     staging.rename(DIST)
-    for name in ('v12_bridge.py', 'v12_preview.py', 'v12_smoke.py'):
+    for name in ('v12_bridge.py', 'v12_preview.py', 'v12_smoke.py', 'flipradar_legacy_bridge.py'):
         _copy_unless_same(HERE / name, ROOT / name)
     (ROOT / 'VERSION').write_text(VERSION + '\noriginal_zip_sha256=' + EXPECTED_SHA + '\n', encoding='utf-8')
     out('PASS: oryginalny frontend React/Expo gotowy; produkcyjny dashboard nietknięty.')
@@ -253,6 +253,7 @@ def publish():
     require(_wait('/',deadline=8),'Podglad LIVE na 8094 nie odpowiada')
     require(ENTRY.is_file(),'Nie znaleziono istniejacego Flaska')
     require((ROOT/'v12_bridge.py').is_file(),'Brak mostu V12.2')
+    require((ROOT/'flipradar_legacy_bridge.py').is_file(),'Brak adaptera danych legacy')
     # Include a startup check for / as well as login/admin before touching production.
     _prepublish_check()
     src=ENTRY.read_text(encoding='utf-8')
@@ -262,7 +263,11 @@ def publish():
     copy_path=OVERLAY/'v12_bridge.py'
     previous_bridge=target/'v12_bridge.py'
     if copy_path.exists():shutil.copy2(copy_path,previous_bridge)
+    helper_path=OVERLAY/'flipradar_legacy_bridge.py'
+    previous_helper=target/'flipradar_legacy_bridge.py'
+    if helper_path.exists():shutil.copy2(helper_path,previous_helper)
     try:
+        shutil.copy2(ROOT/'flipradar_legacy_bridge.py',helper_path)
         shutil.copy2(ROOT/'v12_bridge.py',copy_path)
         entry=src.rstrip()+"""
 
@@ -300,6 +305,8 @@ install_v12_original(app)
         shutil.copy2(target/'flip_v2_overlay_dev.py',ENTRY)
         if previous_bridge.is_file():shutil.copy2(previous_bridge,copy_path)
         else:copy_path.unlink(missing_ok=True)
+        if previous_helper.is_file():shutil.copy2(previous_helper,helper_path)
+        else:helper_path.unlink(missing_ok=True)
         FLAG.unlink(missing_ok=True)
         run(['systemctl','restart',SERVICE])
         raise
@@ -315,6 +322,9 @@ def rollback():
     existing_bridge=target/'v12_bridge.py'
     if existing_bridge.is_file():shutil.copy2(existing_bridge,OVERLAY/'v12_bridge.py')
     else:(OVERLAY/'v12_bridge.py').unlink(missing_ok=True)
+    existing_helper=target/'flipradar_legacy_bridge.py'
+    if existing_helper.is_file():shutil.copy2(existing_helper,OVERLAY/'flipradar_legacy_bridge.py')
+    else:(OVERLAY/'flipradar_legacy_bridge.py').unlink(missing_ok=True)
     FLAG.unlink(missing_ok=True)
     run(['systemctl','restart',SERVICE])
     require(_wait('/login',port=8089,expected=(200,)), 'Nie działa poprzednie logowanie')

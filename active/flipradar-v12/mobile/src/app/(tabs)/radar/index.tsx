@@ -40,6 +40,7 @@ import { OfferRow } from "@/features/workspace/OfferRow";
 import { RadarToolbar } from "@/features/workspace/RadarToolbar";
 import { WorkspaceNotice } from "@/features/workspace/WorkspaceNotice";
 import { priceLabel, safeOfferUrl } from "@/features/workspace/presentation";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { useTheme } from "@/theme/ThemeProvider";
 import { radarSource } from "@/utils/config";
 import { CATEGORY_TABS } from "@/utils/labels";
@@ -47,6 +48,7 @@ import { formatRoiBps } from "@/utils/money";
 
 export default function RadarScreen() {
   const router = useRouter();
+  const runtime = useRuntimeCapabilities();
   const { colors, typography, radii } = useTheme();
   const { pagePadding } = useWorkspaceLayout();
   const [filters, setFilters] = useState<RadarFilters>(defaultFilters);
@@ -57,6 +59,7 @@ export default function RadarScreen() {
   const { request, items: loaded } = useRadarOffers(
     filters.query,
     filtersReady,
+    filters,
   );
   const watch = useWatchActions();
 
@@ -277,7 +280,11 @@ export default function RadarScreen() {
       <View style={{ paddingHorizontal: pagePadding }}>
         <Header
           title="Flip Radar"
-          subtitle="Radar okazji — oferty z Twoich wyszukiwań"
+          subtitle={
+            runtime.capabilities.radar_scope === "global"
+              ? "Radar administratora · wszystkie zebrane oferty"
+              : "Radar okazji — oferty z Twoich wyszukiwań"
+          }
           rightSlot={
             <IconButton
               label="Odśwież radar"
@@ -368,13 +375,14 @@ export default function RadarScreen() {
               item={item}
               last={index === items.length - 1}
               onPress={() => openOffer(item)}
-              onWatch={() => watch.toggle(item)}
+              onWatch={watch.available ? () => watch.toggle(item) : undefined}
               watched={watch.isWatched(item)}
               watchLoading={
                 watch.mutation.isPending &&
                 watch.mutation.variables?.item.id === item.id
               }
               watchDisabled={
+                !watch.writable ||
                 watch.mutation.isPending ||
                 watch.saved.isError ||
                 watch.saved.isPending

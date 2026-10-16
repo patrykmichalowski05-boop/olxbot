@@ -33,6 +33,7 @@ import { IconButton } from "@/components/IconButton";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SelectField } from "@/components/SelectField";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { useAuth } from "@/features/auth/AuthContext";
 import { demoSearches } from "@/features/workspace/demoSearches";
 import { useWorkspaceLayout } from "@/features/workspace/layout";
@@ -47,6 +48,8 @@ function SearchesContent() {
   const { colors, typography, radii } = useTheme();
   const { mode, userId, ready, signedIn } = useAuth();
   const { narrow } = useWorkspaceLayout();
+  const runtime = useRuntimeCapabilities();
+  const liveV12 = runtime.capabilities.backend === "flask-v12";
   const params = useLocalSearchParams<{ query?: string }>();
   const router = useRouter();
   const cache = useQueryClient();
@@ -64,9 +67,18 @@ function SearchesContent() {
   const [excluded, setExcluded] = useState("uszkodzony, pudełko, atrapa");
   const [purpose, setPurpose] = useState<"flip" | "cheap">("flip");
   const [category, setCategory] = useState("ELECTRONICS");
-  const [platforms, setPlatforms] = useState<SearchPlatform[]>([
-    "OLX",
-  ]);
+  const [platforms, setPlatforms] = useState<SearchPlatform[]>(["OLX"]);
+  const activePlatforms = platforms.filter((platform) =>
+    runtime.capabilities.search_platforms.includes(platform),
+  );
+  const activePurpose = runtime.capabilities.search_purposes.includes(purpose)
+    ? purpose
+    : "cheap";
+  const activeCategory = runtime.capabilities.search_categories.includes(
+    category,
+  )
+    ? category
+    : (runtime.capabilities.search_categories[0] ?? "other");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -107,18 +119,22 @@ function SearchesContent() {
     onError: (error) => setError(apiErrorMessage(error)),
   });
   const submit = async () => {
+    if (!runtime.canWrite || !runtime.capabilities.private_searches) {
+      setError("Zmiany wyszukiwań są teraz wyłączone.");
+      return;
+    }
     const limit = budget.trim() ? parseMoneyInput(budget) : null;
-    const minProfit = parseMoneyInput(profit);
-    const minRoi = parseMoneyInput(roi);
-    const delivery = parseMoneyInput(shipping);
-    const repair = parseMoneyInput(repairs);
-    const saleFee = parseMoneyInput(fee);
-    const safety = parseMoneyInput(reserve);
+    const minProfit = activePurpose === "flip" ? parseMoneyInput(profit) : 0;
+    const minRoi = activePurpose === "flip" ? parseMoneyInput(roi) : 0;
+    const delivery = activePurpose === "flip" ? parseMoneyInput(shipping) : 0;
+    const repair = activePurpose === "flip" ? parseMoneyInput(repairs) : 0;
+    const saleFee = activePurpose === "flip" ? parseMoneyInput(fee) : 0;
+    const safety = activePurpose === "flip" ? parseMoneyInput(reserve) : 0;
     if (
       query.trim().length < 3 ||
-      !platforms.length ||
+      !activePlatforms.length ||
       (budget.trim() && limit === null) ||
-      (purpose === "cheap" && !limit) ||
+      (activePurpose === "cheap" && !limit && !liveV12) ||
       minProfit === null ||
       minRoi === null ||
       minRoi > 100000 ||
@@ -137,17 +153,19 @@ function SearchesContent() {
     const body = {
       name: query.trim(),
       query: query.trim(),
-      platforms,
-      purpose,
-      category,
+      platforms: activePlatforms,
+      purpose: activePurpose,
+      category: activeCategory,
       max_price_minor: limit,
       min_profit_minor: minProfit,
       min_roi_bps: minRoi,
       enabled: true,
-      excluded_terms: excluded
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
+      excluded_terms: liveV12
+        ? []
+        : excluded
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
       notify_initial: false,
       costs: {
         shipping_minor: delivery,
@@ -201,6 +219,9 @@ function SearchesContent() {
         subtitle="Wybrane modele, warunki dobrej ceny i Twoje alerty"
         rightSlot={
           <IconButton
+            disabled={
+              !runtime.canWrite || !runtime.capabilities.private_searches
+            }
             label="Dodaj wyszukiwanie"
             icon="add-outline"
             onPress={() => {
@@ -212,8 +233,14 @@ function SearchesContent() {
       />
       <View style={{ gap: 20 }}>
         <DemoBanner />
-        {mode === "live" ? (
-          <WorkspaceNotice text="Aktualny skaner obsługuje indywidualne wyszukiwania OLX. Fraza, kategoria i limit ceny działają. Koszty, ROI i prognoza zysku nie filtrują jeszcze skanera V9." />
+        {!runtime.capabilities.private_searches ? (
+          <WorkspaceNotice text="Na koncie administratora przeglądasz wspólny radar. Własne wyszukiwania dodawaj na koncie użytkownika." />
+        ) : null}
+        {mode === "live" && liveV12 ? (
+          <WorkspaceNotice text="Wyszukiwania obejmują OLX. Wybierz frazę, kategorię i opcjonalny limit ceny. Prognoza zysku pojawi się po udostępnieniu danych porównawczych." />
+        ) : null}
+        {runtime.capabilities.read_only ? (
+          <WorkspaceNotice text="Oglądasz podgląd. Dodawanie i zmienianie wyszukiwań jest wyłączone." />
         ) : null}
         <View
           style={{
@@ -235,6 +262,11 @@ function SearchesContent() {
             </Text>
           </View>
           <PrimaryButton
+            disabled={
+              !runtime.canWrite ||
+              !runtime.capabilities.private_searches ||
+              Boolean(quotaUsed)
+            }
             label="Nowe wyszukiwanie"
             icon="add-outline"
             onPress={() => {
@@ -313,7 +345,7 @@ function SearchesContent() {
                   <Switch
                     accessibilityLabel={`Aktywne wyszukiwanie: ${item.name}`}
                     value={item.enabled}
-                    disabled={toggle.isPending || saving}
+                    disabled={toggle.isPending || saving || !runtime.canWrite}
                     onValueChange={() => toggle.mutate(item)}
                     trackColor={{ true: colors.accentMuted }}
                     thumbColor={colors.surface}
@@ -472,48 +504,52 @@ function SearchesContent() {
                 <View
                   style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
                 >
-                  {searchPlatforms.map((platform) => (
-                    <Pressable
-                      key={platform}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked: platforms.includes(platform),
-                      }}
-                      onPress={() =>
-                        setPlatforms((old) =>
-                          old.includes(platform)
-                            ? old.filter((p) => p !== platform)
-                            : [...old, platform],
-                        )
-                      }
-                      style={{
-                        minHeight: 38,
-                        paddingHorizontal: 12,
-                        paddingVertical: 9,
-                        borderWidth: 1,
-                        borderColor: platforms.includes(platform)
-                          ? colors.accentMuted
-                          : colors.border,
-                        borderRadius: radii.md,
-                        backgroundColor: platforms.includes(platform)
-                          ? colors.accentBg
-                          : colors.surface,
-                      }}
-                    >
-                      <Text
-                        style={[
-                          typography.body,
-                          {
-                            color: platforms.includes(platform)
-                              ? colors.accent
-                              : colors.textMuted,
-                          },
-                        ]}
+                  {searchPlatforms
+                    .filter((platform) =>
+                      runtime.capabilities.search_platforms.includes(platform),
+                    )
+                    .map((platform) => (
+                      <Pressable
+                        key={platform}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{
+                          checked: platforms.includes(platform),
+                        }}
+                        onPress={() =>
+                          setPlatforms((old) =>
+                            old.includes(platform)
+                              ? old.filter((p) => p !== platform)
+                              : [...old, platform],
+                          )
+                        }
+                        style={{
+                          minHeight: 38,
+                          paddingHorizontal: 12,
+                          paddingVertical: 9,
+                          borderWidth: 1,
+                          borderColor: platforms.includes(platform)
+                            ? colors.accentMuted
+                            : colors.border,
+                          borderRadius: radii.md,
+                          backgroundColor: platforms.includes(platform)
+                            ? colors.accentBg
+                            : colors.surface,
+                        }}
                       >
-                        {platformName(platform)}
-                      </Text>
-                    </Pressable>
-                  ))}
+                        <Text
+                          style={[
+                            typography.body,
+                            {
+                              color: platforms.includes(platform)
+                                ? colors.accent
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          {platformName(platform)}
+                        </Text>
+                      </Pressable>
+                    ))}
                 </View>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
@@ -522,14 +558,27 @@ function SearchesContent() {
                 >
                   <SelectField
                     label="Kategoria"
-                    value={category}
+                    value={activeCategory}
                     onChange={setCategory}
-                    options={[
-                      { value: "ELECTRONICS", label: "Elektronika" },
-                      { value: "CAR", label: "Auta" },
-                      { value: "FASHION", label: "Moda" },
-                      { value: "OTHER", label: "Pozostałe" },
-                    ]}
+                    options={runtime.capabilities.search_categories.map(
+                      (value) => ({
+                        value,
+                        label:
+                          (
+                            {
+                              gpu: "Karty graficzne",
+                              pc: "Komputery",
+                              phone: "Telefony",
+                              laptop: "Laptopy",
+                              other: "Pozostałe",
+                              ELECTRONICS: "Elektronika",
+                              CAR: "Auta",
+                              FASHION: "Moda",
+                              OTHER: "Pozostałe",
+                            } as Record<string, string>
+                          )[value] ?? "Pozostałe",
+                      }),
+                    )}
                   />
                 </View>
                 <View
@@ -537,25 +586,35 @@ function SearchesContent() {
                 >
                   <SelectField
                     label="Cel wyszukiwania"
-                    value={purpose}
-                    onChange={setPurpose}
+                    value={activePurpose}
+                    onChange={(value) => setPurpose(value as "flip" | "cheap")}
                     options={[
                       { value: "flip", label: "Potencjał zysku" },
                       { value: "cheap", label: "Limit ceny" },
-                    ]}
+                    ].filter((option) =>
+                      runtime.capabilities.search_purposes.includes(
+                        option.value,
+                      ),
+                    )}
                   />
                 </View>
               </View>
               <FormField
                 compact
                 label="Maksymalna cena zakupu (zł)"
-                placeholder={purpose === "cheap" ? "np. 1500" : "bez limitu"}
+                placeholder={
+                  liveV12
+                    ? "bez limitu"
+                    : activePurpose === "cheap"
+                      ? "np. 1500"
+                      : "bez limitu"
+                }
                 keyboardType="decimal-pad"
                 value={budget}
                 onChangeText={setBudget}
                 maxLength={16}
               />
-              {purpose === "flip" ? (
+              {activePurpose === "flip" ? (
                 <View
                   style={{
                     backgroundColor: colors.navigation,
@@ -630,13 +689,17 @@ function SearchesContent() {
                   </Text>
                 </View>
               ) : null}
-              <FormField
-                compact
-                label="Pomiń słowa (oddziel przecinkiem)"
-                value={excluded}
-                onChangeText={setExcluded}
-                maxLength={600}
-              />
+              {!liveV12 ? (
+                <>
+                  <FormField
+                    compact
+                    label="Pomiń słowa (oddziel przecinkiem)"
+                    value={excluded}
+                    onChangeText={setExcluded}
+                    maxLength={600}
+                  />
+                </>
+              ) : null}
               <Text style={[typography.caption, { color: colors.textMuted }]}>
                 Pierwszy skan tworzy punkt odniesienia. Kolejne nowe oferty i
                 spadki cen mogą generować alerty zgodnie z Twoim pakietem. Nowy
@@ -658,6 +721,9 @@ function SearchesContent() {
                 <PrimaryButton
                   label="Zapisz wyszukiwanie"
                   icon="add-outline"
+                  disabled={
+                    !runtime.canWrite || !runtime.capabilities.private_searches
+                  }
                   loading={saving}
                   onPress={() => {
                     void submit();

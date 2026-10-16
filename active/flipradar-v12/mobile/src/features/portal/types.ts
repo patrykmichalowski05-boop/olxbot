@@ -11,6 +11,7 @@ export type PortalPlan = {
   prices_are_examples: boolean;
 };
 export type Account = {
+  capabilities?: import("@/features/runtime/capabilities").BackendCapabilities;
   user_id: string;
   username: string;
   role: "OWNER" | "MEMBER";
@@ -34,6 +35,7 @@ export type PriceResult = {
   example: boolean;
 };
 export type PublicConfig = {
+  capabilities?: import("@/features/runtime/capabilities").BackendCapabilities;
   demo_data?: boolean;
   registration_enabled: boolean;
   public_search_available: boolean;

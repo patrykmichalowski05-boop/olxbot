@@ -20,6 +20,7 @@ class PublishTests(unittest.TestCase):
         self.entry=self.overlay/'flip_v2_overlay_dev.py'
         self.entry.write_text('app = object()\n')
         (self.root/'v12_bridge.py').write_text('# actual bridge fixture\n')
+        (self.root/'flipradar_legacy_bridge.py').write_text('# read-only companion fixture\n')
         self.dist=self.root/'dist'; self.dist.mkdir()
         for name in ('index.html','account.html'):
             (self.dist/name).write_text('<html>FlipRadar original</html>')
@@ -51,6 +52,7 @@ class PublishTests(unittest.TestCase):
     def test_successful_publish_preserves_data_and_publishes_code(self):
         with patch.object(deploy,'run',return_value=None) as run:
             deploy.publish()
+            self.assertTrue((self.overlay/'flipradar_legacy_bridge.py').is_file())
         self.assertIn('install_v12_original(app)',self.entry.read_text())
         self.assertTrue(deploy.FLAG.is_file())
         self.assertEqual((self.overlay/'v12_bridge.py').read_text(),'# actual bridge fixture\n')

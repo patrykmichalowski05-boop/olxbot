@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix='flip-v12-1-test-') as temp:
         f = d.MOBILE / 'dist' / name
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text('V12 test', encoding='utf-8')
-    for name in ('v12_bridge.py', 'v12_preview.py', 'v12_smoke.py'):
+    for name in ('v12_bridge.py', 'v12_preview.py', 'v12_smoke.py', 'flipradar_legacy_bridge.py'):
         (root / name).write_text('original module', encoding='utf-8')
     d._finish_prepare()
     assert (root / 'dist' / 'bot.html').is_file()
@@ -35,6 +35,7 @@ with tempfile.TemporaryDirectory(prefix='flip-v12-1-test-') as temp:
         'import os;assert "/opt/olx-bot" in os.environ["PYTHONPATH"];'
         'assert "overlay" in os.environ["PYTHONPATH"];'
         'print("PASS: test process imports enabled")', encoding='utf-8')
+    d._prepublish_check = lambda: None  # This test covers recovery/PYTHONPATH; production preflight has separate tests.
     d.smoke()
     print('PASS: V12.1 test environment PYTHONPATH')
 print('PASS: ALL V12.1 PATCH REGRESSION TESTS')

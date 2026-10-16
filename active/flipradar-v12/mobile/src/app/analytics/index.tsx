@@ -1,3 +1,4 @@
+import { RuntimeFeature } from "@/features/runtime/RuntimeFeature";
 import React, { useMemo } from "react";
 import { Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -10,13 +11,16 @@ import { ErrorState } from "@/components/ErrorState";
 import { Header } from "@/components/Header";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { StatCard } from "@/components/StatCard";
+import { dealSummary } from "@/features/workspace/dealSummary";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { useTheme } from "@/theme/ThemeProvider";
 import { workspaceId } from "@/utils/config";
 import { formatMoneyMinor } from "@/utils/money";
 import { useAuth } from "@/features/auth/AuthContext";
 
-export default function AnalyticsScreen() {
+function AnalyticsScreenContent() {
   const router = useRouter();
+  const runtime = useRuntimeCapabilities();
   const { userId } = useAuth();
   const { colors, spacing, typography } = useTheme();
   const available = api.mode === "demo" || Boolean(workspaceId());
@@ -25,31 +29,29 @@ export default function AnalyticsScreen() {
     queryFn: () => api.deals.list(),
     enabled: available,
   });
-  const stats = useMemo(() => {
-    const items = dealsQuery.data?.items ?? [];
-    const sold = items.filter((deal) => deal.status === "SOLD");
-    const open = items.filter((deal) =>
-      ["BOUGHT", "PURCHASED", "LISTED"].includes(deal.status),
-    );
-    return {
-      sold: sold.length,
-      profit: sold.reduce(
-        (sum, deal) => sum + (deal.realized_profit_minor ?? 0),
-        0,
-      ),
-      inventory: open.reduce((sum, deal) => sum + deal.purchase_minor, 0),
-      costs: items.reduce((sum, deal) => sum + deal.cost_minor, 0),
-    };
-  }, [dealsQuery.data]);
+  const stats = useMemo(
+    () => dealSummary(dealsQuery.data?.items ?? []),
+    [dealsQuery.data],
+  );
   return (
     <AppScreen scroll>
       <Header
-        title="Analityka"
+        title={
+          runtime.capabilities.backend === "flask-v12"
+            ? "Analityka administratora"
+            : "Analityka"
+        }
         subtitle="Wyniki Twoich transakcji."
         showBack
         showNotifications={false}
       />
       <View style={{ gap: spacing.lg }}>
+        {stats.incomplete ? (
+          <Text style={[typography.body, { color: colors.warning }]}>
+            Brakuje kompletnych kwot dla {stats.incomplete} pozycji. Niepełne
+            sumy mają znak „—”.
+          </Text>
+        ) : null}
         <Text style={[typography.body, { color: colors.textMuted }]}>
           Podsumowanie pobranych flipów (do 30). Wynik obejmuje zakończone
           sprzedaże.
@@ -116,5 +118,18 @@ export default function AnalyticsScreen() {
         )}
       </View>
     </AppScreen>
+  );
+}
+
+export default function AnalyticsScreen() {
+  return (
+    <RuntimeFeature
+      feature="deals_read"
+      title="Analityka flipów"
+      description="Statystyki transakcji znajdziesz w centrum narzędzi. Ten panel pokaże je po połączeniu historii z kontem."
+      icon="stats-chart-outline"
+    >
+      <AnalyticsScreenContent />
+    </RuntimeFeature>
   );
 }

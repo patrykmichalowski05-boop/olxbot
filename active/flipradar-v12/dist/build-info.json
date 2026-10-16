@@ -1,0 +1,6 @@
+{
+  "mode": "live",
+  "backend": "flask-v12",
+  "api": "same-origin",
+  "lock_sha256": "714193c7178e3b82b69ff9889d2ee89ae7b2c2e4caa27d67a7a1e576627e1058"
+}

@@ -8,18 +8,22 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from flask import abort, jsonify, redirect, request, send_from_directory, session
-from werkzeug.security import check_password_hash
+from werkzeug.exceptions import HTTPException
 import multiuser_v2 as m
 from app_v2 import config
 from app_v2.security import verify_credentials
 
-DIST = Path(os.getenv('FLIPRADAR_V12_DIST', '/opt/flipradar-v12/dist'))
+_LOCAL_DIST = Path(__file__).resolve().parent / 'dist'
+DIST = Path(os.getenv('FLIPRADAR_V12_DIST', str(_LOCAL_DIST if _LOCAL_DIST.is_dir() else Path('/opt/flipradar-v12/dist'))))
 FLAG = Path('/opt/olx-bot-budget-dev/.v12_live')
 CLIENT = 'portal'
+LEGACY_ROOT = Path(os.getenv('FLIPRADAR_LEGACY_DATA_ROOT', str(config.BOT_ROOT)))
 
 # Only these routes are taken over by the original frontend; existing specialist
 # tools /centrum, /dev/flip-hunter and Flask's old mutation routes remain intact.
@@ -78,15 +82,59 @@ def _error(message, status=400):
 
 
 def _safe_url(url, source):
-    p = urlsplit(str(url or ''))
-    host = (p.hostname or '').lower()
-    providers = {'olx': ('olx.pl',), 'facebook':('facebook.com','fb.com')}
-    domains = providers.get(str(source).lower(), ())
-    if p.scheme != 'https' or p.username or p.password:
+    try:
+        p = urlsplit(str(url or ''))
+        host = (p.hostname or '').lower()
+        providers = {'olx': ('olx.pl',), 'facebook': ('facebook.com', 'fb.com')}
+        domains = providers.get(str(source).lower(), ())
+        if p.scheme != 'https' or p.username or p.password or (p.port and p.port != 443):
+            return None
+        if not any(host == d or host.endswith('.' + d) for d in domains):
+            return None
+        return str(url)[:2000]
+    except ValueError:
         return None
-    if not any(host == d or host.endswith('.'+d) for d in domains):
+
+
+def _positive_id(value, *, default=None, maximum=None):
+    if value is None and default is not None:
+        return default
+    try:
+        if not str(value).isascii() or not str(value).isdigit():
+            raise ValueError
+        result = int(value)
+        if result <= 0 or (maximum is not None and result > maximum):
+            raise ValueError
+        return result
+    except (ValueError, TypeError):
+        abort(400, description='Nieprawidłowy zakres wyników')
+
+
+def _minor(value):
+    if value is None:
         return None
-    return str(url)[:2000]
+    try:
+        amount = Decimal(str(value))
+        if not amount.is_finite() or amount < 0:
+            return None
+        result = int((amount * 100).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+        return result if result <= 9007199254740991 else None
+    except (InvalidOperation, ValueError, OverflowError):
+        return None
+
+
+def _capabilities(read_only=False):
+    return {
+        'backend': 'flask-v12', 'read_only': read_only,
+        'search_platforms': ['OLX'],
+        'search_categories': ['gpu', 'pc', 'phone', 'laptop', 'other'],
+        'search_purposes': ['cheap'],
+        'watchlist': False, 'manual_analysis': False, 'deals': False, 'deals_read': False,
+        'private_searches': True, 'radar_scope': 'private',
+        'market_valuation': False, 'public_search': False,
+        'plan_requests': False, 'admin_access': False,
+        'account_delete': not read_only,
+    }
 
 
 def _plan(u):
@@ -116,6 +164,11 @@ def _plans():
 
 def _account(u):
     code,name,limit = _plan(u)
+    capabilities = _capabilities()
+    capabilities.update(deals_read=bool(u.get('root') or u.get('role') == 'admin'),
+                        private_searches=not bool(u.get('root')),
+                        radar_scope='global' if u.get('root') else 'private',
+                        market_valuation=bool(u.get('root')))
     with m._connect() as db:
         used = int(db.execute('SELECT COUNT(*) FROM workspace_searches_v4 WHERE owner_id=?',
                               (u.get('id',-999),)).fetchone()[0]) if not u.get('root') else 0
@@ -128,7 +181,7 @@ def _account(u):
             'access':{'can_open_bot':True,'can_search':remaining is None or remaining>0,
                       'can_receive_notifications':True,'reason':'ACTIVE',
                       'remaining':remaining,'limit':limit,'used':used,'expires_at':None},
-            'plan_request':None}
+            'plan_request':None, 'capabilities':capabilities}
 
 
 def _make_session(u):
@@ -186,10 +239,13 @@ def _radar_items(u, single=None):
         where+=' AND o.rowid=?'
         params.append(int(single))
     q = str(request.args.get('q') or '')[:120].strip()
+    if single is None and request.args.get('before_id') is not None:
+        where += ' AND o.rowid < ?'
+        params.append(_positive_id(request.args['before_id']))
     if q and single is None:
         where+=' AND lower(o.title) LIKE ?'
         params.append('%'+q.casefold()+'%')
-    limit = max(1,min(int(request.args.get('limit','30')) if single is None else 1,100))
+    limit = _positive_id(request.args.get('limit'), default=30, maximum=100) if single is None else 1
     sql = '''SELECT o.rowid AS snapshot_id,o.title,o.price_zl,o.source,o.url,
                     o.last_seen_utc,o.sid,s.query_text,st.status
              FROM user_search_offers_v9 o
@@ -203,7 +259,7 @@ def _radar_items(u, single=None):
              'offer_key':f"{r['source']}:{r['snapshot_id']}",
              'decision':'REVIEW','valuation':{},'observed_at':r['last_seen_utc'],
              'title':r['title'],'platform':r['source'].upper(),
-             'price_minor':int(r['price_zl'])*100 if r['price_zl'] is not None else None,
+             'price_minor':_minor(r['price_zl']),
              'url':_safe_url(r['url'],r['source']), 'currency':'PLN',
              'source_status':r.get('status') or 'UNKNOWN'} for r in rows]
 
@@ -221,7 +277,7 @@ def _searches(u):
     return [{'id':str(r['id']),'name':r['query_text'],'query':r['query_text'],
              'platforms':[str(r['source']).upper()],
              'category':str(r['category'] or 'other'),
-             'purpose':'cheap','max_price_minor':int(r['budget'])*100 if r['budget'] else None,
+             'purpose':'cheap','max_price_minor':_minor(r['budget']) if r['budget'] else None,
              'min_profit_minor':0,'min_roi_bps':0,'enabled':bool(r['active']),
              'notify_initial':bool(r['since']),'excluded_terms':[],
              'costs':{'shipping_minor':0,'repairs_minor':0,'travel_minor':0,
@@ -252,6 +308,8 @@ def _searches_update(u, path):
     _,_,limit=_plan(u)
     now=m.utcnow()
     with m._connect() as db:
+        if not db.in_transaction:
+            db.execute('BEGIN IMMEDIATE')
         db.execute('''CREATE TABLE IF NOT EXISTS workspace_v12_requests (
            owner_id INTEGER NOT NULL, client_key TEXT NOT NULL,
            sid INTEGER NOT NULL, PRIMARY KEY(owner_id, client_key))''')
@@ -291,8 +349,7 @@ def _searches_update(u, path):
             for name,col in cols.items():
                 if name=='id' or name in data:continue
                 if col['notnull'] and col['dflt_value'] is None:
-                    return _error('Nieznana wymagana kolumna V4: '+name+
-                                  '. Zapisz radar w /centrum i podeślij strukturę.',409)
+                    return _error('Nie można teraz zapisać radaru. Skorzystaj z centrum narzędzi.',409)
             keys=[k for k in data if k in cols]
             assignments=','.join('"'+k+'"' for k in keys)
             placeholders=','.join('?' for _ in keys)
@@ -328,17 +385,20 @@ def _source_health(u):
 
 
 def _inbox(u):
+    params = [int(u.get('id') or -1)]
+    where = 'WHERE owner_id=?'
+    if request.args.get('before_id') is not None:
+        where += ' AND id < ?'
+        params.append(_positive_id(request.args['before_id']))
     with m._connect() as db:
-        rows=[dict(r) for r in db.execute('''SELECT id,title,source,url,price_zl,created_utc,
-            read_utc,listing_id FROM monitor_v8_alerts WHERE owner_id=?
-            ORDER BY id DESC LIMIT 30''',(int(u.get('id') or -1),))]
-    items=[]
-    for r in rows:
-        items.append({'id':str(r['id']),'category':'Nowa oferta',
-                      'title':r['title'],
-                      'reason':f"{str(r['source']).upper()} · {r['price_zl']} zł",
-                      'at':r['created_utc']})
-    return {'items':items,'next_before_id':None}
+        rows = [dict(r) for r in db.execute(
+            'SELECT id,title,source,url,price_zl,created_utc,read_utc,listing_id '
+            'FROM monitor_v8_alerts ' + where + ' ORDER BY id DESC LIMIT 31', params)]
+    selected = rows[:30]
+    items = [{'id': str(r['id']), 'category': 'Nowa oferta', 'title': r['title'],
+              'reason': str(r['source']).upper() + (' · ' + str(r['price_zl']) + ' zł' if r['price_zl'] is not None else ''),
+              'at': r['created_utc']} for r in selected]
+    return {'items': items, 'next_before_id': str(selected[-1]['id']) if len(rows) > 30 else None}
 
 
 def _admin_data(u):
@@ -390,11 +450,11 @@ def _api(path, *, read_only=False):
     elif request.method not in ('GET','HEAD'):
         abort(405)
     if path == '/api/v1/public/config':
-        return jsonify({'demo_data':False,'registration_enabled':True,
-           'public_search_available':False,'payment_mode':'MANUAL','plans':_plans()})
+        return jsonify({'demo_data':False,'registration_enabled':not read_only,
+           'public_search_available':False,'payment_mode':'MANUAL','plans':_plans(),
+           'capabilities':_capabilities(read_only)})
     if path == '/api/v1/public/search':
-        d=_json_body(); q=str(d.get('query') or '')[:120]
-        return jsonify({'query':q,'remaining':None,'items':[],'example':False})
+        return _error('Wyszukiwanie jest dostępne po zalogowaniu na własnym koncie.',501)
     if path == '/api/v1/portal/auth/login' and request.method=='POST':return _login()
     if path == '/api/v1/portal/auth/register' and request.method=='POST':return _register()
     u=_identity()
@@ -411,12 +471,29 @@ def _api(path, *, read_only=False):
     if path == '/api/v1/portal/admin/access' and request.method=='POST':return _admin_access(u)
     if path == '/api/v1/portal/plan-requests' and request.method=='POST':
         return _error('Pakiety zarządzane są w obecnym panelu administratora',501)
+    if path == '/api/v1/universal/mobile-radar' and u.get('root'):
+        from flipradar_legacy_bridge import LegacyBridge
+        optional = lambda key: int(request.args[key]) if request.args.get(key) is not None else None
+        return jsonify(LegacyBridge(LEGACY_ROOT).radar(
+            limit=_positive_id(request.args.get('limit'), default=30, maximum=100),
+            before_id=optional('before_id'), q=request.args.get('q',''),
+            min_price_minor=optional('min_price_minor'), max_price_minor=optional('max_price_minor'),
+            min_profit_minor=optional('min_profit_minor'), min_roi_bps=optional('min_roi_bps'),
+            category=request.args.get('category'), platform=request.args.get('platform')))
     if path == '/api/v1/universal/mobile-radar':
-        return jsonify({'items':_radar_items(u),'next_before_id':None})
+        items = _radar_items(u)
+        limit = _positive_id(request.args.get('limit'), default=30, maximum=100)
+        return jsonify({'items':items,'next_before_id':items[-1]['snapshot_id'] if len(items) == limit else None})
     if path.startswith('/api/v1/universal/mobile-radar/'):
         try: snapshot_id=int(path.rsplit('/',1)[-1])
         except ValueError:abort(404)
-        rows=_radar_items(u,single=snapshot_id)
+        if snapshot_id <= 0: abort(404)
+        if u.get('root'):
+            from flipradar_legacy_bridge import LegacyBridge
+            rows=LegacyBridge(LEGACY_ROOT).radar(limit=1,before_id=snapshot_id+1)['items']
+            rows=[row for row in rows if row['snapshot_id']==snapshot_id]
+        else:
+            rows=_radar_items(u,single=snapshot_id)
         if not rows:abort(404)
         return jsonify(rows[0])
     if path=='/api/v1/universal/searches':return jsonify({'items':_searches(u)})
@@ -424,9 +501,9 @@ def _api(path, *, read_only=False):
         return _searches_update(u,path)
     if path=='/api/v1/universal/source-health':return jsonify(_source_health(u))
     if path=='/api/v1/portal/notifications':return jsonify(_inbox(u))
-    if path=='/api/v1/universal/watchlist' and request.method=='GET':
-        return jsonify({'items':[]})
-    return _error('Ta funkcja wymaga kolejnego adaptera danych V12. Nie są pokazywane fałszywe dane.',501)
+    if path=='/api/v1/universal/watchlist':
+        return _error('Zapisywanie ofert nie jest jeszcze dostępne na tym koncie.',501)
+    return _error('Ta funkcja jest dostępna w centrum narzędzi.',501)
 
 
 def _asset(path):
@@ -461,6 +538,10 @@ def _html_route(path):
     if item.is_file():return _asset(name+'/index.html')
     item=DIST/(name+'.html')
     if item.is_file():return _asset(name+'.html')
+    parts = name.split('/')
+    dynamic = {'offer': '[id].html', 'purchase': '[listingId].html', 'flips': '[dealId].html'}
+    if len(parts) == 2 and parts[0] in dynamic and parts[1] not in ('', '.', '..'):
+        return _asset(parts[0] + '/' + dynamic[parts[0]])
     abort(404)
 
 
@@ -471,18 +552,28 @@ def _is_frontend_path(path):
 
 def install(app, *, preview=False):
     """Call before first Flask request; in preview make V12 the root app UI."""
+    app.config['v12_read_only'] = bool(preview or app.config.get('v12_read_only'))
     if app.config.get('v12_bridge'):
         return
     def early():
         path=request.path
-        enabled=preview or FLAG.is_file()
+        is_preview=bool(app.config.get('v12_read_only'))
+        enabled=is_preview or FLAG.is_file()
         if not enabled:return None
         if path.startswith(('/_expo/','/assets/')):
             return _asset(path.lstrip('/'))
         if path.startswith('/api/v1/'):
             if path in PUBLIC_API or path in OTHER_API or path.startswith(
                     ('/api/v1/universal/mobile-radar/','/api/v1/universal/searches/')):
-                return _api(path,read_only=preview)
+                try:
+                    return _api(path,read_only=is_preview)
+                except HTTPException as ex:
+                    return _error(ex.description, ex.code or 500)
+                except (ValueError, TypeError):
+                    return _error('Nieprawidłowe parametry wyszukiwania.',422)
+                except (sqlite3.Error, FileNotFoundError):
+                    app.logger.exception('V12 data adapter is unavailable')
+                    return _error('Dane konta są chwilowo niedostępne. Spróbuj ponownie.',503)
             return None
         if request.method not in ('GET','HEAD'):
             return None
@@ -491,7 +582,7 @@ def install(app, *, preview=False):
         # specialized legacy routes and scanners.
         if path == '/':
             return _asset('index.html')
-        if not preview and path=='/centrum' and not request.args.get('tab'):
+        if not is_preview and path=='/centrum' and not request.args.get('tab'):
             user=_identity()
             if user: return redirect('/bot', code=302)
         if path in ('/login','/register','/rejestracja','/info'):
@@ -501,7 +592,8 @@ def install(app, *, preview=False):
         if path in PRIVATE_UI or (_is_frontend_path(path) and path not in PUBLIC_UI):
             user=_identity()
             if not user:
-                return redirect('/login?next=/bot',code=302)
+                from urllib.parse import urlencode
+                return redirect('/login?' + urlencode({'next': path}),code=302)
             if path.startswith('/admin/uzytkownicy') and not (
                     user.get('root') or user.get('role')=='admin'):
                 abort(403)
@@ -509,5 +601,11 @@ def install(app, *, preview=False):
                 return None
             return _html_route(path)
         return None
+    from flipradar_legacy_bridge import register_flask
+    def legacy_admin():
+        enabled=bool(app.config.get('v12_read_only')) or FLAG.is_file()
+        user=_identity() if enabled else None
+        return bool(user and (user.get('root') or user.get('role')=='admin'))
+    register_flask(app, LEGACY_ROOT, legacy_admin)
     app.before_request_funcs.setdefault(None,[]).insert(0,early)
     app.config['v12_bridge']=True

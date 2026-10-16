@@ -30,6 +30,20 @@ it("preserves ROI on total invested capital, currency units and costs", () => {
   expect(mapSnapshotDetail(item).maxBuyMinor).toBe(110000);
 });
 
+it("uses legacy bridge amounts and category consistently with server-side filters", () => {
+  const card = mapRadarItem({
+    ...item,
+    title: "Sprzęt z magazynu",
+    profit_minor: 4567,
+    roi_bps: 1789,
+    category: "ELECTRONICS",
+    valuation: { quick_sale: 1500, total_cost: 1454.33 },
+  });
+  expect(card.operatingProfitMinor).toBe(4567);
+  expect(card.roiBps).toBe(1789);
+  expect(card.category).toBe("ELECTRONICS");
+});
+
 it("labels deterministic comparables without claiming AI output", () => {
   expect(opportunityInsight(mapRadarItem(item))).toEqual({
     label: "Analiza rynku",

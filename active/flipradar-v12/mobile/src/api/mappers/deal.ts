@@ -1,4 +1,5 @@
 export type FinancialDeal = {
+  financials_complete?: boolean;
   id: string;
   listing_id?: string;
   title?: string | null;
@@ -26,12 +27,12 @@ export function mapDemoDeal(deal: LegacyDemoDeal): FinancialDeal {
   return {
     id: deal.id,
     title: deal.title,
-    status: deal.status === 'PURCHASED' ? 'BOUGHT' : deal.status,
+    status: deal.status === "PURCHASED" ? "BOUGHT" : deal.status,
     purchase_minor: deal.purchase_amount_minor,
     cost_minor: deal.total_costs_minor,
     sale_minor: deal.sale_amount_minor,
-    realized_profit_minor: deal.status === 'SOLD' ? deal.profit_minor : null,
-    currency: 'PLN',
+    realized_profit_minor: deal.status === "SOLD" ? deal.profit_minor : null,
+    currency: "PLN",
     created_at: deal.updated_at,
   };
 }

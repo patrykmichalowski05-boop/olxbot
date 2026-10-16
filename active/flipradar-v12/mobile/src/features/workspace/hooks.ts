@@ -1,3 +1,4 @@
+import type { RadarFilters } from "@/features/radar/filterStore";
 import { useMemo, useState } from "react";
 import {
   useInfiniteQuery,
@@ -10,16 +11,31 @@ import { apiErrorMessage } from "@/api/errors";
 import type { UniversalWatchItem } from "@/api/endpoints/universal";
 import type { OpportunityCard } from "@/features/opportunity/types";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { savedKeyFor } from "./presentation";
 
-export function useRadarOffers(query = "", enabled = true) {
+export function useRadarOffers(
+  query = "",
+  enabled = true,
+  filters?: RadarFilters,
+) {
   const { ready, signedIn, userId } = useAuth();
   const request = useInfiniteQuery({
-    queryKey: ["workspace-offers", api.mode, userId, query],
+    queryKey: ["workspace-offers", api.mode, userId, query, filters ?? null],
     enabled: ready && signedIn && enabled,
     initialPageParam: null as number | null,
     queryFn: ({ pageParam, signal }) =>
-      api.radarPage({ beforeId: pageParam, q: query, signal }),
+      api.radarPage({
+        beforeId: pageParam,
+        q: query,
+        signal,
+        minPriceMinor: filters?.minBudgetMinor,
+        maxPriceMinor: filters?.maxBudgetMinor,
+        minProfitMinor: filters?.minProfitMinor,
+        minRoiBps: filters?.minRoiBps,
+        category: filters?.category,
+        platforms: filters?.platforms,
+      }),
     getNextPageParam: (last) => last.nextBeforeId ?? undefined,
   });
   const items = useMemo(
@@ -36,6 +52,7 @@ export function useRadarOffers(query = "", enabled = true) {
 }
 
 export function useWatchActions() {
+  const runtime = useRuntimeCapabilities();
   const { userId, ready, signedIn } = useAuth();
   const cache = useQueryClient();
   const [notice, setNotice] = useState("");
@@ -43,7 +60,8 @@ export function useWatchActions() {
   const saved = useQuery({
     queryKey: key,
     queryFn: () => api.watchlist.list(),
-    enabled: ready && signedIn,
+    enabled:
+      ready && signedIn && runtime.ready && runtime.capabilities.watchlist,
   });
   const watched = useMemo(
     () => new Set(saved.data?.map((item) => item.listing_key)),
@@ -86,13 +104,22 @@ export function useWatchActions() {
   });
   return {
     saved,
+    available: runtime.ready && runtime.capabilities.watchlist,
+    writable: runtime.canWrite,
     watched,
     isWatched: (item: OpportunityCard) => Boolean(savedKeyFor(item, watched)),
     mutation,
     notice,
     clearNotice: () => setNotice(""),
     toggle: (item: OpportunityCard) => {
-      if (mutation.isPending || saved.isPending || saved.isError) return;
+      if (
+        !runtime.canWrite ||
+        !runtime.capabilities.watchlist ||
+        mutation.isPending ||
+        saved.isPending ||
+        saved.isError
+      )
+        return;
       const existing = savedKeyFor(item, watched);
       mutation.mutate({
         item,

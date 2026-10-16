@@ -1,3 +1,4 @@
+import { RuntimeFeature } from "@/features/runtime/RuntimeFeature";
 import React, { useMemo } from "react";
 import {
   FlatList,
@@ -23,6 +24,11 @@ import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { MoneyValue } from "@/components/MoneyValue";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { StatCard } from "@/components/StatCard";
+import {
+  dealSummary,
+  hasKnownFinancials,
+} from "@/features/workspace/dealSummary";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { useTheme } from "@/theme/ThemeProvider";
 import { workspaceId } from "@/utils/config";
 import { formatMoneyMinor } from "@/utils/money";
@@ -37,8 +43,9 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Anulowany",
   ARCHIVED: "Archiwum",
 };
-export default function FlipsScreen() {
+function FlipsScreenContent() {
   const router = useRouter();
+  const runtime = useRuntimeCapabilities();
   const { pagePadding } = useWorkspaceLayout();
   const { userId } = useAuth();
   const { colors, spacing, typography, radii } = useTheme();
@@ -49,24 +56,7 @@ export default function FlipsScreen() {
     enabled: available,
   });
   const items = useMemo(() => dealsQuery.data?.items ?? [], [dealsQuery.data]);
-  const stats = useMemo(() => {
-    const sold = items.filter((item) => item.status === "SOLD");
-    const open = items.filter((item) =>
-      ["BOUGHT", "PURCHASED", "LISTED"].includes(item.status),
-    );
-    return {
-      sold: sold.length,
-      open: open.length,
-      profit: sold.reduce(
-        (sum, item) => sum + (item.realized_profit_minor ?? 0),
-        0,
-      ),
-      capital: open.reduce(
-        (sum, item) => sum + item.purchase_minor + item.cost_minor,
-        0,
-      ),
-    };
-  }, [items]);
+  const stats = useMemo(() => dealSummary(items), [items]);
   const known = Boolean(dealsQuery.data);
   return (
     <AppScreen padded={false} bottomInset={false}>
@@ -95,7 +85,11 @@ export default function FlipsScreen() {
           <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>
             <View>
               <Header
-                title="Moje flipy"
+                title={
+                  runtime.capabilities.backend === "flask-v12"
+                    ? "Magazyn administratora"
+                    : "Moje flipy"
+                }
                 subtitle="Od pierwszego zakupu do wyniku."
                 rightSlot={
                   <IconButton
@@ -108,6 +102,12 @@ export default function FlipsScreen() {
               />
               <DemoBanner />
             </View>
+            {stats.incomplete ? (
+              <Text style={[typography.body, { color: colors.warning }]}>
+                Brakuje kompletnych kwot dla {stats.incomplete} pozycji.
+                Niepełne sumy mają znak „—”.
+              </Text>
+            ) : null}
             <View
               style={[
                 styles.analytics,
@@ -246,8 +246,16 @@ export default function FlipsScreen() {
               <Ionicons name="arrow-forward" size={20} color={colors.accent} />
             </View>
             <View style={styles.row}>
-              <MoneyValue label="Zakup" amountMinor={item.purchase_minor} />
-              <MoneyValue label="Koszty" amountMinor={item.cost_minor} />
+              <MoneyValue
+                label="Zakup"
+                amountMinor={
+                  hasKnownFinancials(item) ? item.purchase_minor : null
+                }
+              />
+              <MoneyValue
+                label="Koszty"
+                amountMinor={hasKnownFinancials(item) ? item.cost_minor : null}
+              />
               <MoneyValue
                 label="Zrealizowany wynik"
                 amountMinor={
@@ -273,3 +281,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
+
+export default function FlipsScreen() {
+  return (
+    <RuntimeFeature
+      feature="deals_read"
+      title="Moje flipy"
+      description="Rejestrowanie zakupów i sprzedaży pozostaje dostępne w centrum narzędzi. Tutaj pojawi się po połączeniu historii transakcji z kontem."
+      icon="briefcase-outline"
+    >
+      <FlipsScreenContent />
+    </RuntimeFeature>
+  );
+}

@@ -222,13 +222,14 @@ function SearchResultsContent() {
                       })
                   : undefined
               }
-              onWatch={() => watch.toggle(item)}
+              onWatch={watch.available ? () => watch.toggle(item) : undefined}
               watched={watch.isWatched(item)}
               watchLoading={
                 watch.mutation.isPending &&
                 watch.mutation.variables?.item.id === item.id
               }
               watchDisabled={
+                !watch.writable ||
                 watch.mutation.isPending ||
                 watch.saved.isPending ||
                 watch.saved.isError

@@ -1,51 +1,59 @@
-import React, { useRef, useState } from 'react';
-import { Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { RuntimeFeature } from "@/features/runtime/RuntimeFeature";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
+import { hasKnownFinancials } from "@/features/workspace/dealSummary";
+import { WorkspaceNotice } from "@/features/workspace/WorkspaceNotice";
+import React, { useRef, useState } from "react";
+import { Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-import { api } from '@/api';
-import { apiErrorMessage } from '@/api/errors';
-import { AppScreen } from '@/components/AppScreen';
-import { ConfirmationSheet } from '@/components/ConfirmationSheet';
-import { ErrorState } from '@/components/ErrorState';
-import { FormField } from '@/components/FormField';
-import { Header } from '@/components/Header';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
-import { MoneyValue } from '@/components/MoneyValue';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { createIdempotencyKey } from '@/utils/idempotency';
-import { formatMoneyMinor, parseMoneyInput } from '@/utils/money';
-import { workspaceId } from '@/utils/config';
+import { api } from "@/api";
+import { apiErrorMessage } from "@/api/errors";
+import { AppScreen } from "@/components/AppScreen";
+import { ConfirmationSheet } from "@/components/ConfirmationSheet";
+import { ErrorState } from "@/components/ErrorState";
+import { FormField } from "@/components/FormField";
+import { Header } from "@/components/Header";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { MoneyValue } from "@/components/MoneyValue";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { useTheme } from "@/theme/ThemeProvider";
+import { createIdempotencyKey } from "@/utils/idempotency";
+import { formatMoneyMinor, parseMoneyInput } from "@/utils/money";
+import { workspaceId } from "@/utils/config";
 
-const costSchema = z.object({ kind: z.string().min(1), amount: z.string().min(1) });
+const costSchema = z.object({
+  kind: z.string().min(1),
+  amount: z.string().min(1),
+});
 const saleSchema = z.object({ amount: z.string().min(1) });
 
-export default function DealDetailScreen() {
+function DealDetailContent() {
   const { dealId } = useLocalSearchParams<{ dealId: string }>();
   const queryClient = useQueryClient();
+  const runtime = useRuntimeCapabilities();
   const { colors, spacing, typography } = useTheme();
-  const [sheet, setSheet] = useState<'cost' | 'sale' | null>(null);
+  const [sheet, setSheet] = useState<"cost" | "sale" | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const idempotencyRef = useRef<string | null>(null);
 
   const dealQuery = useQuery({
-    queryKey: ['deal', dealId, api.mode],
+    queryKey: ["deal", dealId, api.mode],
     queryFn: () => api.deals.get(String(dealId)),
   });
 
   const costForm = useForm<z.infer<typeof costSchema>>({
     resolver: zodResolver(costSchema),
-    defaultValues: { kind: 'prep', amount: '' },
+    defaultValues: { kind: "prep", amount: "" },
   });
 
   const saleForm = useForm<z.infer<typeof saleSchema>>({
     resolver: zodResolver(saleSchema),
-    defaultValues: { amount: '' },
+    defaultValues: { amount: "" },
   });
 
   if (dealQuery.isLoading) {
@@ -59,7 +67,10 @@ export default function DealDetailScreen() {
   if (dealQuery.isError || !dealQuery.data) {
     return (
       <AppScreen>
-        <ErrorState message={apiErrorMessage(dealQuery.error)} onRetry={() => dealQuery.refetch()} />
+        <ErrorState
+          message={apiErrorMessage(dealQuery.error)}
+          onRetry={() => dealQuery.refetch()}
+        />
       </AppScreen>
     );
   }
@@ -67,25 +78,29 @@ export default function DealDetailScreen() {
   const deal = dealQuery.data;
 
   const submitFinancial = async (
-    kind: 'cost' | 'sale',
+    kind: "cost" | "sale",
     values: { amount: string; kind?: string },
   ) => {
+    if (!runtime.canWrite || !runtime.capabilities.deals) {
+      setError("Zapis transakcji jest obecnie dostępny w centrum narzędzi.");
+      return;
+    }
     const minor = parseMoneyInput(values.amount);
     if (minor === null) {
-      setError('Nieprawidłowa kwota');
+      setError("Nieprawidłowa kwota");
       return;
     }
     setLoading(true);
-    setError('');
+    setError("");
     if (!idempotencyRef.current) {
       idempotencyRef.current = createIdempotencyKey(kind);
     }
     try {
-      if (api.mode === 'live' && workspaceId()) {
-        if (kind === 'cost') {
+      if (api.mode === "live" && workspaceId()) {
+        if (kind === "cost") {
           await api.deals.cost({
             dealId: String(dealId),
-            kind: values.kind ?? 'misc',
+            kind: values.kind ?? "misc",
             amountMinor: minor,
             idempotencyKey: idempotencyRef.current,
           });
@@ -96,15 +111,15 @@ export default function DealDetailScreen() {
             idempotencyKey: idempotencyRef.current,
           });
         }
-      } else if (api.mode === 'demo') {
+      } else if (api.mode === "demo") {
         // demo: brak osobnego silnika — odśwież listę
       } else {
-        throw new Error('API v2 niedostępne');
+        throw new Error("API v2 niedostępne");
       }
       idempotencyRef.current = null;
       setSheet(null);
-      await queryClient.invalidateQueries({ queryKey: ['deals'] });
-      await queryClient.invalidateQueries({ queryKey: ['deal', dealId] });
+      await queryClient.invalidateQueries({ queryKey: ["deals"] });
+      await queryClient.invalidateQueries({ queryKey: ["deal", dealId] });
     } catch (e) {
       setError(apiErrorMessage(e));
     } finally {
@@ -114,47 +129,98 @@ export default function DealDetailScreen() {
 
   return (
     <AppScreen scroll>
-      <Header title={deal.title ?? 'Flip'} showBack showNotifications={false} />
+      <Header title={deal.title ?? "Flip"} showBack showNotifications={false} />
 
       <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
         <Text style={[typography.caption, { color: colors.textMuted }]}>
-          Status: {deal.status ?? '—'}
+          Status:{" "}
+          {(
+            {
+              BOUGHT: "Kupiony",
+              PURCHASED: "Kupiony",
+              LISTED: "W sprzedaży",
+              SOLD: "Sprzedany",
+              PREPARING: "W przygotowaniu",
+              PICKUP: "Do odbioru",
+              READY_TO_SELL: "Gotowy do sprzedaży",
+              CANCELLED: "Anulowany",
+              ARCHIVED: "Archiwum",
+            } as Record<string, string>
+          )[deal.status] ?? "W toku"}
         </Text>
-        <MoneyValue label="Zakup" amountMinor={deal.purchase_minor ?? null} emphasize />
-        <MoneyValue label="Koszty łącznie" amountMinor={deal.cost_minor ?? null} />
+        <MoneyValue
+          label="Zakup"
+          amountMinor={hasKnownFinancials(deal) ? deal.purchase_minor : null}
+          emphasize
+        />
+        <MoneyValue
+          label="Koszty łącznie"
+          amountMinor={hasKnownFinancials(deal) ? deal.cost_minor : null}
+        />
         <MoneyValue label="Sprzedaż" amountMinor={deal.sale_minor ?? null} />
-        <MoneyValue label="Wynik" amountMinor={deal.realized_profit_minor ?? null} />
+        <MoneyValue
+          label="Wynik"
+          amountMinor={deal.realized_profit_minor ?? null}
+        />
       </View>
 
-      <PrimaryButton label="Dodaj koszt" variant="secondary" onPress={() => setSheet('cost')} />
+      {!runtime.capabilities.deals ? (
+        <WorkspaceNotice text="Historia transakcji jest dostępna do odczytu. Zakupy, koszty i sprzedaż zapisuj w centrum narzędzi." />
+      ) : null}
+      {!hasKnownFinancials(deal) ? (
+        <WorkspaceNotice text="Ta pozycja nie ma kompletnych kwot zakupu i kosztów. Nie pokazujemy ich jako zerowych." />
+      ) : null}
+      {runtime.canWrite && runtime.capabilities.deals ? (
+        <PrimaryButton
+          label="Dodaj koszt"
+          variant="secondary"
+          onPress={() => setSheet("cost")}
+        />
+      ) : null}
       <View style={{ height: spacing.sm }} />
-      {deal.status !== 'SOLD' ? (
-        <PrimaryButton label="Zapisz sprzedaż" onPress={() => setSheet('sale')} />
+      {runtime.canWrite &&
+      runtime.capabilities.deals &&
+      deal.status !== "SOLD" ? (
+        <PrimaryButton
+          label="Zapisz sprzedaż"
+          onPress={() => setSheet("sale")}
+        />
       ) : null}
 
       {error ? (
-        <Text style={[typography.caption, { color: colors.loss, marginTop: spacing.md }]}>
+        <Text
+          style={[
+            typography.caption,
+            { color: colors.loss, marginTop: spacing.md },
+          ]}
+        >
           {error}
         </Text>
       ) : null}
 
       <ConfirmationSheet
-        visible={sheet === 'cost'}
+        visible={sheet === "cost"}
         title="Dodaj koszt"
         description="Podaj rodzaj i kwotę kosztu przygotowania."
         confirmLabel="Zapisz koszt"
         loading={loading}
-        onConfirm={() => { void costForm.handleSubmit((v) => submitFinancial('cost', v))(); }}
+        onConfirm={() => {
+          void costForm.handleSubmit((v) => submitFinancial("cost", v))();
+        }}
         onCancel={() => setSheet(null)}
       />
 
-      {sheet === 'cost' ? (
+      {sheet === "cost" ? (
         <View>
           <Controller
             control={costForm.control}
             name="kind"
             render={({ field: { onChange, value } }) => (
-              <FormField label="Rodzaj kosztu" value={value} onChangeText={onChange} />
+              <FormField
+                label="Rodzaj kosztu"
+                value={value}
+                onChangeText={onChange}
+              />
             )}
           />
           <Controller
@@ -173,16 +239,18 @@ export default function DealDetailScreen() {
       ) : null}
 
       <ConfirmationSheet
-        visible={sheet === 'sale'}
+        visible={sheet === "sale"}
         title="Zapis sprzedaży"
-        description={`Potwierdź kwotę sprzedaży (${formatMoneyMinor(parseMoneyInput(saleForm.getValues('amount')) ?? null)}).`}
+        description={`Potwierdź kwotę sprzedaży (${formatMoneyMinor(parseMoneyInput(saleForm.getValues("amount")) ?? null)}).`}
         confirmLabel="Zapisz sprzedaż"
         loading={loading}
-        onConfirm={() => { void saleForm.handleSubmit((v) => submitFinancial('sale', v))(); }}
+        onConfirm={() => {
+          void saleForm.handleSubmit((v) => submitFinancial("sale", v))();
+        }}
         onCancel={() => setSheet(null)}
       />
 
-      {sheet === 'sale' ? (
+      {sheet === "sale" ? (
         <Controller
           control={saleForm.control}
           name="amount"
@@ -197,5 +265,18 @@ export default function DealDetailScreen() {
         />
       ) : null}
     </AppScreen>
+  );
+}
+
+export default function DealDetailScreen() {
+  return (
+    <RuntimeFeature
+      feature="deals_read"
+      title="Szczegóły transakcji"
+      icon="briefcase-outline"
+      description="Historia transakcji jest dostępna w centrum narzędzi."
+    >
+      <DealDetailContent />
+    </RuntimeFeature>
   );
 }

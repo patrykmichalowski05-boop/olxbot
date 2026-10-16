@@ -70,16 +70,23 @@ export function mapRadarItem(item: RadarApiItem): OpportunityCard {
   const valuation = item.valuation ?? {};
   const quick = valuationNumber(valuation, "quick_sale");
   const profit =
-    typeof valuation.profit === "number"
-      ? Math.round(valuation.profit * 100)
-      : quick !== null && item.price_minor !== null
-        ? quick - item.price_minor
-        : null;
+    typeof item.profit_minor === "number" &&
+    Number.isSafeInteger(item.profit_minor)
+      ? item.profit_minor
+      : typeof valuation.profit === "number" &&
+          Number.isFinite(valuation.profit)
+        ? Math.round(valuation.profit * 100)
+        : quick !== null && item.price_minor !== null
+          ? quick - item.price_minor
+          : null;
 
   let roiBps: number | null =
-    typeof valuation.roi_bps === "number" && Number.isFinite(valuation.roi_bps)
-      ? Math.round(valuation.roi_bps)
-      : null;
+    typeof item.roi_bps === "number" && Number.isSafeInteger(item.roi_bps)
+      ? item.roi_bps
+      : typeof valuation.roi_bps === "number" &&
+          Number.isFinite(valuation.roi_bps)
+        ? Math.round(valuation.roi_bps)
+        : null;
   if (
     roiBps === null &&
     profit !== null &&
@@ -120,7 +127,10 @@ export function mapRadarItem(item: RadarApiItem): OpportunityCard {
       typeof valuation.image_url === "string" ? valuation.image_url : null,
     verifiedAt: item.observed_at,
     url: item.url,
-    category: inferCategory(item.title, valuation),
+    category: inferCategory(item.title, {
+      ...valuation,
+      category: item.category ?? valuation.category,
+    }),
     sourceStatus: item.source_status ?? "UNKNOWN",
     hasValuation: hasReliableValuation(decision, valuation),
     market: readMarket(valuation.market),

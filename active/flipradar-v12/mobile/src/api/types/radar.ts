@@ -7,6 +7,9 @@ export type RadarApiItem = {
   title: string | null;
   platform: string;
   price_minor: number | null;
+  profit_minor?: number | null;
+  roi_bps?: number | null;
+  category?: string;
   url: string | null;
   currency?: string;
   source_status?: string;

@@ -1,0 +1,36 @@
+name: FlipRadar GUI integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  bridge-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install Flask pytest
+      - name: Validate session bridge, access scope and readonly legacy data
+        run: python -m pytest -q active/flipradar-v12/tests
+  expo-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: active/flipradar-v12/mobile/package-lock.json
+      - run: npm ci
+        working-directory: active/flipradar-v12/mobile
+      - run: npm run typecheck && npm run lint && npm test -- --runInBand
+        working-directory: active/flipradar-v12/mobile
+      - name: Build LIVE GUI with complete font and image assets
+        run: python3 active/flipradar-v12/build_ui.py --output "$RUNNER_TEMP/flipradar-gui"

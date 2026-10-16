@@ -22,6 +22,7 @@ import {
 import { saveReturnPath } from "@/api/session";
 import { mapRadarItem } from "@/api/mappers/opportunity";
 import type { RadarApiItem } from "@/api/types/radar";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { portalEnabled } from "@/utils/config";
 import { formatMoneyMinor } from "@/utils/money";
 import { publicPlans, questions, steps } from "./content";
@@ -288,7 +289,9 @@ const exampleItem: RadarApiItem = {
 function Pricing({
   plans = publicPlans,
   onChoose,
+  managed = false,
 }: {
+  managed?: boolean;
   plans?: PortalPlan[];
   onChoose: (plan: PlanCode) => void;
 }) {
@@ -308,11 +311,14 @@ function Pricing({
                   <span className="fr-pill fr-popular">Polecany pakiet</span>
                 ) : null}
               </div>
-              <p className="fr-plan-price">{plan.price_minor / 100} zł</p>
+              <p className="fr-plan-price">
+                {managed ? "Dostęp na koncie" : `${plan.price_minor / 100} zł`}
+              </p>
               <ul>
                 <li>
-                  {plan.searches}{" "}
-                  {plan.searches === 3 ? "wyszukiwania" : "wyszukiwań"}
+                  {plan.searches === null
+                    ? "Wyszukiwania bez limitu"
+                    : `${plan.searches} ${plan.searches === 3 ? "wyszukiwania" : "wyszukiwań"}`}
                 </li>
                 <li>
                   {plan.notifications
@@ -329,20 +335,26 @@ function Pricing({
                 className={`fr-btn${plan.code === "STANDARD" ? " fr-btn-primary" : ""}`}
                 onClick={() => onChoose(plan.code)}
               >
-                {plan.code === "START" ? "Wypróbuj" : "Wybierz"}
+                {managed
+                  ? "Sprawdź dostęp"
+                  : plan.code === "START"
+                    ? "Wypróbuj"
+                    : "Wybierz"}
               </button>
             </article>
           ))}
       </div>
       <p className="fr-plans-note">
-        Nazwy i ceny przykładowe. Płatny pakiet aktywuje operator po
-        potwierdzeniu zgłoszenia.
+        {managed
+          ? "Aktualny pakiet i limit są przypisane do Twojego konta. Zmiany dostępu zatwierdza administrator."
+          : "Nazwy i ceny przykładowe. Płatny pakiet aktywuje operator po potwierdzeniu zgłoszenia."}
       </p>
     </>
   );
 }
 
 function Landing() {
+  const runtime = useRuntimeCapabilities();
   const { mode, ready, signedIn } = useAuth();
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
@@ -373,6 +385,10 @@ function Landing() {
     retry: false,
   });
   const choose = async (plan: PlanCode) => {
+    if (!runtime.capabilities.plan_requests) {
+      router.push(signedIn ? "/account" : "/register");
+      return;
+    }
     if (plan === "START") {
       input.current?.focus();
       input.current?.scrollIntoView({ block: "center" });
@@ -388,6 +404,12 @@ function Landing() {
     setError("");
     if (query.trim().length < 3) {
       setError("Wpisz co najmniej 3 znaki, np. RTX 4060.");
+      return;
+    }
+    if (mode === "live" && !runtime.capabilities.public_search) {
+      const destination = `/searches?query=${encodeURIComponent(query.trim())}`;
+      await saveReturnPath(destination);
+      router.push((signedIn ? destination : "/login") as never);
       return;
     }
     setLoading(true);
@@ -473,7 +495,11 @@ function Landing() {
             className="fr-btn fr-btn-primary"
             disabled={loading || !ready}
           >
-            {loading ? "Sprawdzamy…" : "Sprawdź ceny"}
+            {loading
+              ? "Sprawdzamy…"
+              : runtime.capabilities.public_search
+                ? "Sprawdź ceny"
+                : "Szukaj na swoim koncie"}
           </button>
         </form>
         <p className="fr-free-note">
@@ -559,6 +585,7 @@ function Landing() {
         </SectionHead>
         <Pricing
           plans={config.data?.plans}
+          managed={!runtime.capabilities.plan_requests}
           onChoose={(plan) => {
             void choose(plan);
           }}
@@ -587,6 +614,7 @@ function Landing() {
 }
 
 function AuthForm({ register = false }: { register?: boolean }) {
+  const runtime = useRuntimeCapabilities();
   const auth = useAuth();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -603,6 +631,15 @@ function AuthForm({ register = false }: { register?: boolean }) {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    if (
+      register &&
+      (!runtime.canWrite || runtime.query.data?.registration_enabled === false)
+    ) {
+      setError(
+        "Rejestracja jest obecnie wyłączona. Możesz zalogować się na istniejące konto.",
+      );
+      return;
+    }
     if (register && (password.length < 12 || password !== confirmation)) {
       setError(
         "Hasło musi mieć co najmniej 12 znaków i być takie samo w obu polach.",
@@ -651,16 +688,25 @@ function AuthForm({ register = false }: { register?: boolean }) {
             pattern={register ? "[a-zA-Z][a-zA-Z0-9_.-]{2,31}" : undefined}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder={register ? "Wybierz login" : "E-mail lub login administratora"}
+            placeholder={
+              register ? "Wybierz login" : "E-mail lub login administratora"
+            }
             required
           />
         </label>
         {register ? (
           <label className="fr-field">
             Adres e-mail — wymagany
-            <input type="email" name="email" autoComplete="email" value={email}
-              onChange={(e) => setEmail(e.target.value)} maxLength={200} required
-              placeholder="twoj@email.pl" />
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              maxLength={200}
+              required
+              placeholder="twoj@email.pl"
+            />
           </label>
         ) : null}
         <label className="fr-field">
@@ -694,7 +740,13 @@ function AuthForm({ register = false }: { register?: boolean }) {
         <button
           type="submit"
           className="fr-btn fr-btn-primary"
-          disabled={busy || !auth.ready}
+          disabled={
+            busy ||
+            !auth.ready ||
+            (register &&
+              (!runtime.canWrite ||
+                runtime.query.data?.registration_enabled === false))
+          }
         >
           {busy
             ? "Chwila…"
@@ -776,6 +828,7 @@ export function PortalBotGate({ children }: { children?: React.ReactNode }) {
 }
 
 function AdminPanel() {
+  const runtime = useRuntimeCapabilities();
   const cache = useQueryClient();
   const data = useQuery({
     queryKey: ["portal-admin"],
@@ -800,7 +853,9 @@ function AdminPanel() {
     }
   }, [pending]);
   const deleteMember = async (userId: string, username: string) => {
-    const confirm = window.prompt(`Usunięcie konta ${username} jest nieodwracalne. Wpisz dokładnie login:`);
+    const confirm = window.prompt(
+      `Usunięcie konta ${username} jest nieodwracalne. Wpisz dokładnie login:`,
+    );
     if (confirm !== username) return;
     setBusy(true);
     setError("");
@@ -809,7 +864,9 @@ function AdminPanel() {
       await cache.invalidateQueries({ queryKey: ["portal-admin"] });
     } catch (e) {
       setError(apiErrorMessage(e));
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
   const commit = async () => {
     if (!pending) return;
@@ -863,61 +920,76 @@ function AdminPanel() {
                   </small>
                 </div>
                 <div className="fr-member-actions">
-                  <label className="fr-sr" htmlFor={`plan-${member.user_id}`}>
-                    Pakiet dla {member.username}
-                  </label>
-                  <select
-                    id={`plan-${member.user_id}`}
-                    value={plan}
-                    onChange={(event) =>
-                      setSelected((current) => ({
-                        ...current,
-                        [member.user_id]: event.target.value as PlanCode,
-                      }))
-                    }
-                  >
-                    <option value="START">Start</option>
-                    <option value="STANDARD">Standard</option>
-                    <option value="PLUS">Plus</option>
-                  </select>
-                  <button
-                    className="fr-btn fr-btn-small fr-btn-primary"
-                    onClick={() =>
-                      setPending({
-                        userId: member.user_id,
-                        username: member.username,
-                        action: "activate",
-                        plan,
-                        operation: operationId(),
-                      })
-                    }
-                  >
-                    Aktywuj
-                  </button>
-                  <button
-                    className="fr-btn fr-btn-small fr-btn-danger"
-                    onClick={() =>
-                      setPending({
-                        userId: member.user_id,
-                        username: member.username,
-                        action: "disable",
-                        operation: operationId(),
-                      })
-                    }
-                  >
-                    Wstrzymaj
-                  </button>
-                  <button className="fr-btn fr-btn-small fr-btn-danger"
-                    disabled={busy} onClick={() => {void deleteMember(member.user_id,member.username);}}>
-                    Usuń konto
-                  </button>
+                  {runtime.canWrite && runtime.capabilities.admin_access ? (
+                    <>
+                      <label
+                        className="fr-sr"
+                        htmlFor={`plan-${member.user_id}`}
+                      >
+                        Pakiet dla {member.username}
+                      </label>
+                      <select
+                        id={`plan-${member.user_id}`}
+                        value={plan}
+                        onChange={(event) =>
+                          setSelected((current) => ({
+                            ...current,
+                            [member.user_id]: event.target.value as PlanCode,
+                          }))
+                        }
+                      >
+                        <option value="START">Start</option>
+                        <option value="STANDARD">Standard</option>
+                        <option value="PLUS">Plus</option>
+                      </select>
+                      <button
+                        className="fr-btn fr-btn-small fr-btn-primary"
+                        onClick={() =>
+                          setPending({
+                            userId: member.user_id,
+                            username: member.username,
+                            action: "activate",
+                            plan,
+                            operation: operationId(),
+                          })
+                        }
+                      >
+                        Aktywuj
+                      </button>
+                      <button
+                        className="fr-btn fr-btn-small fr-btn-danger"
+                        onClick={() =>
+                          setPending({
+                            userId: member.user_id,
+                            username: member.username,
+                            action: "disable",
+                            operation: operationId(),
+                          })
+                        }
+                      >
+                        Wstrzymaj
+                      </button>
+                    </>
+                  ) : null}
+                  {runtime.canWrite && runtime.capabilities.account_delete ? (
+                    <button
+                      className="fr-btn fr-btn-small fr-btn-danger"
+                      disabled={busy}
+                      onClick={() => {
+                        void deleteMember(member.user_id, member.username);
+                      }}
+                    >
+                      Usuń konto
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );
           })}
       </div>
-      <p className="fr-plans-note">Dodatkowe ustawienia ról i platform:
-        {" "}<a href="/admin/uzytkownicy?legacy=1">zarządzanie zaawansowane</a>.
+      <p className="fr-plans-note">
+        Dodatkowe ustawienia ról i platform:{" "}
+        <a href="/admin/uzytkownicy?legacy=1">zarządzanie zaawansowane</a>.
       </p>
       {!data.data.accounts.some((member) => member.role !== "OWNER") ? (
         <p className="fr-plans-note">
@@ -973,6 +1045,7 @@ function AdminPanel() {
 }
 
 function AccountPage() {
+  const runtime = useRuntimeCapabilities();
   const auth = useAuth();
   const router = useRouter();
   const cache = useQueryClient();
@@ -1001,6 +1074,12 @@ function AccountPage() {
         );
         return;
       }
+      if (!runtime.canWrite || !runtime.capabilities.plan_requests) {
+        setMessage(
+          "Pakiet przypisuje administrator. Aktualny dostęp i limit są widoczne na Twoim koncie.",
+        );
+        return;
+      }
       setBusy(true);
       try {
         await requestPlan(plan);
@@ -1016,7 +1095,14 @@ function AccountPage() {
         setBusy(false);
       }
     },
-    [auth.mode, auth.userId, cache, router],
+    [
+      auth.mode,
+      auth.userId,
+      cache,
+      router,
+      runtime.canWrite,
+      runtime.capabilities.plan_requests,
+    ],
   );
   useEffect(() => {
     if (
@@ -1180,11 +1266,18 @@ function AccountPage() {
         <SectionHead title="Wybierz dostęp dla siebie">
           Liczba wyszukiwań i powiadomienia zgodnie z Twoim pakietem.
         </SectionHead>
-        <Pricing
-          onChoose={(plan) => {
-            if (!busy) void choose(plan);
-          }}
-        />
+        {runtime.capabilities.plan_requests ? (
+          <Pricing
+            onChoose={(plan) => {
+              if (!busy) void choose(plan);
+            }}
+          />
+        ) : (
+          <Notice>
+            Pakiet przypisuje administrator. Aktualny dostęp i limit są widoczne
+            powyżej.
+          </Notice>
+        )}
       </section>
     </div>
   );

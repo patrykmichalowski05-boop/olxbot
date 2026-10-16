@@ -20,6 +20,7 @@ import { MetricTile } from "@/features/workspace/MarketSummary";
 import { OfferAnalysisCard } from "@/features/workspace/OfferAnalysisCard";
 import { priceLabel } from "@/features/workspace/presentation";
 import { WorkspaceNotice } from "@/features/workspace/WorkspaceNotice";
+import { useRuntimeCapabilities } from "@/features/runtime/useRuntimeCapabilities";
 import { useTheme } from "@/theme/ThemeProvider";
 import { formatUserDateTime } from "@/utils/datetime";
 import { workspaceId } from "@/utils/config";
@@ -36,6 +37,7 @@ export default function OfferDetailScreen() {
     queryFn: () => api.opportunityDetail(String(id)),
   });
   const watch = useWatchActions();
+  const runtime = useRuntimeCapabilities();
   const item = detail.data;
   const panel = {
     borderWidth: 1,
@@ -73,10 +75,15 @@ export default function OfferDetailScreen() {
               item={item}
               demo={api.mode === "demo"}
               defaultExpanded
-              onWatch={() => watch.toggle(item)}
+              onWatch={watch.available ? () => watch.toggle(item) : undefined}
               watched={watch.isWatched(item)}
               watchLoading={watch.mutation.isPending}
-              watchDisabled={watch.saved.isError || watch.saved.isPending}
+              watchDisabled={
+                !watch.writable ||
+                watch.mutation.isPending ||
+                watch.saved.isError ||
+                watch.saved.isPending
+              }
             />
             {watch.notice ? (
               <WorkspaceNotice
@@ -248,7 +255,10 @@ export default function OfferDetailScreen() {
               </View>
             ) : null}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-              {item.listingId && (api.mode === "demo" || workspaceId()) ? (
+              {runtime.canWrite &&
+              runtime.capabilities.deals &&
+              item.listingId &&
+              (api.mode === "demo" || workspaceId()) ? (
                 <PrimaryButton
                   label="Zapisz zakup w moich flipach"
                   icon="briefcase-outline"

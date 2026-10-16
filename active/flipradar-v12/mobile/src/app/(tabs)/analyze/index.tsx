@@ -1,3 +1,4 @@
+import { RuntimeFeature } from "@/features/runtime/RuntimeFeature";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -61,7 +62,7 @@ const steps: { icon: IconName; title: string; text: string }[] = [
     text: "Sprawdź wynik i ryzyka, zanim zdecydujesz się na zakup.",
   },
 ];
-export default function AnalyzeScreen() {
+function AnalyzeScreenContent() {
   const router = useRouter();
   const { colors, spacing, typography, radii } = useTheme();
   const [jobId, setJobId] = useState<string | null>(null);
@@ -445,3 +446,16 @@ const styles = StyleSheet.create({
   categories: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   step: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
 });
+
+export default function AnalyzeScreen() {
+  return (
+    <RuntimeFeature
+      feature="manual_analysis"
+      title="Analiza oferty"
+      description="Analiza własnej oferty nie jest jeszcze dostępna w tym panelu. Sprawdź ceny ogłoszeń w radarze."
+      icon="scan-outline"
+    >
+      <AnalyzeScreenContent />
+    </RuntimeFeature>
+  );
+}

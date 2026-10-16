@@ -1,3 +1,4 @@
+import { RuntimeFeature } from "@/features/runtime/RuntimeFeature";
 import React, { useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +22,7 @@ import { savedOfferId } from "@/features/workspace/presentation";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useAuth } from "@/features/auth/AuthContext";
 
-export default function WatchedScreen() {
+function WatchedScreenContent() {
   const router = useRouter();
   const { pagePadding } = useWorkspaceLayout();
   const { userId } = useAuth();
@@ -237,3 +238,16 @@ const styles = StyleSheet.create({
   },
   top: { flexDirection: "row", alignItems: "center", gap: 12 },
 });
+
+export default function WatchedScreen() {
+  return (
+    <RuntimeFeature
+      feature="watchlist"
+      title="Zapisane oferty"
+      description="Zapisywanie pojedynczych ofert nie jest jeszcze dostępne w tym panelu. Możesz wrócić do radaru lub otworzyć centrum narzędzi."
+      icon="bookmark-outline"
+    >
+      <WatchedScreenContent />
+    </RuntimeFeature>
+  );
+}
